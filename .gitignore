@@ -1,0 +1,43 @@
+# Node.js
+node_modules/
+
+# Dependency directories
+**/node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# dotenv environment variables file
+.env
+
+# Compiled binary addons (like bindings for native modules)
+build/Release
+
+# Output of 'npm pack'
+*.tgz
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Editor-specific files
+.vscode/
+.idea/
+
+# Ignore package-lock.json
+package-lock.json
+
+# Ignore public folder
+public/
+
+# Ignore zip files
+*.zip
+
+# Ignore any files ending with .zip
+**/*.zip
+
+keyfile.json

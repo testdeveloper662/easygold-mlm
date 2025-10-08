@@ -30,7 +30,7 @@ const Brokers = sequelize.define(
     referral_code: {
       type: Sequelize.STRING(10),
       unique: true,
-      allowNull: false,
+      allowNull: true,
     },
     referred_by_code: {
       type: Sequelize.STRING(10),

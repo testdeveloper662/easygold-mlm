@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 
 const MAIL_SENDER = process.env.MAIL_SENDER;
 const MAIL_PASSWORD = process.env.MAIL_PASSWORD;
+const ADMIN_REFERRAL_CODE = process.env.ADMIN_REFERRAL_CODE;
 
 const RegisterBroker = async (req, res) => {
   try {
@@ -19,15 +20,15 @@ const RegisterBroker = async (req, res) => {
       });
     }
 
-    const apiUrl = `https://goldsilberstore.com/api/b2b-users?email=${email}`;
-    const apiResponse = await axios.get(apiUrl);
+    // const apiUrl = `https://goldsilberstore.com/api/b2b-users?email=${email}`;
+    // const apiResponse = await axios.get(apiUrl);
 
-    if (!apiResponse.data.success) {
-      return res.status(400).json({
-        success: false,
-        message: "Broker email does not exist.",
-      });
-    }
+    // if (!apiResponse.data.success) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Broker email does not exist.",
+    //   });
+    // }
 
     // Generate a temporary password
     const tempPassword = Math.random().toString(36).slice(-8);
@@ -43,16 +44,16 @@ const RegisterBroker = async (req, res) => {
     });
 
     // Generate unique referral code
-    const referralCode = Math.random()
-      .toString(36)
-      .substring(2, 10)
-      .toUpperCase();
+    // const referralCode = Math.random()
+    //   .toString(36)
+    //   .substring(2, 10)
+    //   .toUpperCase();
 
     // Create Broker entry
     const newBroker = await db.Brokers.create({
       user_id: newUser.id,
       parent_id: null,
-      referral_code: referralCode,
+      referral_code: null,
       referred_by_code: null,
     });
 
@@ -72,10 +73,11 @@ const RegisterBroker = async (req, res) => {
       subject: "Broker Registration Details",
       html: `
         <h3>Welcome, ${brokerName}!</h3>
-        <p>Your registration is successful.</p>
+        <p>Please Registern yourself with following details:</p>
         <p><strong>Broker Name:</strong> ${brokerName}</p>
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Temporary Password:</strong> ${tempPassword}</p>
+        <p><strong>Referral Code:</strong> ${ADMIN_REFERRAL_CODE}</p>
         <p>Please change your password after first login.</p>
       `,
     };
@@ -85,7 +87,7 @@ const RegisterBroker = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Broker registered and email sent successfully.",
+      message: "Email has been sent with Registration details.",
     });
   } catch (error) {
     console.log("Error: ", error);

@@ -52,6 +52,21 @@ const Login = async (req, res) => {
         .json({ success: false, message: "Incorrect password" });
     }
 
+    if (user.role === "BROKER") {
+      const broker = await db.Brokers.findOne({
+        where: {
+          user_id: user.id,
+        },
+      });
+
+      if (!broker.referred_by_code) {
+        return res.status(404).send({
+          success: false,
+          message: "Broker not exists",
+        });
+      }
+    }
+
     const { password: _, ...userData } = user.toJSON();
 
     const token = jwt.sign(

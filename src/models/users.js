@@ -29,6 +29,14 @@ const Users = sequelize.define(
       type: Sequelize.ENUM("SUPER_ADMIN", "BROKER", "AFFILIATE"),
       allowNull: false,
     },
+    otp: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    otp_expires: {
+      type: Sequelize.DATE,
+      allowNull: true,
+    },
   },
   {
     timestamps: true,

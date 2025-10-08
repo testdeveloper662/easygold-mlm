@@ -57,7 +57,7 @@ const RegisterBroker = async (req, res) => {
     });
 
     // Generate new referral code for broker
-    const referralCode = generateReferralCode();
+    // const referralCode = generateReferralCode();
 
     const parentBroker = await db.Brokers.findOne({
       where: {
@@ -69,8 +69,8 @@ const RegisterBroker = async (req, res) => {
     const newBroker = await db.Brokers.create({
       user_id: newUser.id,
       parent_id: parentBroker.id,
-      referral_code: referralCode,
-      referred_by_code: parentBroker.referral_code,
+      referral_code: null,
+      referred_by_code: null,
     });
 
     // Increment parent's children count
@@ -94,11 +94,11 @@ const RegisterBroker = async (req, res) => {
       subject: "Broker Registration Successful",
       html: `
         <h3>Welcome, ${brokerName}!</h3>
-        <p>You’ve been successfully registered as a Broker under ${user.first_name}.</p>
+        <p>Please Register yourself with following details:</p>
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Temporary Password:</strong> ${tempPassword}</p>
-        <p><strong>Your Referral Code:</strong> ${referralCode}</p>
-        <p>Please log in and change your password after first login.</p>
+        <p><strong>Referral Code:</strong> ${parentBroker.referral_code}</p>
+        <p>Please change your password after first login.</p>
       `,
     };
 
@@ -106,7 +106,7 @@ const RegisterBroker = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Broker registered and email sent successfully.",
+      message: "Email has been sent with Registration details.",
     });
   } catch (error) {
     console.error("Error:", error);

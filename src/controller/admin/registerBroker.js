@@ -66,19 +66,38 @@ const RegisterBroker = async (req, res) => {
       },
     });
 
+    const registerUrl =
+      process.env.FRONTEND_URL +
+      "/broker-register" +
+      `?referral=${ADMIN_REFERRAL_CODE}`;
+
     // Email content
     const mailOptions = {
       from: MAIL_SENDER,
       to: email,
-      subject: "Broker Registration Details",
+      subject:
+        "Welcome to the Hartmann & Benz Group — Complete your registration",
       html: `
-        <h3>Welcome, ${brokerName}!</h3>
-        <p>Please Registern yourself with following details:</p>
-        <p><strong>Broker Name:</strong> ${brokerName}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Temporary Password:</strong> ${tempPassword}</p>
-        <p><strong>Referral Code:</strong> ${ADMIN_REFERRAL_CODE}</p>
-        <p>Please change your password after first login.</p>
+        <p>Dear Partner,</p>
+
+        <p>Welcome to the Hartmann & Benz Group!</p>
+
+        <p>We are delighted to have you on board and are confident that we can offer you real added value.</p>
+
+        <p>Your partner has sent you a referral code.<br/>
+        Please click on the following link to start your registration – the referral code will be automatically applied:<br/>
+        👉 <a href="${registerUrl}">Register now with referral code ${ADMIN_REFERRAL_CODE}</a></p>
+
+        <p><strong>Email:</strong> ${email}<br/>
+        <strong>Temporary password:</strong> ${tempPassword}<br/>
+        <strong>Referral code:</strong> ${ADMIN_REFERRAL_CODE}</p>
+
+        <p>For your security, please change your password after logging in for the first time.</p>
+
+        <p>If you have any questions, our team is always happy to help.</p>
+
+        <p>Best regards,<br/>
+        Your Hartmann & Benz Group Team</p>
       `,
     };
 

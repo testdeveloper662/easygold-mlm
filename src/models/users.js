@@ -8,11 +8,39 @@ const Users = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-    first_name: {
+    fullName: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    company: {
       type: Sequelize.STRING,
       allowNull: true,
     },
-    last_name: {
+    contactPerson: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    address: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    postalCode: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    city: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    country: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    vatId: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    taxNumber: {
       type: Sequelize.STRING,
       allowNull: true,
     },
@@ -21,20 +49,66 @@ const Users = sequelize.define(
       unique: true,
       allowNull: false,
     },
+    phone: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    mobile: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    referral_code: {
+      type: Sequelize.STRING(10),
+      unique: true,
+      allowNull: false,
+    },
+    website: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    username: {
+      type: Sequelize.STRING,
+      unique: true,
+      allowNull: false,
+    },
     password: {
       type: Sequelize.STRING,
       allowNull: false,
+    },
+    idExpiryDate: {
+      type: Sequelize.DATE,
+      allowNull: true,
+    },
+    iban: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    bic: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    bankName: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    bankAddress: {
+      type: Sequelize.STRING,
+      allowNull: true,
     },
     role: {
       type: Sequelize.ENUM("SUPER_ADMIN", "BROKER", "AFFILIATE"),
       allowNull: false,
     },
-    otp: {
+    business_license: {
       type: Sequelize.STRING,
       allowNull: true,
     },
-    otp_expires: {
-      type: Sequelize.DATE,
+    passport_front: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    passport_back: {
+      type: Sequelize.STRING,
       allowNull: true,
     },
   },

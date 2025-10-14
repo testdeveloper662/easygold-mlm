@@ -8,9 +8,7 @@ const buildBrokerTree = (brokers, parentId = null, level = 1) => {
 
       return {
         id: b.id.toString(),
-        name:
-          `${b.user?.first_name || ""} ${b.user?.last_name || ""}`.trim() ||
-          "Unnamed Broker",
+        name: b.user?.fullName,
         email: b.user?.email,
         referralCode: b.referral_code,
         level,
@@ -20,7 +18,6 @@ const buildBrokerTree = (brokers, parentId = null, level = 1) => {
     });
 };
 
-// Controller
 const GetBrokerNetwork = async (req, res) => {
   try {
     const { user } = req.user;
@@ -33,7 +30,7 @@ const GetBrokerNetwork = async (req, res) => {
         {
           model: db.Users,
           as: "user",
-          attributes: ["first_name", "last_name", "email"],
+          attributes: ["fullName", "email"],
         },
       ],
     });
@@ -51,7 +48,7 @@ const GetBrokerNetwork = async (req, res) => {
         {
           model: db.Users,
           as: "user",
-          attributes: ["first_name", "last_name", "email"],
+          attributes: ["fullName", "email"],
         },
       ],
       raw: false, // Important: get Sequelize instances, not plain objects
@@ -63,13 +60,10 @@ const GetBrokerNetwork = async (req, res) => {
     // Create root node (current broker)
     const network = {
       id: currentBroker.id.toString(),
-      name:
-        `${currentBroker.user?.first_name || ""} ${
-          currentBroker.user?.last_name || ""
-        }`.trim() || "Unnamed Broker",
+      name: currentBroker.user?.fullName,
       email: currentBroker.user?.email,
       referralCode: currentBroker.referral_code,
-      level: 0, // Root is level 0
+      level: 0,
       children,
       childrenCount: children.length,
       isCurrentUser: true,

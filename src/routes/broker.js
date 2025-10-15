@@ -6,6 +6,7 @@ const upload = require("../middleware/multer");
 const RegisterBroker = require("../controller/auth/brokerRegistration");
 const ReferBroker = require("../controller/broker/referBroker");
 const GetBrokerNetwork = require("../controller/broker/getBrokerNetwork");
+const GetBrokerNetworkById = require("../controller/broker/getBrokerNetworkById");
 
 // Auth Routes
 const uploadDocuments = upload("docs");
@@ -54,5 +55,10 @@ brokerRouter.post("/register", (req, res, next) => {
 
 brokerRouter.post("/referral", authenticateToken, ReferBroker);
 brokerRouter.get("/network", authenticateToken, GetBrokerNetwork);
+brokerRouter.get(
+  "/network/:broker_id",
+  authenticateToken,
+  GetBrokerNetworkById
+);
 
 module.exports = brokerRouter;

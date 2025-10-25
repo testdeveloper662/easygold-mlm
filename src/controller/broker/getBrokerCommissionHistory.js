@@ -17,17 +17,10 @@ const GetBrokerCommissionHistory = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    if (!history.length) {
-      return res.status(404).json({
-        success: false,
-        message: "No commission history found for this broker.",
-      });
-    }
-
     return res.status(200).json({
       success: true,
       message: "Broker commission history fetched successfully.",
-      data: history,
+      data: history || [],
     });
   } catch (error) {
     console.error("Error fetching broker commission history:", error);

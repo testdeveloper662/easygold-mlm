@@ -33,7 +33,7 @@ const Login = async (req, res) => {
 
     const user = await db.Users.findOne({
       where: {
-        email,
+        user_email: email,
       },
     });
 
@@ -44,7 +44,7 @@ const Login = async (req, res) => {
       });
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.user_pass);
 
     if (!isValidPassword) {
       return res
@@ -52,7 +52,9 @@ const Login = async (req, res) => {
         .json({ success: false, message: "Incorrect password" });
     }
 
-    const { password: _, ...userData } = user.toJSON();
+    const { user_pass: _, ...userData } = user.toJSON();
+
+    userData.role = userData.user_type === 0 ? "BROKER" : "SUPER_ADMIN";
 
     const token = jwt.sign(
       {

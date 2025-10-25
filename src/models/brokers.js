@@ -10,16 +10,16 @@ const Brokers = sequelize.define(
       primaryKey: true,
     },
     user_id: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.BIGINT.UNSIGNED, // ✅ match 6LWUP_users.ID
       allowNull: false,
       references: {
-        model: Users,
-        key: "id",
+        model: "6LWUP_users",
+        key: "ID",
       },
       onDelete: "CASCADE",
     },
     parent_id: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.INTEGER.UNSIGNED, // self reference (same as brokers.id)
       allowNull: true,
       references: {
         model: "brokers",
@@ -40,13 +40,18 @@ const Brokers = sequelize.define(
       type: Sequelize.INTEGER,
       defaultValue: 0,
     },
+    total_commission_amount: {
+      type: Sequelize.FLOAT,
+      allowNull: false,
+      defaultValue: 0,
+      comment: "Total commission amount accumulated by broker",
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Relations
 Brokers.belongsTo(Users, { foreignKey: "user_id", as: "user" });
 Brokers.belongsTo(Brokers, { foreignKey: "parent_id", as: "parent" });
 Brokers.hasMany(Brokers, { foreignKey: "parent_id", as: "children" });

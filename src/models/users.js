@@ -1,119 +1,123 @@
 const { Sequelize, sequelize } = require("../config/database");
 
 const Users = sequelize.define(
-  "users",
+  "6LWUP_users", // Table name
   {
-    id: {
-      type: Sequelize.INTEGER,
-      autoIncrement: true,
+    ID: {
+      type: Sequelize.BIGINT.UNSIGNED,
+      allowNull: false,
       primaryKey: true,
+      autoIncrement: true,
     },
-    fullName: {
-      type: Sequelize.STRING,
+    user_login: {
+      type: Sequelize.STRING(60),
       allowNull: false,
+      defaultValue: "",
     },
-    company: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    contactPerson: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    address: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    postalCode: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    city: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    country: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    vatId: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    taxNumber: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    email: {
-      type: Sequelize.STRING,
-      unique: true,
+    user_pass: {
+      type: Sequelize.STRING(255),
       allowNull: false,
+      defaultValue: "",
     },
-    phone: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    mobile: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    referral_code: {
-      type: Sequelize.STRING(10),
-      unique: true,
+    user_nicename: {
+      type: Sequelize.STRING(50),
       allowNull: false,
+      defaultValue: "",
     },
-    website: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    username: {
-      type: Sequelize.STRING,
-      unique: true,
+    user_email: {
+      type: Sequelize.STRING(100),
       allowNull: false,
+      defaultValue: "",
     },
-    password: {
-      type: Sequelize.STRING,
+    user_url: {
+      type: Sequelize.STRING(100),
       allowNull: false,
+      defaultValue: "",
     },
-    idExpiryDate: {
+    user_registered: {
       type: Sequelize.DATE,
-      allowNull: true,
-    },
-    iban: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    bic: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    bankName: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    bankAddress: {
-      type: Sequelize.STRING,
-      allowNull: true,
-    },
-    role: {
-      type: Sequelize.ENUM("SUPER_ADMIN", "BROKER", "AFFILIATE"),
       allowNull: false,
+      defaultValue: Sequelize.literal("'0000-00-00 00:00:00'"),
     },
-    business_license: {
-      type: Sequelize.STRING,
+    user_activation_key: {
+      type: Sequelize.STRING(255),
+      allowNull: false,
+      defaultValue: "",
+    },
+    user_status: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    display_name: {
+      type: Sequelize.STRING(250),
+      allowNull: false,
+      defaultValue: "",
+    },
+    user_type: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+      comment: "0-user, 1-admin",
+    },
+    wallet_amount: {
+      type: Sequelize.FLOAT,
+      allowNull: true,
+      defaultValue: 0,
+    },
+    wallet_payment: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: "0 = user wallet payment off, 1 = on",
+    },
+    logo: {
+      type: Sequelize.STRING(255),
       allowNull: true,
     },
-    passport_front: {
-      type: Sequelize.STRING,
+    menulogo: {
+      type: Sequelize.STRING(255),
       allowNull: true,
     },
-    passport_back: {
-      type: Sequelize.STRING,
+    commission_percentage: {
+      type: Sequelize.FLOAT,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    api_commission_percentage: {
+      type: Sequelize.FLOAT,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    shipping_costs_setting: {
+      type: Sequelize.INTEGER,
       allowNull: true,
+      defaultValue: 0,
+      comment: "0=false, 1=true",
+    },
+    temp_pass: {
+      type: Sequelize.STRING(255),
+      allowNull: true,
+    },
+    mystorekey: {
+      type: Sequelize.STRING(255),
+      allowNull: true,
+    },
+    self_service: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: "0=self_service off, 1=on",
+    },
+    landing_page: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: "0=landing_page off, 1=on",
     },
   },
   {
-    timestamps: true,
+    tableName: "6LWUP_users",
+    timestamps: false, // WordPress tables typically don’t use createdAt/updatedAt
   }
 );
 

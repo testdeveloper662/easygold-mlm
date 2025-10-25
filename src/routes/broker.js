@@ -7,6 +7,7 @@ const RegisterBroker = require("../controller/auth/brokerRegistration");
 const ReferBroker = require("../controller/broker/referBroker");
 const GetBrokerNetwork = require("../controller/broker/getBrokerNetwork");
 const GetBrokerNetworkById = require("../controller/broker/getBrokerNetworkById");
+const GetBrokerCommissionHistory = require("../controller/broker/getBrokerCommissionHistory");
 
 // Auth Routes
 const uploadDocuments = upload("docs");
@@ -59,6 +60,11 @@ brokerRouter.get(
   "/network/:broker_id",
   authenticateToken,
   GetBrokerNetworkById
+);
+brokerRouter.get(
+  "/commissions/:id",
+  authenticateToken,
+  GetBrokerCommissionHistory
 );
 
 module.exports = brokerRouter;

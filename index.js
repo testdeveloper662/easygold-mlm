@@ -8,6 +8,7 @@ const path = require("path");
 const authRouter = require("./src/routes/auth");
 const adminRouter = require("./src/routes/admin");
 const brokerRouter = require("./src/routes/broker");
+const userRouter = require("./src/routes/user");
 
 const port = process.env.PORT || 4000;
 
@@ -44,6 +45,7 @@ app.get("/", (req, res) => {
 app.use("/api/v1", authRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/broker", brokerRouter);
+app.use("/api/v1/user", userRouter);
 
 app.listen(port, () => {
   console.log(`Server running on PORT: ${port} 🚀`);

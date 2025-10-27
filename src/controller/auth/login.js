@@ -6,7 +6,8 @@ const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 
 const Login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, referral_code } = req.body;
+    let isNewUser = true;
 
     if (!email) {
       return res.status(404).json({
@@ -44,12 +45,61 @@ const Login = async (req, res) => {
       });
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.user_pass);
+    let userPassword = user.user_pass;
+    if (userPassword.startsWith("$2y")) {
+      userPassword = userPassword.replace("$2y", "$2b");
+    }
+
+    const isValidPassword = await bcrypt.compare(password, userPassword);
 
     if (!isValidPassword) {
       return res
         .status(401)
         .json({ success: false, message: "Incorrect password" });
+    }
+
+    if (!referral_code || referral_code === null) {
+      isNewUser = false;
+    }
+
+    const broker = await db.Brokers.findOne({
+      where: {
+        user_id: user.ID,
+      },
+    });
+
+    if (!broker) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Broker not found" });
+    }
+
+    if (isNewUser) {
+      const parentBroker = await db.Brokers.findOne({
+        where: {
+          referral_code: referral_code,
+        },
+      });
+
+      if (!parentBroker) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid referral code" });
+      }
+
+      broker.referred_by_code = parentBroker.referral_code;
+      broker.parent_id = parentBroker.id || null;
+      await broker.save();
+
+      // increament count of parentBroker's children_count
+      parentBroker.children_count = (parentBroker.children_count || 0) + 1;
+      await parentBroker.save();
+    } else {
+      if (!broker.referred_by_code) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid broker" });
+      }
     }
 
     const { user_pass: _, ...userData } = user.toJSON();

@@ -18,7 +18,7 @@ const ReferBroker = async (req, res) => {
 
     // Check if parent broker already has 4 children
     const childrenCount = await db.Brokers.count({
-      where: { parent_id: user.id },
+      where: { parent_id: user.ID },
     });
 
     if (childrenCount >= 4) {
@@ -28,14 +28,55 @@ const ReferBroker = async (req, res) => {
       });
     }
 
-    // Check if email already exists
-    const existingUser = await db.Users.findOne({ where: { email } });
-    if (existingUser) {
+    // User must exist in users table
+    const userExist = await db.Users.findOne({
+      where: {
+        user_email: email,
+      },
+    });
+
+    if (!userExist) {
       return res.status(400).json({
         success: false,
-        message: "Email already registered.",
+        message: "User not exist. Please invite EasyGold registered user only.",
       });
     }
+
+    // Check if broker exist or not in brokers table
+    const brokerExist = await db.Brokers.findOne({
+      where: {
+        user_id: userExist.ID,
+      },
+    });
+
+    if (brokerExist) {
+      return res.status(400).json({
+        success: false,
+        message: "Broker already invited.",
+      });
+    }
+
+    const parentBroker = await db.Brokers.findOne({
+      where: {
+        user_id: user.ID,
+      },
+    });
+
+    // Generate unique referral code
+    const referralCode = Math.random()
+      .toString(36)
+      .substring(2, 10)
+      .toUpperCase();
+
+    // Make broker entry in broker table
+    await db.Brokers.create({
+      user_id: userExist.ID,
+      parent_id: null,
+      referral_code: referralCode,
+      referred_by_code: null,
+      children_count: 0,
+      total_commission_amount: 0,
+    });
 
     // Send email with credentials
     const transporter = nodemailer.createTransport({
@@ -46,14 +87,17 @@ const ReferBroker = async (req, res) => {
       },
     });
 
-    const registerUrl = process.env.FRONTEND_URL + "/broker-register/step1";
+    const loginUrl =
+      process.env.FRONTEND_URL +
+      "/login" +
+      `?referral_code=${parentBroker.referral_code}`;
 
     // Email content
     const mailOptions = {
       from: MAIL_SENDER,
       to: email,
       subject:
-        "Welcome to the Hartmann & Benz Group — Complete your registration",
+        "Welcome to the Hartmann & Benz Group — Complete your first login",
       html: `
         <p>Dear Partner,</p>
 
@@ -62,11 +106,11 @@ const ReferBroker = async (req, res) => {
         <p>We are delighted to have you on board and are confident that we can offer you real added value.</p>
 
         <p>Your partner has sent you a referral code.<br/>
-        Please click on the following link to start your registration<br/>
-        👉 <a href="${registerUrl}">Register now with referral code ${user.referral_code}</a></p>
+        Please click on the following link to start your login<br/>
+        👉 <a href="${loginUrl}">Login now with referral code ${parentBroker.referral_code}</a></p>
 
         <p><strong>Email:</strong> ${email}<br/>
-        <strong>Referral code:</strong> ${user.referral_code}</p>
+        <strong>Referral code:</strong> ${parentBroker.referral_code}</p>
 
         <p>If you have any questions, our team is always happy to help.</p>
 
@@ -79,7 +123,7 @@ const ReferBroker = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Email has been sent with Registration details.",
+      message: "Email has been sent with login details.",
     });
   } catch (error) {
     console.error("Error:", error);

@@ -95,6 +95,7 @@ const CaptureOrder = async (req, res) => {
         user_id: currentBroker.user_id,
         order_id: orderId,
         order_amount: lpOrderPivot.price,
+        profit_amount: totalProfitAmount,
         commission_percent: commissionPercent,
         commission_amount: commissionAmount,
         tree,

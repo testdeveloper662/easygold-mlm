@@ -24,6 +24,10 @@ const BrokerCommissionHistory = sequelize.define(
       type: Sequelize.FLOAT,
       allowNull: false,
     },
+    profit_amount: {
+      type: Sequelize.FLOAT,
+      allowNull: false,
+    },
     commission_percent: {
       type: Sequelize.FLOAT,
       allowNull: false,

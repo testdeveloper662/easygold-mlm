@@ -58,6 +58,32 @@ const Login = async (req, res) => {
         .json({ success: false, message: "Incorrect password" });
     }
 
+    // Determine role
+    const userRole = user.user_type === 1 ? "SUPER_ADMIN" : "BROKER";
+
+    // ---------------------
+    // ADMIN LOGIN LOGIC
+    // ---------------------
+
+    if (userRole === "SUPER_ADMIN") {
+      const { user_pass: _, ...userData } = user.toJSON();
+      userData.role = "SUPER_ADMIN";
+
+      const token = jwt.sign({ user: userData }, JWT_ACCESS_TOKEN, {
+        expiresIn: process.env.JWT_EXPIRE || "90d",
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Admin logged in successfully",
+        data: { user: userData, token },
+      });
+    }
+
+    // ---------------------
+    // BROKER LOGIN LOGIC
+    // ---------------------
+
     if (!referral_code || referral_code === null) {
       isNewUser = false;
     }
@@ -104,7 +130,7 @@ const Login = async (req, res) => {
 
     const { user_pass: _, ...userData } = user.toJSON();
 
-    userData.role = userData.user_type === 0 ? "BROKER" : "SUPER_ADMIN";
+    userData.role = "BROKER";
 
     const token = jwt.sign(
       {

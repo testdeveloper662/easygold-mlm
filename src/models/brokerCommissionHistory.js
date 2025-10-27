@@ -20,6 +20,10 @@ const BrokerCommissionHistory = sequelize.define(
       type: Sequelize.INTEGER,
       allowNull: false,
     },
+    order_amount: {
+      type: Sequelize.FLOAT,
+      allowNull: false,
+    },
     commission_percent: {
       type: Sequelize.FLOAT,
       allowNull: false,

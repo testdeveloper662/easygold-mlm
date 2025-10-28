@@ -41,6 +41,14 @@ const BrokerCommissionHistory = sequelize.define(
       allowNull: false,
       comment: "Broker hierarchy, e.g. 1->2->3",
     },
+    is_seller: {
+      type: Sequelize.BOOLEAN,
+      default: false,
+    },
+    is_payment_done: {
+      type: Sequelize.BOOLEAN,
+      default: false,
+    },
   },
   {
     timestamps: true,

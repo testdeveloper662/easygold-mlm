@@ -81,12 +81,15 @@ const CaptureOrder = async (req, res) => {
         ((commissionPercent / 100) * totalProfitAmount).toFixed(2)
       );
 
+      const isSeller = i === 0;
+
       distribution.push({
         level: i + 1,
         broker_id: currentBroker.id,
         user_id: currentBroker.user_id,
         commission_percent: commissionPercent,
         commission_amount: commissionAmount,
+        is_seller: isSeller,
       });
 
       // ✅ Step 8a: Save in commission history
@@ -99,6 +102,7 @@ const CaptureOrder = async (req, res) => {
         commission_percent: commissionPercent,
         commission_amount: commissionAmount,
         tree,
+        is_seller: isSeller,
       });
 
       // ✅ Step 8b: Increment total_commission_amount

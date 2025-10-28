@@ -7,13 +7,12 @@ const buildBrokerTree = (brokers, parentId = null, level = 1) => {
       const children = buildBrokerTree(brokers, b.id, level + 1);
 
       return {
-        id: b.id.toString(),
-        name: b.user?.fullName,
-        email: b.user?.email,
-        referralCode: b.referral_code,
+        broker_id: b.id,
+        user_id: b.user?.ID || null,
+        user_email: b.user?.user_email || null,
+        display_name: b.user?.display_name || null,
         level,
         children,
-        childrenCount: children.length,
       };
     });
 };
@@ -21,16 +20,22 @@ const buildBrokerTree = (brokers, parentId = null, level = 1) => {
 const GetBrokerNetwork = async (req, res) => {
   try {
     const { user } = req.user;
-    const brokerUserId = user.id;
 
-    // Find current broker entry
+    if (!user || !user.ID) {
+      return res.status(400).json({
+        success: false,
+        message: "User information is missing from request",
+      });
+    }
+
+    // Find the broker entry for this user
     const currentBroker = await db.Brokers.findOne({
-      where: { user_id: brokerUserId },
+      where: { user_id: user.ID },
       include: [
         {
           model: db.Users,
           as: "user",
-          attributes: ["fullName", "email"],
+          attributes: ["ID", "user_email", "display_name"],
         },
       ],
     });
@@ -42,46 +47,33 @@ const GetBrokerNetwork = async (req, res) => {
       });
     }
 
-    // Fetch all brokers including user details
+    // Fetch all brokers with user details
     const allBrokers = await db.Brokers.findAll({
       include: [
         {
           model: db.Users,
           as: "user",
-          attributes: ["fullName", "email"],
+          attributes: ["ID", "user_email", "display_name"],
         },
       ],
-      raw: false, // Important: get Sequelize instances, not plain objects
     });
 
-    // Build tree starting from current broker's children
-    const children = buildBrokerTree(allBrokers, currentBroker.id, 1);
+    // Build the hierarchy tree
+    const children = buildBrokerTree(allBrokers, currentBroker.id, 2);
 
-    // Create root node (current broker)
+    // Construct the root broker node
     const network = {
-      id: currentBroker.id.toString(),
-      name: currentBroker.user?.fullName,
-      email: currentBroker.user?.email,
-      referralCode: currentBroker.referral_code,
-      level: 0,
+      broker_id: currentBroker.id,
+      user_id: currentBroker.user?.ID || null,
+      user_email: currentBroker.user?.user_email || null,
+      display_name: currentBroker.user?.display_name || null,
+      level: 1,
       children,
-      childrenCount: children.length,
-      isCurrentUser: true,
     };
 
     return res.status(200).json({
       success: true,
-      data: {
-        broker: {
-          id: currentBroker.id,
-          name: `${currentBroker.user?.first_name || ""} ${
-            currentBroker.user?.last_name || ""
-          }`.trim(),
-          referralCode: currentBroker.referral_code,
-          totalDirectChildren: children.length,
-        },
-        network,
-      },
+      data: network,
     });
   } catch (error) {
     console.error("Error fetching broker network:", error);

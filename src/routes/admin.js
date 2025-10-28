@@ -7,6 +7,7 @@ const GetFixedBrokerCommissions = require("../controller/admin/getFixedBrokerCom
 const AdjustFixedBrokerCommissions = require("../controller/admin/adjustFixedBrokerCommissions");
 const GetAllBrokers = require("../controller/admin/getAllBrokers");
 const GetAllBrokerCommissionHistory = require("../controller/admin/getAllBrokerCommissionHistory");
+const GetBrokersList = require("../controller/admin/getBrokersList");
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
@@ -25,6 +26,7 @@ adminRouter.post(
 
 // Brokers
 adminRouter.get("/brokers", authenticateToken, GetAllBrokers);
+adminRouter.get("/brokers/list", authenticateToken, GetBrokersList);
 adminRouter.get(
   "/commission-history",
   authenticateToken,

@@ -1,5 +1,6 @@
 const db = require("../../models");
 
+// Recursive function to build broker hierarchy
 const buildBrokerTree = (brokers, parentId = null, level = 1) => {
   return brokers
     .filter((b) => Number(b.parent_id) === Number(parentId))
@@ -7,13 +8,14 @@ const buildBrokerTree = (brokers, parentId = null, level = 1) => {
       const children = buildBrokerTree(brokers, b.id, level + 1);
 
       return {
-        id: b.id.toString(),
-        name: b.user?.fullName,
-        email: b.user?.email,
-        referralCode: b.referral_code,
+        broker_id: b.id,
+        user_id: b.user?.ID || null,
+        user_email: b.user?.user_email || null,
+        display_name: b.user?.display_name || null,
+        referral_code: b.referral_code || null,
         level,
         children,
-        childrenCount: children.length,
+        children_count: children.length,
       };
     });
 };
@@ -22,7 +24,6 @@ const GetBrokerNetworkById = async (req, res) => {
   try {
     const { broker_id } = req.params;
 
-    // Validate param
     if (!broker_id) {
       return res.status(400).json({
         success: false,
@@ -30,14 +31,14 @@ const GetBrokerNetworkById = async (req, res) => {
       });
     }
 
-    // Find broker entry by ID
+    // Find the target broker by ID
     const targetBroker = await db.Brokers.findOne({
       where: { id: broker_id },
       include: [
         {
           model: db.Users,
           as: "user",
-          attributes: ["fullName", "email"],
+          attributes: ["ID", "user_email", "display_name"],
         },
       ],
     });
@@ -49,41 +50,41 @@ const GetBrokerNetworkById = async (req, res) => {
       });
     }
 
-    // Fetch all brokers (to build complete hierarchy)
+    // Fetch all brokers (to build the complete hierarchy)
     const allBrokers = await db.Brokers.findAll({
       include: [
         {
           model: db.Users,
           as: "user",
-          attributes: ["fullName", "email"],
+          attributes: ["ID", "user_email", "display_name"],
         },
       ],
-      raw: false,
     });
 
-    // Build children recursively (reusing same utility function)
-    const children = buildBrokerTree(allBrokers, targetBroker.id, 1);
+    // Build children recursively
+    const children = buildBrokerTree(allBrokers, targetBroker.id, 2);
 
-    // Create root node (the requested broker)
+    // Root node structure
     const network = {
-      id: targetBroker.id.toString(),
-      name: targetBroker.user?.fullName,
-      email: targetBroker.user?.email,
-      referralCode: targetBroker.referral_code,
-      level: 0,
+      broker_id: targetBroker.id,
+      user_id: targetBroker.user?.ID || null,
+      user_email: targetBroker.user?.user_email || null,
+      display_name: targetBroker.user?.display_name || null,
+      referral_code: targetBroker.referral_code || null,
+      level: 1,
       children,
-      childrenCount: children.length,
-      isCurrentUser: false, // not necessarily the logged-in one
+      children_count: children.length,
     };
 
     return res.status(200).json({
       success: true,
       data: {
         broker: {
-          id: targetBroker.id,
-          name: targetBroker.user?.fullName,
-          referralCode: targetBroker.referral_code,
-          totalDirectChildren: children.length,
+          broker_id: targetBroker.id,
+          user_id: targetBroker.user?.ID || null,
+          display_name: targetBroker.user?.display_name || null,
+          referral_code: targetBroker.referral_code || null,
+          total_direct_children: children.length,
         },
         network,
       },

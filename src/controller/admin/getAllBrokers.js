@@ -1,9 +1,13 @@
 const db = require("../../models");
+const { Op } = require("sequelize");
+
+const PUBLIC_URL = "https://dashboardstage.goldsilberstore.com/";
 
 const GetAllBrokers = async (req, res) => {
   try {
     const { user } = req.user;
 
+    // Only SUPER_ADMIN can access
     if (user.role !== "SUPER_ADMIN") {
       return res.status(400).json({
         success: false,
@@ -14,37 +18,13 @@ const GetAllBrokers = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
 
+    // 1️⃣ Get paginated brokers with their user info
     const { count, rows: brokers } = await db.Brokers.findAndCountAll({
       include: [
         {
           model: db.Users,
           as: "user",
-          attributes: [
-            "id",
-            "fullName",
-            "email",
-            "company",
-            "referral_code",
-            "phone",
-            "mobile",
-            "address",
-            "city",
-            "country",
-            "postalCode",
-            "contactPerson",
-            "website",
-            "username",
-            "iban",
-            "bic",
-            "bankName",
-            "bankAddress",
-            "role",
-            "business_license",
-            "passport_front",
-            "passport_back",
-            "createdAt",
-            "updatedAt",
-          ],
+          attributes: ["ID", "user_email", "display_name"],
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -52,44 +32,103 @@ const GetAllBrokers = async (req, res) => {
       offset: parseInt(offset),
     });
 
-    // Format response
+    const userIds = brokers.map((b) => b.user_id);
+
+    // 2️⃣ Fetch all usermeta for these users
+    const metas = await db.UsersMeta.findAll({
+      where: {
+        user_id: {
+          [Op.in]: userIds,
+        },
+        meta_key: {
+          [Op.in]: [
+            "u_trade_register",
+            "u_travel_id",
+            "signatureData",
+            "u_company",
+            "u_contact_person",
+            "u_street_no",
+            "u_street",
+            "u_location",
+            "u_postcode",
+            "u_country",
+            "u_vat_no",
+            "u_tax_no",
+            "u_phone",
+            "u_landline_number",
+            "language",
+            "date",
+            "u_web_site",
+            "u_bank",
+            "u_iban",
+            "u_bic",
+            "u_bank_address",
+          ],
+        },
+      },
+    });
+
+    // Group metas by user_id
+    const userMetaMap = {};
+    metas.forEach((meta) => {
+      if (!userMetaMap[meta.user_id]) userMetaMap[meta.user_id] = {};
+      userMetaMap[meta.user_id][meta.meta_key] = meta.meta_value;
+    });
+
+    // 3️⃣ Combine data
     const brokerData = brokers.map((broker) => {
       const u = broker.user;
+      const m = userMetaMap[u?.ID] || {};
+
+      // Construct public URLs if exist
+      const tradeRegisterUrl = m.u_trade_register
+        ? `${PUBLIC_URL}${m.u_trade_register}`
+        : null;
+      const travelIdUrl = m.u_travel_id
+        ? `${PUBLIC_URL}${m.u_travel_id}`
+        : null;
+      const signatureUrl = m.signatureData
+        ? `${PUBLIC_URL}${m.signatureData}`
+        : null;
+
       return {
         broker_id: broker.id,
-        user_id: u.id,
-        fullName: u.fullName,
-        email: u.email,
-        company: u.company,
-        referral_code: u.referral_code,
-        phone: u.phone,
-        mobile: u.mobile,
-        address: u.address,
-        city: u.city,
-        country: u.country,
-        postalCode: u.postalCode,
-        contactPerson: u.contactPerson,
-        website: u.website,
-        username: u.username,
-        iban: u.iban,
-        bic: u.bic,
-        bankName: u.bankName,
-        bankAddress: u.bankAddress,
-        role: u.role,
-        createdAt: u.createdAt,
-        updatedAt: u.updatedAt,
-        business_license: u.business_license
-          ? `${process.env.PUBLIC_URL}/uploads/docs/${u.business_license}`
-          : null,
-        passport_front: u.passport_front
-          ? `${process.env.PUBLIC_URL}/uploads/docs/${u.passport_front}`
-          : null,
-        passport_back: u.passport_back
-          ? `${process.env.PUBLIC_URL}/uploads/docs/${u.passport_back}`
-          : null,
+        user_id: u?.ID || null,
+        display_name: u?.display_name || null,
+        user_email: u?.user_email || null,
+        referral_code: broker.referral_code || null,
+
+        // Meta fields
+        company: m.u_company || null,
+        contact_person: m.u_contact_person || null,
+        street_no: m.u_street_no || null,
+        street: m.u_street || null,
+        location: m.u_location || null,
+        postcode: m.u_postcode || null,
+        country: m.u_country || null,
+        vat_no: m.u_vat_no || null,
+        tax_no: m.u_tax_no || null,
+        phone: m.u_phone || null,
+        landline_number: m.u_landline_number || null,
+        language: m.language || null,
+        date: m.date || null,
+        web_site: m.u_web_site || null,
+        bank: m.u_bank || null,
+        iban: m.u_iban || null,
+        bic: m.u_bic || null,
+        bank_address: m.u_bank_address || null,
+
+        // Document URLs
+        trade_register: tradeRegisterUrl,
+        travel_id: travelIdUrl,
+        signature: signatureUrl,
+
+        createdAt: broker.createdAt,
+        updatedAt: broker.updatedAt,
       };
     });
 
+    // 4️⃣ Response
     return res.status(200).json({
       success: true,
       message: "All Brokers data",
@@ -105,6 +144,7 @@ const GetAllBrokers = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

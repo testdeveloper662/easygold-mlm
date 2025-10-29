@@ -24,61 +24,26 @@ const ReferBroker = async (req, res) => {
     if (childrenCount >= 4) {
       return res.status(400).json({
         success: false,
-        message: "You have already referred maximum 4 brokers.",
+        message: "You have already referred the maximum of 4 brokers.",
       });
     }
 
-    // User must exist in users table
     const userExist = await db.Users.findOne({
-      where: {
-        user_email: email,
-      },
+      where: { user_email: email },
     });
-
-    if (!userExist) {
-      return res.status(400).json({
-        success: false,
-        message: "User not exist. Please invite EasyGold registered user only.",
-      });
-    }
-
-    // Check if broker exist or not in brokers table
-    const brokerExist = await db.Brokers.findOne({
-      where: {
-        user_id: userExist.ID,
-      },
-    });
-
-    if (brokerExist) {
-      return res.status(400).json({
-        success: false,
-        message: "Broker already invited.",
-      });
-    }
 
     const parentBroker = await db.Brokers.findOne({
-      where: {
-        user_id: user.ID,
-      },
+      where: { user_id: user.ID },
     });
 
-    // Generate unique referral code
-    const referralCode = Math.random()
-      .toString(36)
-      .substring(2, 10)
-      .toUpperCase();
+    if (!parentBroker) {
+      return res.status(400).json({
+        success: false,
+        message: "Parent broker record not found.",
+      });
+    }
 
-    // Make broker entry in broker table
-    await db.Brokers.create({
-      user_id: userExist.ID,
-      parent_id: null,
-      referral_code: referralCode,
-      referred_by_code: null,
-      children_count: 0,
-      total_commission_amount: 0,
-    });
-
-    // Send email with credentials
+    // Setup transporter
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -87,46 +52,101 @@ const ReferBroker = async (req, res) => {
       },
     });
 
-    const loginUrl =
-      process.env.FRONTEND_URL +
-      "/login" +
-      `?referral_code=${parentBroker.referral_code}`;
+    let mailOptions;
 
-    // Email content
-    const mailOptions = {
-      from: MAIL_SENDER,
-      to: email,
-      subject:
-        "Welcome to the Hartmann & Benz Group — Complete your first login",
-      html: `
-        <p>Dear Partner,</p>
+    // ✅ CASE 1: User already exists → generate referral code + create broker + send login email
+    if (userExist) {
+      // Generate a unique referral code (8 chars)
+      const referralCode = Math.random()
+        .toString(36)
+        .substring(2, 10)
+        .toUpperCase();
 
-        <p>Welcome to the Hartmann & Benz Group!</p>
+      // Check if broker already exists
+      const existingBroker = await db.Brokers.findOne({
+        where: { user_id: userExist.ID },
+      });
 
-        <p>We are delighted to have you on board and are confident that we can offer you real added value.</p>
+      // Create broker if not exists
+      if (!existingBroker) {
+        await db.Brokers.create({
+          user_id: userExist.ID,
+          parent_id: user.ID,
+          referral_code: referralCode,
+          referred_by_code: parentBroker.referral_code,
+          children_count: 0,
+          total_commission_amount: 0,
+        });
+      }
 
-        <p>Your partner has sent you a referral code.<br/>
-        Please click on the following link to start your login<br/>
-        👉 <a href="${loginUrl}">Login now with referral code ${parentBroker.referral_code}</a></p>
+      const loginUrl =
+        process.env.FRONTEND_URL + "/login" + `?referral_code=${referralCode}`;
 
-        <p><strong>Email:</strong> ${email}<br/>
-        <strong>Referral code:</strong> ${parentBroker.referral_code}</p>
+      mailOptions = {
+        from: MAIL_SENDER,
+        to: email,
+        subject:
+          "Welcome Back to the Hartmann & Benz Group — Access Your Broker Account",
+        html: `
+          <p>Dear Partner,</p>
 
-        <p>If you have any questions, our team is always happy to help.</p>
+          <p>Welcome back to the Hartmann & Benz Group!</p>
 
-        <p>Best regards,<br/>
-        Your Hartmann & Benz Group Team</p>
-      `,
-    };
+          <p>Your partner has invited you to join as a broker.</p>
+
+          <p>You can now login to your broker account using the link below:<br/>
+          👉 <a href="${loginUrl}">Login to your account</a></p>
+
+          <p><strong>Email:</strong> ${email}<br/>
+          <strong>Your Referral Code:</strong> ${referralCode}</p>
+
+          <p>If you have any questions, our team is always happy to help.</p>
+
+          <p>Best regards,<br/>
+          Your Hartmann & Benz Group Team</p>
+        `,
+      };
+    }
+
+    // ✅ CASE 2: User does NOT exist → send registration email
+    else {
+      const registrationUrl =
+        process.env.FRONTEND_URL + "/broker-register/step1";
+
+      mailOptions = {
+        from: MAIL_SENDER,
+        to: email,
+        subject:
+          "Welcome to the Hartmann & Benz Group — Complete Your Registration",
+        html: `
+          <p>Dear Partner,</p>
+
+          <p>Welcome to the Hartmann & Benz Group!</p>
+
+          <p>Your partner has invited you to join our broker network.</p>
+
+          <p>Please click the link below to start your registration:<br/>
+          👉 <a href="${registrationUrl}">Register Now</a></p>
+
+          <p><strong>Email:</strong> ${email}<br/>
+          <strong>Referral Code:</strong> ${parentBroker.referral_code}</p>
+
+          <p>If you have any questions, our team is always happy to help.</p>
+
+          <p>Best regards,<br/>
+          Your Hartmann & Benz Group Team</p>
+        `,
+      };
+    }
 
     await transporter.sendMail(mailOptions);
 
     return res.status(200).json({
       success: true,
-      message: "Email has been sent with login details.",
+      message: `Email sent successfully to ${email}`,
     });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in ReferBroker:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error.",

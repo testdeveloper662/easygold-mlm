@@ -12,20 +12,11 @@ const GetBrokerCommissionHistory = require("../controller/broker/getBrokerCommis
 // Auth Routes
 const uploadDocuments = upload("docs");
 
-// brokerRouter.post(
-//   "/register",
-//   uploadDocuments.fields([
-//     { name: "business_license", maxCount: 1 },
-//     { name: "passport_front", maxCount: 1 },
-//     { name: "passport_back", maxCount: 1 },
-//   ]),
-//   RegisterBroker
-// );
 brokerRouter.post("/register", (req, res, next) => {
   const uploadMiddleware = uploadDocuments.fields([
-    { name: "business_license", maxCount: 1 },
-    { name: "passport_front", maxCount: 1 },
-    { name: "passport_back", maxCount: 1 },
+    { name: "u_trade_register", maxCount: 1 },
+    { name: "u_travel_id", maxCount: 1 },
+    { name: "signatureData", maxCount: 1 },
   ]);
 
   uploadMiddleware(req, res, (err) => {

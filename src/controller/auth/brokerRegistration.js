@@ -27,7 +27,14 @@ const BrokerRegistration = async (req, res) => {
       website,
       username,
       password,
-      idExpiryDate,
+      u_street_no,
+      u_street,
+      u_location,
+      u_describe_business,
+      u_business_purpose,
+      u_export_import,
+      u_country_origin,
+      u_recipient_country,
       iban,
       bic,
       bankName,
@@ -39,7 +46,6 @@ const BrokerRegistration = async (req, res) => {
       !fullName ||
       !company ||
       !contactPerson ||
-      !address ||
       !postalCode ||
       !city ||
       !country ||
@@ -48,7 +54,6 @@ const BrokerRegistration = async (req, res) => {
       !mobile ||
       !username ||
       !password ||
-      !idExpiryDate ||
       !iban ||
       !bic ||
       !bankName ||
@@ -57,26 +62,18 @@ const BrokerRegistration = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "referralCode, fullName, company, contactPerson, address, postalCode, city, country, email, phone, mobile, username, password, idExpiryDate, iban, bic, bankName, bankAddress required",
+          "Missing required fields: referralCode, fullName, company, contactPerson, postalCode, city, country, email, phone, mobile, username, password, iban, bic, bankName, bankAddress",
       });
     }
 
-    let isAdminParent;
-    let parentBroker;
-
-    if (referralCode === process.env.ADMIN_REFERRAL_CODE) {
-      isAdminParent = true;
-    } else {
-      isAdminParent = false;
-    }
+    // Determine parent (admin or broker)
+    const isAdminParent = referralCode === process.env.ADMIN_REFERRAL_CODE;
+    let parentBroker = null;
 
     if (!isAdminParent) {
       parentBroker = await db.Brokers.findOne({
-        where: {
-          referral_code: referralCode,
-        },
+        where: { referral_code: referralCode },
       });
-
       if (!parentBroker) {
         return res.status(400).json({
           success: false,
@@ -85,23 +82,21 @@ const BrokerRegistration = async (req, res) => {
       }
     }
 
-    const businessLicenseFile =
-      req.files?.business_license?.[0]?.filename || null;
-    const passportFrontFile = req.files?.passport_front?.[0]?.filename || null;
-    const passportBackFile = req.files?.passport_back?.[0]?.filename || null;
+    // File uploads (if any)
+    const u_trade_register = req.files?.u_trade_register?.[0]?.filename || null;
+    const u_travel_id = req.files?.u_travel_id?.[0]?.filename || null;
+    const signatureData = req.files?.signatureData?.[0]?.filename || null;
 
-    if (!businessLicenseFile || !passportBackFile || !passportFrontFile) {
+    if (!u_trade_register || !u_travel_id || !signatureData) {
       return res.status(400).json({
         success: false,
-        message:
-          "Business Licence, Passport/ID front and back document required",
+        message: "Trade register, Travel ID and Signature Data required",
       });
     }
 
+    // Check if user already exists
     const existingUser = await db.Users.findOne({
-      where: {
-        email,
-      },
+      where: { user_email: email },
     });
 
     if (existingUser) {
@@ -111,75 +106,105 @@ const BrokerRegistration = async (req, res) => {
       });
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     const newReferralCode = generateReferralCode();
 
-    const user = await db.Users.create({
-      referral_code: newReferralCode,
-      fullName,
-      company,
-      contactPerson,
-      address,
-      postalCode,
-      city,
-      country,
-      email,
-      phone,
-      mobile,
-      username,
-      password: hashedPassword,
-      idExpiryDate,
-      iban,
-      bic,
-      bankName,
-      bankAddress,
-      vatId,
-      taxNumber,
-      website,
-      profile_verified: false,
-      role: "BROKER",
-      business_license: businessLicenseFile,
-      passport_front: passportFrontFile,
-      passport_back: passportBackFile,
+    // Create new user (6LWUP_users)
+    const createdAt = new Date();
+    const newUser = await db.Users.create({
+      user_login: username,
+      user_nicename: username,
+      user_email: email,
+      user_pass: hashedPassword,
+      user_registered: createdAt,
+      display_name: fullName,
+      user_type: 0,
     });
 
+    // Prepare usermeta key-value pairs
+    const userMetaData = {
+      u_trade_register,
+      u_travel_id,
+      signatureData,
+      u_company: company,
+      u_contact_person: contactPerson,
+      u_street_no: u_street_no || "",
+      u_street: u_street || "",
+      u_location: u_location || city,
+      u_postcode: postalCode,
+      u_country: country,
+      u_vat_no: vatId || "",
+      u_tax_no: taxNumber || "",
+      u_phone: phone,
+      u_landline_number: mobile,
+      u_web_site: website || "",
+      u_i_or_we: "I",
+      u_describe_business: u_describe_business || "",
+      u_business_purpose: u_business_purpose || "",
+      u_export_import: u_export_import || "",
+      u_country_origin: u_country_origin || "",
+      u_recipient_country: u_recipient_country || "",
+      u_account_owner: fullName,
+      u_bank: bankName,
+      u_iban: iban,
+      u_bic: bic,
+      u_bank_address: bankAddress,
+    };
+
+    // Insert usermeta entries
+    const metaEntries = Object.entries(userMetaData).map(([key, value]) => ({
+      user_id: newUser.ID,
+      meta_key: key,
+      meta_value: value,
+    }));
+
+    await db.UsersMeta.bulkCreate(metaEntries);
+
+    // Create broker entry
     await db.Brokers.create({
-      user_id: user.id,
-      parent_id: isAdminParent ? null : parentBroker.id,
+      user_id: newUser.ID,
+      parent_id: isAdminParent ? null : parentBroker?.id || null,
       referral_code: newReferralCode,
       referred_by_code: isAdminParent
         ? process.env.ADMIN_REFERRAL_CODE
         : parentBroker.referral_code,
+      children_count: 0,
+      total_commission_amount: 0,
     });
 
-    if (!isAdminParent) {
+    // Update parent’s children count
+    if (!isAdminParent && parentBroker) {
       await parentBroker.update({
         children_count: parentBroker.children_count + 1,
       });
     }
 
-    const { password: _, ...userData } = user.toJSON();
+    // Create user object for frontend
+    const userResponse = {
+      ID: newUser.ID,
+      fullName,
+      email,
+      username,
+      referral_code: newReferralCode,
+      role: "BROKER",
+    };
 
-    const token = jwt.sign(
-      {
-        user: userData,
-      },
-      JWT_ACCESS_TOKEN,
-      {
-        expiresIn: process.env.JWT_EXPIRE || "90d",
-      }
-    );
+    // Generate JWT token
+    const token = jwt.sign({ user: userResponse }, JWT_ACCESS_TOKEN, {
+      expiresIn: process.env.JWT_EXPIRE || "90d",
+    });
 
     return res.status(200).json({
       success: true,
       message: "Broker registered successfully",
       data: {
-        user: userData,
+        user: userResponse,
         token,
       },
     });
   } catch (error) {
-    console.log("Error:", error);
+    console.error("Error in BrokerRegistration:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",

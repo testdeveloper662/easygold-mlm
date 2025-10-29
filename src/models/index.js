@@ -9,6 +9,7 @@ const LpOrderShippingOptions = require("./lpOrderShippingOptions");
 const Brokers = require("./brokers");
 const BrokerCommissionHistory = require("./brokerCommissionHistory");
 const AdminFixedBrokerCommission = require("./adminFixedBrokerCommission");
+const MyStoreSetting = require("./mystoreSetting");
 
 const db = {};
 
@@ -24,5 +25,6 @@ db.LpOrderShippingOptions = LpOrderShippingOptions;
 db.Brokers = Brokers;
 db.BrokerCommissionHistory = BrokerCommissionHistory;
 db.AdminFixedBrokerCommission = AdminFixedBrokerCommission;
+db.MyStoreSetting = MyStoreSetting;
 
 module.exports = db;

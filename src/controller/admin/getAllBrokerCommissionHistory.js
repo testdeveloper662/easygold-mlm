@@ -16,6 +16,7 @@
 //         bch.commission_amount,
 //         bch.is_seller,
 //         bch.is_payment_done,
+//         bch.tree,
 //         bch.createdAt,
 //         bch.updatedAt,
 //         u.user_email
@@ -36,6 +37,7 @@
 //           createdAt: record.createdAt,
 //           updatedAt: record.updatedAt,
 //           broker_commissions: [],
+//           tree: record.tree, // store once for reference
 //         };
 //       }
 
@@ -47,20 +49,29 @@
 //         commission_amount: record.commission_amount,
 //         is_seller: record.is_seller,
 //         is_payment_done: record.is_payment_done,
+//         tree: record.tree,
 //       });
 
 //       return acc;
 //     }, {});
 
-//     // Convert to array and ensure:
-//     // 1️⃣ Seller (is_seller = true) is always first
-//     // 2️⃣ Orders are sorted by latest order_id DESC
+//     // Convert to array and order based on tree structure
 //     const grouped = Object.values(groupedMap)
 //       .map((order) => {
-//         order.broker_commissions.sort((a, b) => b.is_seller - a.is_seller);
+//         // Find the main tree (any record's tree will do, since all brokers of same order share the same tree)
+//         const treeStr = order.broker_commissions[0]?.tree || "";
+//         const treeOrder = treeStr.split("->").map((id) => parseInt(id.trim()));
+
+//         // Sort broker_commissions by position in treeOrder
+//         order.broker_commissions.sort((a, b) => {
+//           const posA = treeOrder.indexOf(a.broker_id);
+//           const posB = treeOrder.indexOf(b.broker_id);
+//           return posA - posB;
+//         });
+
 //         return order;
 //       })
-//       .sort((a, b) => b.order_id - a.order_id); // ✅ latest order first
+//       .sort((a, b) => b.order_id - a.order_id); // latest orders first
 
 //     return res.status(200).json({
 //       success: true,
@@ -83,9 +94,53 @@ const { sequelize } = require("../../config/database");
 
 const GetAllBrokerCommissionHistory = async (req, res) => {
   try {
-    // Fetch all commission entries joined with user emails
-    const [results] = await sequelize.query(`
-      SELECT 
+    // Get pagination parameters from query
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Get total count of unique orders
+    const [countResult] = await sequelize.query(`
+      SELECT COUNT(DISTINCT order_id) as total
+      FROM broker_commission_histories
+    `);
+    const totalOrders = countResult[0]?.total || 0;
+
+    // First, get the paginated list of order_ids using a derived table
+    const [orderIds] = await sequelize.query(
+      `
+      SELECT DISTINCT order_id
+      FROM broker_commission_histories
+      ORDER BY createdAt DESC
+      LIMIT :limit OFFSET :offset
+    `,
+      {
+        replacements: { limit, offset },
+      }
+    );
+
+    // If no orders found, return empty result
+    if (!orderIds || orderIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "All brokers commission history fetched successfully.",
+        data: [],
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalOrders / limit),
+          totalItems: totalOrders,
+          itemsPerPage: limit,
+        },
+      });
+    }
+
+    // Extract order IDs
+    const orderIdsList = orderIds.map((row) => row.order_id);
+
+    // Fetch commission entries for these specific order IDs
+    const [results] = await sequelize.query(
+      `
+      SELECT
         bch.id,
         bch.order_id,
         bch.order_amount,
@@ -102,8 +157,13 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
         u.user_email
       FROM broker_commission_histories AS bch
       LEFT JOIN 6LWUP_users AS u ON u.ID = bch.user_id
+      WHERE bch.order_id IN (:orderIds)
       ORDER BY bch.createdAt DESC
-    `);
+    `,
+      {
+        replacements: { orderIds: orderIdsList },
+      }
+    );
 
     // Group by order_id
     const groupedMap = results.reduce((acc, record) => {
@@ -117,7 +177,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
           createdAt: record.createdAt,
           updatedAt: record.updatedAt,
           broker_commissions: [],
-          tree: record.tree, // store once for reference
+          tree: record.tree,
         };
       }
 
@@ -138,11 +198,9 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     // Convert to array and order based on tree structure
     const grouped = Object.values(groupedMap)
       .map((order) => {
-        // Find the main tree (any record's tree will do, since all brokers of same order share the same tree)
         const treeStr = order.broker_commissions[0]?.tree || "";
         const treeOrder = treeStr.split("->").map((id) => parseInt(id.trim()));
 
-        // Sort broker_commissions by position in treeOrder
         order.broker_commissions.sort((a, b) => {
           const posA = treeOrder.indexOf(a.broker_id);
           const posB = treeOrder.indexOf(b.broker_id);
@@ -151,12 +209,18 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
 
         return order;
       })
-      .sort((a, b) => b.order_id - a.order_id); // latest orders first
+      .sort((a, b) => b.order_id - a.order_id);
 
     return res.status(200).json({
       success: true,
       message: "All brokers commission history fetched successfully.",
       data: grouped || [],
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalOrders / limit),
+        totalItems: totalOrders,
+        itemsPerPage: limit,
+      },
     });
   } catch (error) {
     console.error("Error fetching all broker commission history:", error);

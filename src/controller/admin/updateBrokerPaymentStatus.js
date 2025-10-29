@@ -2,22 +2,21 @@ const db = require("../../models");
 
 const UpdateBrokerPaymentStatus = async (req, res) => {
   try {
-    const { order_id, broker_id } = req.body;
+    const { order_id } = req.body;
 
-    if (!order_id || !broker_id) {
+    if (!order_id) {
       return res.status(400).json({
         success: false,
-        message: "order_id and broker_id are required",
+        message: "order_id is required",
       });
     }
 
-    // Update payment status to true for that broker and order
+    // Update payment status to true for all brokers with this order_id
     const [updatedCount] = await db.BrokerCommissionHistory.update(
       { is_payment_done: true },
       {
         where: {
           order_id,
-          broker_id,
         },
       }
     );
@@ -25,17 +24,17 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
     if (updatedCount === 0) {
       return res.status(404).json({
         success: false,
-        message: "No record found for given order_id and broker_id",
+        message: "No records found for the given order",
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Broker payment status updated successfully.",
+      message: "Payment status updated.",
       data: {
         order_id,
-        broker_id,
         is_payment_done: true,
+        updated_records: updatedCount,
       },
     });
   } catch (error) {

@@ -338,6 +338,7 @@ const BrokerRegistration = async (req, res) => {
       user_registered: createdAt,
       display_name: fullName,
       user_type: 0,
+      mystorekey: email,
     });
 
     // Prepare usermeta key-value pairs

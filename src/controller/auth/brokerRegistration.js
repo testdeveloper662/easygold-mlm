@@ -398,7 +398,7 @@ const BrokerRegistration = async (req, res) => {
     }
 
     // 🔹 Create entry in MyStoreSettings
-    await db.MyStoreSettings.create({
+    await db.MyStoreSetting.create({
       user_id: newUser.ID,
       category: "all",
       paymentOption: "Cash_question, Card_question, Bank_Transfer_question",

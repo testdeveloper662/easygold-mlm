@@ -16,18 +16,6 @@ const ReferBroker = async (req, res) => {
       });
     }
 
-    // Check if parent broker already has 4 children
-    const childrenCount = await db.Brokers.count({
-      where: { parent_id: user.ID },
-    });
-
-    if (childrenCount >= 4) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already referred the maximum of 4 brokers.",
-      });
-    }
-
     const userExist = await db.Users.findOne({
       where: { user_email: email },
     });
@@ -40,6 +28,18 @@ const ReferBroker = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Parent broker record not found.",
+      });
+    }
+
+    // Check if parent broker already has 4 children
+    const childrenCount = await db.Brokers.count({
+      where: { parent_id: parentBroker.id },
+    });
+
+    if (childrenCount >= 4) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already referred the maximum of 4 brokers.",
       });
     }
 

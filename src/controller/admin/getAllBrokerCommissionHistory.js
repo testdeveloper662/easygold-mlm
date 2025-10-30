@@ -3,8 +3,52 @@
 
 // const GetAllBrokerCommissionHistory = async (req, res) => {
 //   try {
-//     // Fetch all commission entries joined with user emails
-//     const [results] = await sequelize.query(`
+//     // Get pagination parameters from query
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const offset = (page - 1) * limit;
+
+//     // Get total count of unique orders
+//     const [countResult] = await sequelize.query(`
+//       SELECT COUNT(DISTINCT order_id) as total
+//       FROM broker_commission_histories
+//     `);
+//     const totalOrders = countResult[0]?.total || 0;
+
+//     // First, get the paginated list of order_ids using a derived table
+//     const [orderIds] = await sequelize.query(
+//       `
+//       SELECT DISTINCT order_id
+//       FROM broker_commission_histories
+//       ORDER BY createdAt DESC
+//       LIMIT :limit OFFSET :offset
+//     `,
+//       {
+//         replacements: { limit, offset },
+//       }
+//     );
+
+//     // If no orders found, return empty result
+//     if (!orderIds || orderIds.length === 0) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "All brokers commission history fetched successfully.",
+//         data: [],
+//         pagination: {
+//           currentPage: page,
+//           totalPages: Math.ceil(totalOrders / limit),
+//           totalItems: totalOrders,
+//           itemsPerPage: limit,
+//         },
+//       });
+//     }
+
+//     // Extract order IDs
+//     const orderIdsList = orderIds.map((row) => row.order_id);
+
+//     // Fetch commission entries for these specific order IDs
+//     const [results] = await sequelize.query(
+//       `
 //       SELECT
 //         bch.id,
 //         bch.order_id,
@@ -22,8 +66,13 @@
 //         u.user_email
 //       FROM broker_commission_histories AS bch
 //       LEFT JOIN 6LWUP_users AS u ON u.ID = bch.user_id
+//       WHERE bch.order_id IN (:orderIds)
 //       ORDER BY bch.createdAt DESC
-//     `);
+//     `,
+//       {
+//         replacements: { orderIds: orderIdsList },
+//       }
+//     );
 
 //     // Group by order_id
 //     const groupedMap = results.reduce((acc, record) => {
@@ -37,7 +86,7 @@
 //           createdAt: record.createdAt,
 //           updatedAt: record.updatedAt,
 //           broker_commissions: [],
-//           tree: record.tree, // store once for reference
+//           tree: record.tree,
 //         };
 //       }
 
@@ -58,11 +107,9 @@
 //     // Convert to array and order based on tree structure
 //     const grouped = Object.values(groupedMap)
 //       .map((order) => {
-//         // Find the main tree (any record's tree will do, since all brokers of same order share the same tree)
 //         const treeStr = order.broker_commissions[0]?.tree || "";
 //         const treeOrder = treeStr.split("->").map((id) => parseInt(id.trim()));
 
-//         // Sort broker_commissions by position in treeOrder
 //         order.broker_commissions.sort((a, b) => {
 //           const posA = treeOrder.indexOf(a.broker_id);
 //           const posB = treeOrder.indexOf(b.broker_id);
@@ -71,12 +118,18 @@
 
 //         return order;
 //       })
-//       .sort((a, b) => b.order_id - a.order_id); // latest orders first
+//       .sort((a, b) => b.order_id - a.order_id);
 
 //     return res.status(200).json({
 //       success: true,
 //       message: "All brokers commission history fetched successfully.",
 //       data: grouped || [],
+//       pagination: {
+//         currentPage: page,
+//         totalPages: Math.ceil(totalOrders / limit),
+//         totalItems: totalOrders,
+//         itemsPerPage: limit,
+//       },
 //     });
 //   } catch (error) {
 //     console.error("Error fetching all broker commission history:", error);
@@ -106,7 +159,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     `);
     const totalOrders = countResult[0]?.total || 0;
 
-    // First, get the paginated list of order_ids using a derived table
+    // Get paginated distinct order IDs
     const [orderIds] = await sequelize.query(
       `
       SELECT DISTINCT order_id
@@ -119,7 +172,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
       }
     );
 
-    // If no orders found, return empty result
+    // If no orders found
     if (!orderIds || orderIds.length === 0) {
       return res.status(200).json({
         success: true,
@@ -137,12 +190,13 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     // Extract order IDs
     const orderIdsList = orderIds.map((row) => row.order_id);
 
-    // Fetch commission entries for these specific order IDs
+    // Fetch commission entries for these specific order IDs (with order_type)
     const [results] = await sequelize.query(
       `
       SELECT
         bch.id,
         bch.order_id,
+        bch.order_type,
         bch.order_amount,
         bch.profit_amount,
         bch.broker_id,
@@ -165,13 +219,14 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
       }
     );
 
-    // Group by order_id
+    // Group results by order_id
     const groupedMap = results.reduce((acc, record) => {
       const orderId = record.order_id;
 
       if (!acc[orderId]) {
         acc[orderId] = {
           order_id: orderId,
+          order_type: record.order_type, // ✅ include order_type
           order_amount: record.order_amount,
           profit_amount: record.profit_amount,
           createdAt: record.createdAt,
@@ -195,7 +250,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
       return acc;
     }, {});
 
-    // Convert to array and order based on tree structure
+    // Convert grouped map to array and sort based on tree structure
     const grouped = Object.values(groupedMap)
       .map((order) => {
         const treeStr = order.broker_commissions[0]?.tree || "";

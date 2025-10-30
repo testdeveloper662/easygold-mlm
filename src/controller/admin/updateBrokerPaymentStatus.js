@@ -2,7 +2,7 @@ const db = require("../../models");
 
 const UpdateBrokerPaymentStatus = async (req, res) => {
   try {
-    const { order_id } = req.body;
+    const { order_id, order_type } = req.body;
 
     if (!order_id) {
       return res.status(400).json({
@@ -17,6 +17,7 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
       {
         where: {
           order_id,
+          order_type,
         },
       }
     );
@@ -33,6 +34,7 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
       message: "Payment status updated.",
       data: {
         order_id,
+        order_type,
         is_payment_done: true,
         updated_records: updatedCount,
       },

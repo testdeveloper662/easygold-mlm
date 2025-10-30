@@ -10,6 +10,8 @@ const Brokers = require("./brokers");
 const BrokerCommissionHistory = require("./brokerCommissionHistory");
 const AdminFixedBrokerCommission = require("./adminFixedBrokerCommission");
 const MyStoreSetting = require("./mystoreSetting");
+const MyStoreOrder = require("./mystoreOrder");
+const MyStoreOrderPivots = require("./mystoreOrderPivots");
 
 const db = {};
 
@@ -26,5 +28,7 @@ db.Brokers = Brokers;
 db.BrokerCommissionHistory = BrokerCommissionHistory;
 db.AdminFixedBrokerCommission = AdminFixedBrokerCommission;
 db.MyStoreSetting = MyStoreSetting;
+db.MyStoreOrder = MyStoreOrder;
+db.MyStoreOrderPivots = MyStoreOrderPivots;
 
 module.exports = db;

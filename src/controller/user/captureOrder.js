@@ -137,9 +137,7 @@ const db = require("../../models");
 
 const CaptureOrder = async (req, res) => {
   try {
-    // const { orderId, orderType } = req.body;
-    const orderId = "4426";
-    const orderType = "my_store";
+    const { orderId, orderType } = req.body;
 
     if (!orderId || !orderType) {
       return res.status(400).json({

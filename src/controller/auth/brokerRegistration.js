@@ -172,12 +172,18 @@ const BrokerRegistration = async (req, res) => {
       );
     }
 
+    // if (req.files?.signatureData) {
+    //   form.append(
+    //     "signatureData",
+    //     fs.createReadStream(req.files.signatureData.tempFilePath),
+    //     req.files.signatureData.name
+    //   );
+    // }
     if (req.files?.signatureData) {
-      form.append(
-        "signatureData",
-        fs.createReadStream(req.files.signatureData.tempFilePath),
-        req.files.signatureData.name
-      );
+      const sigBuffer = fs.readFileSync(req.files.signatureData.tempFilePath);
+      const sigBase64 = sigBuffer.toString("base64");
+
+      form.append("signatureData", sigBase64);
     }
 
     console.log("==================START CALLING API==============");

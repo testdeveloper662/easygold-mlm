@@ -100,6 +100,19 @@ const Login = async (req, res) => {
         .json({ success: false, message: "Broker not found" });
     }
 
+    const userVerified = await db.Users.findOne({
+      where: {
+        id: user.ID
+      }
+    });
+    console.log("userVerified= ", userVerified);
+
+    if (userVerified && !userVerified?.user_status) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Your Profile is Under Review. We will notify you soon through email." });
+    }
+
     if (isNewUser) {
       const parentBroker = await db.Brokers.findOne({
         where: {

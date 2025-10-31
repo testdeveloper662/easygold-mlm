@@ -108,7 +108,7 @@ const Login = async (req, res) => {
     });
     console.log("userVerified= ", userVerified);
 
-    if (userVerified && !userVerified?.user_status != 0) {
+    if (userVerified && userVerified?.user_status != 0) {
       return res
         .status(400)
         .json({ success: false, message: "Your Profile is Under Review. We will notify you soon through email." });

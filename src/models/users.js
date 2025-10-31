@@ -47,7 +47,7 @@ const Users = sequelize.define(
     user_status: {
       type: Sequelize.INTEGER,
       allowNull: false,
-      defaultValue: 0,
+      defaultValue: 2,
     },
     display_name: {
       type: Sequelize.STRING(250),

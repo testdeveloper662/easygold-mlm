@@ -103,7 +103,8 @@ const Login = async (req, res) => {
     const userVerified = await db.Users.findOne({
       where: {
         id: user.ID
-      }
+      },
+      raw: true
     });
     console.log("userVerified= ", userVerified);
 

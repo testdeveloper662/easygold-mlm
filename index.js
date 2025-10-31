@@ -9,6 +9,7 @@ const authRouter = require("./src/routes/auth");
 const adminRouter = require("./src/routes/admin");
 const brokerRouter = require("./src/routes/broker");
 const userRouter = require("./src/routes/user");
+const fileUpload = require("express-fileupload");
 
 const port = process.env.PORT || 4000;
 
@@ -24,6 +25,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/public", express.static(path.join(__dirname, "public")));
 
 app.use(bodyParser.json({ limit: "35mb" }));
+app.use(bodyParser.urlencoded({ extended: true }));
+// after bodyParser setup
+app.use(
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: "/tmp/",
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB max
+  })
+);
 
 app.use(
   bodyParser.urlencoded({

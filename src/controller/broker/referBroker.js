@@ -111,7 +111,8 @@ const ReferBroker = async (req, res) => {
     // ✅ CASE 2: User does NOT exist → send registration email
     else {
       const registrationUrl =
-        process.env.FRONTEND_URL + "/broker-register/step1";
+        process.env.FRONTEND_URL + "/broker-register/step1/" + btoa(parentBroker.referral_code);
+      console.log("=======registrationUrl =", registrationUrl);
 
       mailOptions = {
         from: MAIL_SENDER,

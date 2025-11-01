@@ -4,91 +4,65 @@ const GetOrderDetails = async (req, res) => {
   try {
     const { orderId, orderType } = req.body;
 
-    let orderShippingMeta;
-    let orderPivot;
-    let order;
-    let productId;
-    let userId;
+    let orderShippingMeta = [];
+    let orderPivots = [];
+    let order = null;
+    let userId = null;
 
-    // Fetch order shipping details
+    // Fetch order shipping details, pivots, and order info based on type
     if (orderType === "landing_page") {
       orderShippingMeta = await db.LpOrderShippingOptions.findAll({
-        where: {
-          lp_order_id: orderId,
-        },
+        where: { lp_order_id: orderId },
       });
 
-      orderPivot = await db.LpOrderPivots.findOne({
-        where: {
-          order_id: orderId,
-        },
+      orderPivots = await db.LpOrderPivots.findAll({
+        where: { order_id: orderId },
       });
-
-      productId = orderPivot.product_id;
 
       order = await db.LpOrders.findOne({
-        where: {
-          id: orderId,
-        },
+        where: { id: orderId },
       });
 
-      userId = order.user_id;
-    } else if (orderType === "my_store") {
+      userId = order?.user_id;
+    } else if (orderType === "my_store" || orderType === "api") {
       orderShippingMeta = await db.MyStoreOrderShippingOptions.findAll({
-        where: {
-          my_store_order_id: orderId,
-        },
+        where: { my_store_order_id: orderId },
       });
 
-      orderPivot = await db.MyStoreOrderPivots.findOne({
-        where: {
-          order_id: orderId,
-        },
+      orderPivots = await db.MyStoreOrderPivots.findAll({
+        where: { order_id: orderId },
       });
-
-      productId = orderPivot.product_id;
 
       order = await db.MyStoreOrder.findOne({
-        where: {
-          id: orderId,
-        },
+        where: { id: orderId },
       });
 
-      userId = order.user_id;
-    } else if (orderType === "api") {
-      orderShippingMeta = await db.MyStoreOrderShippingOptions.findAll({
-        where: {
-          my_store_order_id: orderId,
-        },
-      });
-
-      orderPivot = await db.MyStoreOrderPivots.findOne({
-        where: {
-          order_id: orderId,
-        },
-      });
-
-      productId = orderPivot.product_id;
-
-      order = await db.MyStoreOrder.findOne({
-        where: {
-          id: orderId,
-        },
-      });
-
-      userId = order.user_id;
+      userId = order?.user_id;
     }
 
-    // Get product details
-    const product = await db.Product.findOne({
-      where: {
-        id: productId,
-      },
+    // Collect product IDs
+    const productIds = orderPivots.map((pivot) => pivot.product_id);
+
+    // Fetch all product details
+    const productsData = await db.Product.findAll({
+      where: { id: productIds },
     });
 
-    const orderDetails = {};
-    orderDetails.order_id = orderId;
-    orderDetails.order_type = orderType;
+    // Combine product + pivot info
+    const products = orderPivots.map((pivot) => {
+      const product = productsData.find((p) => p.id === pivot.product_id);
+      return {
+        ...product?.dataValues,
+        quantity: pivot.quantity || 1,
+        price: pivot.price || product?.dataValues?.price || 0,
+      };
+    });
+
+    // Build order details object from shipping meta
+    const orderDetails = {
+      order_id: orderId,
+      order_type: orderType,
+    };
 
     orderShippingMeta.forEach((o) => {
       const { meta_key, meta_value } = o.dataValues;
@@ -98,15 +72,11 @@ const GetOrderDetails = async (req, res) => {
     // Get partner details
     let partner = {};
     const partnerData = await db.Users.findOne({
-      where: {
-        ID: userId,
-      },
+      where: { ID: userId },
     });
 
     const partnerMeta = await db.UsersMeta.findAll({
-      where: {
-        user_id: userId,
-      },
+      where: { user_id: userId },
     });
 
     partner = {
@@ -120,24 +90,18 @@ const GetOrderDetails = async (req, res) => {
 
     partnerMeta.forEach((u) => {
       const { meta_key, meta_value } = u.dataValues;
-
-      if (meta_key === "u_street_no") {
-        partner.user_street_no = meta_value;
-      } else if (meta_key === "u_street") {
-        partner.user_street = meta_value;
-      } else if (meta_key === "u_location") {
-        partner.user_location = meta_value;
-      } else if (meta_key === "u_country") {
-        partner.user_country = meta_value;
-      }
+      if (meta_key === "u_street_no") partner.user_street_no = meta_value;
+      else if (meta_key === "u_street") partner.user_street = meta_value;
+      else if (meta_key === "u_location") partner.user_location = meta_value;
+      else if (meta_key === "u_country") partner.user_country = meta_value;
     });
 
     return res.status(200).json({
       success: true,
       data: {
-        product: product,
-        partner: partner,
-        orderDetails: orderDetails,
+        products,
+        partner,
+        orderDetails,
       },
     });
   } catch (error) {

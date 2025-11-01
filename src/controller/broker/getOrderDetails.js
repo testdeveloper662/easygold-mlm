@@ -4,65 +4,41 @@ const GetOrderDetails = async (req, res) => {
   try {
     const { orderId, orderType } = req.body;
 
-    let orderShippingMeta;
-    let orderPivot;
-    let productId;
+    let orderShippingMeta = [];
+    let orderPivots = [];
 
-    // Fetch order shipping details
+    // Fetch order shipping details and pivots
     if (orderType === "landing_page") {
       orderShippingMeta = await db.LpOrderShippingOptions.findAll({
-        where: {
-          lp_order_id: orderId,
-        },
+        where: { lp_order_id: orderId },
       });
 
-      orderPivot = await db.LpOrderPivots.findOne({
-        where: {
-          order_id: orderId,
-        },
+      orderPivots = await db.LpOrderPivots.findAll({
+        where: { order_id: orderId },
       });
-
-      productId = orderPivot.product_id;
-    } else if (orderType === "my_store") {
+    } else if (orderType === "my_store" || orderType === "api") {
       orderShippingMeta = await db.MyStoreOrderShippingOptions.findAll({
-        where: {
-          my_store_order_id: orderId,
-        },
+        where: { my_store_order_id: orderId },
       });
 
-      orderPivot = await db.MyStoreOrderPivots.findOne({
-        where: {
-          order_id: orderId,
-        },
+      orderPivots = await db.MyStoreOrderPivots.findAll({
+        where: { order_id: orderId },
       });
-
-      productId = orderPivot.product_id;
-    } else if (orderType === "api") {
-      orderShippingMeta = await db.MyStoreOrderShippingOptions.findAll({
-        where: {
-          my_store_order_id: orderId,
-        },
-      });
-
-      orderPivot = await db.MyStoreOrderPivots.findOne({
-        where: {
-          order_id: orderId,
-        },
-      });
-
-      productId = orderPivot.product_id;
     }
 
-    // Get product details
-    const product = await db.Product.findOne({
-      where: {
-        id: productId,
-      },
+    // Collect product IDs from pivots
+    const productIds = orderPivots.map((pivot) => pivot.product_id);
+
+    // Get all product details
+    const products = await db.Product.findAll({
+      where: { id: productIds },
     });
 
-    const orderDetails = {};
-    orderDetails.order_id = orderId;
-    orderDetails.order_type = orderType;
+    // Build order details object from shipping meta
+    const orderDetails = {
+      order_id: orderId,
+      order_type: orderType,
+    };
 
     orderShippingMeta.forEach((o) => {
       const { meta_key, meta_value } = o.dataValues;
@@ -72,8 +48,8 @@ const GetOrderDetails = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        product: product,
-        orderDetails: orderDetails,
+        products,
+        orderDetails,
       },
     });
   } catch (error) {

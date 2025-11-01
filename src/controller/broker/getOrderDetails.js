@@ -37,6 +37,20 @@ const GetOrderDetails = async (req, res) => {
       });
 
       productId = orderPivot.product_id;
+    } else if (orderType === "api") {
+      orderShippingMeta = await db.MyStoreOrderShippingOptions.findAll({
+        where: {
+          my_store_order_id: orderId,
+        },
+      });
+
+      orderPivot = await db.MyStoreOrderPivots.findOne({
+        where: {
+          order_id: orderId,
+        },
+      });
+
+      productId = orderPivot.product_id;
     }
 
     // Get product details

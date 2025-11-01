@@ -55,6 +55,28 @@ const GetOrderDetails = async (req, res) => {
       });
 
       userId = order.user_id;
+    } else if (orderType === "api") {
+      orderShippingMeta = await db.MyStoreOrderShippingOptions.findAll({
+        where: {
+          my_store_order_id: orderId,
+        },
+      });
+
+      orderPivot = await db.MyStoreOrderPivots.findOne({
+        where: {
+          order_id: orderId,
+        },
+      });
+
+      productId = orderPivot.product_id;
+
+      order = await db.MyStoreOrder.findOne({
+        where: {
+          id: orderId,
+        },
+      });
+
+      userId = order.user_id;
     }
 
     // Get product details
@@ -88,8 +110,8 @@ const GetOrderDetails = async (req, res) => {
     });
 
     partner = {
-      display_name: partnerData.display_name,
-      user_nicename: partnerData.user_nicename,
+      display_name: partnerData?.display_name || "-",
+      user_nicename: partnerData?.user_nicename || "-",
       user_street_no: "",
       user_street: "",
       user_location: "",

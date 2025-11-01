@@ -12,6 +12,8 @@ const AdminFixedBrokerCommission = require("./adminFixedBrokerCommission");
 const MyStoreSetting = require("./mystoreSetting");
 const MyStoreOrder = require("./mystoreOrder");
 const MyStoreOrderPivots = require("./mystoreOrderPivots");
+const MyStoreOrderShippingOptions = require("./mystoreOrderShippingOptions");
+const Product = require("./product");
 
 const db = {};
 
@@ -30,5 +32,7 @@ db.AdminFixedBrokerCommission = AdminFixedBrokerCommission;
 db.MyStoreSetting = MyStoreSetting;
 db.MyStoreOrder = MyStoreOrder;
 db.MyStoreOrderPivots = MyStoreOrderPivots;
+db.MyStoreOrderShippingOptions = MyStoreOrderShippingOptions;
+db.Product = Product;
 
 module.exports = db;

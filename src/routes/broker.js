@@ -9,11 +9,14 @@ const GetBrokerNetworkById = require("../controller/broker/getBrokerNetworkById"
 const GetBrokerCommissionHistory = require("../controller/broker/getBrokerCommissionHistory");
 const multer = require("multer");
 const BrokerRegistration = require("../controller/auth/brokerRegistration");
+const GetOrderDetails = require("../controller/broker/getOrderDetails");
 
 // Auth Routes
 const uploadDocuments = upload("docs");
 
-brokerRouter.post("/register", BrokerRegistration
+brokerRouter.post(
+  "/register",
+  BrokerRegistration
   //  (req, res, next) => {
   // const uploadMiddleware = uploadDocuments.fields([
   //   { name: "u_trade_register", maxCount: 1 },
@@ -44,7 +47,7 @@ brokerRouter.post("/register", BrokerRegistration
 
   // If no error, continue to controller
   // RegisterBroker(req, res, next);
-  // });  
+  // });
   // }
 );
 
@@ -60,5 +63,6 @@ brokerRouter.get(
   authenticateToken,
   GetBrokerCommissionHistory
 );
+brokerRouter.post("/order/detail", authenticateToken, GetOrderDetails);
 
 module.exports = brokerRouter;

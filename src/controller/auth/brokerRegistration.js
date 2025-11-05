@@ -47,7 +47,8 @@ const BrokerRegistration = async (req, res) => {
       bic,
       bankName,
       bankAddress,
-      idExpiryDate
+      idExpiryDate,
+      veriff_session_id
     } = req.body;
 
     if (
@@ -269,6 +270,7 @@ const BrokerRegistration = async (req, res) => {
         : parentBroker.referral_code,
       children_count: 0,
       total_commission_amount: 0,
+      veriff_session_id: veriff_session_id || null,
     });
 
     // Update parent’s children count

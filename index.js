@@ -25,21 +25,25 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/public", express.static(path.join(__dirname, "public")));
 
 app.use(bodyParser.json({ limit: "35mb" }));
-app.use(bodyParser.urlencoded({ extended: true }));
-// after bodyParser setup
-app.use(
+
+// Skip urlencoded and express-fileupload for multer routes
+app.use((req, res, next) => {
+  if (req.path.includes("/profile-image") || req.path.includes("/logo-image")) {
+    return next();
+  }
+  bodyParser.urlencoded({ extended: true })(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (req.path.includes("/profile-image") || req.path.includes("/logo-image")) {
+    return next();
+  }
   fileUpload({
     useTempFiles: true,
     tempFileDir: "/tmp/",
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB max
-  })
-);
-
-app.use(
-  bodyParser.urlencoded({
-    extended: true,
-  })
-);
+    limits: { fileSize: 50 * 1024 * 1024 },
+  })(req, res, next);
+});
 
 // Custom middleware for logging
 app.use((req, res, next) => {
@@ -56,6 +60,7 @@ app.use("/api/v1", authRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/broker", brokerRouter);
 app.use("/api/v1/user", userRouter);
+app.use("/api/v1/users", userRouter); // Support both singular and plural
 
 app.listen(port, () => {
   console.log(`Server running on PORT: ${port} 🚀`);

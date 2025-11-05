@@ -40,10 +40,126 @@ const GetBrokerCommissionHistory = async (req, res) => {
       offset: offset,
     });
 
+    // Enrich with seller info and order details
+    // 1) Seller info (user_nicename and user_login) from Users table
+    const userIds = [...new Set(history.map((h) => h.user_id))];
+
+    let usersMap = {};
+    if (userIds.length) {
+      const users = await db.Users.findAll({
+        where: { ID: { [Op.in]: userIds } },
+        attributes: ["ID", "user_nicename", "user_login"],
+        raw: true,
+      });
+
+      usersMap = users.reduce((acc, u) => {
+        acc[u.ID] = {
+          user_nicename: u.user_nicename || null,
+          user_login: u.user_login || null,
+        };
+        return acc;
+      }, {});
+    }
+
+    // 2) Order details by order_type → fetch from respective tables
+    const myStoreOrderIds = history
+      .filter((h) => h.order_type === "my_store")
+      .map((h) => h.order_id);
+    const apiOrderIds = history
+      .filter((h) => h.order_type === "api")
+      .map((h) => h.order_id);
+    const lpOrderIds = history
+      .filter((h) => h.order_type === "landing_page" || h.order_type === "lp_order")
+      .map((h) => h.order_id);
+
+    let myStoreOrderMap = {};
+    if (myStoreOrderIds.length) {
+      const myStoreOrders = await db.MyStoreOrder.findAll({
+        where: { id: { [Op.in]: myStoreOrderIds } },
+        raw: true,
+      });
+      myStoreOrderMap = myStoreOrders.reduce((acc, o) => {
+        acc[o.id] = o;
+        return acc;
+      }, {});
+    }
+
+    // Note: API orders are stored in MyStoreOrder in this schema
+    let apiOrderMap = {};
+    if (apiOrderIds.length) {
+      const apiOrders = await db.MyStoreOrder.findAll({
+        where: { id: { [Op.in]: apiOrderIds } },
+        raw: true,
+      });
+      apiOrderMap = apiOrders.reduce((acc, o) => {
+        acc[o.id] = o;
+        return acc;
+      }, {});
+    }
+
+    let lpOrderMap = {};
+    if (lpOrderIds.length) {
+      const lpOrders = await db.LpOrders.findAll({
+        where: { id: { [Op.in]: lpOrderIds } },
+        raw: true,
+      });
+      lpOrderMap = lpOrders.reduce((acc, o) => {
+        acc[o.id] = o;
+        return acc;
+      }, {});
+    }
+
+    // Collect user_ids from fetched orders to resolve user_login
+    const orderUserIds = new Set();
+    Object.values(myStoreOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
+    Object.values(apiOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
+    Object.values(lpOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
+
+    let orderUsersMap = {};
+    if (orderUserIds.size) {
+      const users = await db.Users.findAll({
+        where: { ID: { [Op.in]: Array.from(orderUserIds) } },
+        attributes: ["ID", "user_login"],
+        raw: true,
+      });
+      orderUsersMap = users.reduce((acc, u) => {
+        acc[u.ID] = u.user_login || "Unknown";
+        return acc;
+      }, {});
+    }
+
+    const enrichedHistory = history.map((item) => {
+      const json = item.toJSON();
+      const sellerInfo = usersMap[item.user_id] || {};
+
+      let order_details = null;
+      if (json.order_type === "my_store" || json.order_type === "api") {
+        // differentiate maps for lookup, both fallback to respective map
+        order_details =
+          (json.order_type === "my_store"
+            ? myStoreOrderMap[json.order_id]
+            : apiOrderMap[json.order_id]) || null;
+      } else if (json.order_type === "landing_page" || json.order_type === "lp_order") {
+        order_details = lpOrderMap[json.order_id] || null;
+      }
+
+      const relatedUserLogin = order_details?.user_id
+        ? orderUsersMap[order_details.user_id] || "Unknown"
+        : "Unknown";
+
+      return {
+        ...json,
+        seller_name: sellerInfo.user_nicename || null,
+        seller_username: sellerInfo.user_login || null,
+        user_login: relatedUserLogin,
+        order_details,
+      };
+    });
+
     return res.status(200).json({
       success: true,
       message: "Broker commission history fetched successfully.",
-      data: history || [],
+      data: enrichedHistory || [],
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalCount / limit),

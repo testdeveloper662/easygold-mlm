@@ -87,6 +87,7 @@ const RegisterBroker = async (req, res) => {
         <p>Your partner has sent you a referral code.<br/>
         Please click on the following link to start your registration – the referral code will be automatically applied:<br/>
         👉 <a href="${registerUrl}">Register now with referral code ${ADMIN_REFERRAL_CODE}</a></p>
+        <p>👉 <a href="${registerUrl}">Register now with referral code ${ADMIN_REFERRAL_CODE}</a></p>
 
         <p><strong>Email:</strong> ${email}<br/>
         <strong>Temporary password:</strong> ${tempPassword}<br/>

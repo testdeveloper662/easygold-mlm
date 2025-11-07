@@ -124,10 +124,12 @@ const ReferBroker = async (req, res) => {
 
           <p>Welcome to the Hartmann & Benz Group!</p>
 
-          <p>Your partner has invited you to join our broker network.</p>
+          <p>We are delighted to have you on board and are confident that we can offer you real added value.</p>
 
-          <p>Please click the link below to start your registration:<br/>
-          👉 <a href="${registrationUrl}">Register Now</a></p>
+          <p>Your partner has sent you a referral code.</p>
+
+          <p>Please click on the following link to start your registration – the referral code will be automatically applied:<br/>
+          👉 <a href="${registrationUrl}">Register now with referral code${parentBroker.referral_code}</a></p>
 
           <p><strong>Email:</strong> ${email}<br/>
           <strong>Referral Code:</strong> ${parentBroker.referral_code}</p>

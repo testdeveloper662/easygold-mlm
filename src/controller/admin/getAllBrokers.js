@@ -1,7 +1,6 @@
 const db = require("../../models");
 const { Op } = require("sequelize");
-
-const PUBLIC_URL = "https://dashboardstage.goldsilberstore.com/";
+require("dotenv").config();
 
 const GetAllBrokers = async (req, res) => {
   try {
@@ -82,13 +81,13 @@ const GetAllBrokers = async (req, res) => {
 
       // Construct public URLs if exist
       const tradeRegisterUrl = m.u_trade_register
-        ? `${PUBLIC_URL}${m.u_trade_register}`
+        ? `${process.env.PUBLIC_URL}${m.u_trade_register}`
         : null;
       const travelIdUrl = m.u_travel_id
-        ? `${PUBLIC_URL}${m.u_travel_id}`
+        ? `${process.env.PUBLIC_URL}${m.u_travel_id}`
         : null;
       const signatureUrl = m.signatureData
-        ? `${PUBLIC_URL}${m.signatureData}`
+        ? `${process.env.PUBLIC_URL}${m.signatureData}`
         : null;
 
       return {

@@ -1,6 +1,7 @@
 const db = require("../../models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { generateImageUrl } = require("../../utils/Helper");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 
@@ -145,6 +146,8 @@ const Login = async (req, res) => {
     const { user_pass: _, ...userData } = user.toJSON();
 
     userData.role = "BROKER";
+    userData.logo = await generateImageUrl(broker.logo, "logo");
+    userData.profile_image = await generateImageUrl(broker.profile_image, "profile");
 
     const token = jwt.sign(
       {

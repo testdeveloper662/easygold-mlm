@@ -5,9 +5,9 @@ const { Users, Brokers, AdminFixedBrokerCommission } = require("../models");
 
 async function createTable() {
   try {
-    await Users.sync({ alter: true });
+    // await Users.sync({ alter: true });
     await Brokers.sync({ alter: true });
-    await AdminFixedBrokerCommission.sync({ alter: true });
+    // await AdminFixedBrokerCommission.sync({ alter: true });
 
     console.log("Table created successfully.");
   } catch (error) {

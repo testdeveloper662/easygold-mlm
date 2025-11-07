@@ -9,6 +9,14 @@ const Brokers = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
+    logo: {
+      type: Sequelize.STRING(255),
+      allowNull: true,
+    },
+    profile_image: {
+      type: Sequelize.STRING(255),
+      allowNull: true,
+    },
     user_id: {
       type: Sequelize.BIGINT.UNSIGNED, // ✅ match 6LWUP_users.ID
       allowNull: false,

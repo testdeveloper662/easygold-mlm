@@ -87,23 +87,26 @@
 
 // module.exports = GetBrokerNetwork;
 
+const { Op } = require("sequelize");
 const db = require("../../models");
 
 const MAX_LEVEL = 5;
 
-const buildBrokerTree = (brokers, parentId = null, level = 1) => {
-  if (level > MAX_LEVEL) return []; // Stop recursion beyond level 5
+const buildBrokerTree = (brokers, parentId = null, level = 1, commissionMap = {}) => {
+  if (level > MAX_LEVEL) return [];
 
   return brokers
     .filter((b) => Number(b.parent_id) === Number(parentId))
     .map((b) => {
-      const children = buildBrokerTree(brokers, b.id, level + 1);
+      const children = buildBrokerTree(brokers, b.id, level + 1, commissionMap);
+      const commissionAmount = commissionMap[b.user?.ID] || 0;
 
       return {
         broker_id: b.id,
         user_id: b.user?.ID || null,
         user_email: b.user?.user_email || null,
         display_name: b.user?.display_name || null,
+        commission_amount: commissionAmount,
         level,
         children,
       };
@@ -121,7 +124,7 @@ const GetBrokerNetwork = async (req, res) => {
       });
     }
 
-    // Find the broker entry for this user
+    // Find current broker
     const currentBroker = await db.Brokers.findOne({
       where: { user_id: user.ID },
       include: [
@@ -151,16 +154,55 @@ const GetBrokerNetwork = async (req, res) => {
       ],
     });
 
-    // Build the hierarchy tree (up to 5 levels)
-    const children = buildBrokerTree(allBrokers, currentBroker.id, 2);
+    // Get all commission records earned by this broker (join users to get email)
+    const brokerCommissions = await db.BrokerCommissionHistory.findAll({
+      where: { broker_id: currentBroker.id },
+      include: [
+        {
+          model: db.Users,
+          as: "commission_from_user",
+          attributes: ["user_email"],
+        },
+      ],
+      attributes: [
+        "commission_amount",
+        "is_seller",
+      ],
+      raw: true,
+    });
+    console.log("brokerCommissions= ", brokerCommissions);
 
-    // Construct the root broker node
+    const commissionMap = {};
+    let selfCommissionAmount = 0;
+
+    brokerCommissions.forEach((record) => {
+      const amount = parseFloat(record["commission_amount"] || 0);
+      const userId = record["user_id"]; // <-- use user_id instead of email
+
+      if (record["is_seller"]) {
+        selfCommissionAmount += amount;
+      } else if (userId) {
+        if (!commissionMap[userId]) commissionMap[userId] = 0;
+        commissionMap[userId] += amount;
+      }
+    });
+
+    // Build hierarchy
+    const children = buildBrokerTree(allBrokers, currentBroker.id, 2, commissionMap);
+
+    // Calculate totals
+    const totalFromChildren = Object.values(commissionMap).reduce((a, b) => a + b, 0);
+    const totalCommission = totalFromChildren + selfCommissionAmount;
+
+    // Response
     const network = {
       broker_id: currentBroker.id,
       user_id: currentBroker.user?.ID || null,
       user_email: currentBroker.user?.user_email || null,
       display_name: currentBroker.user?.display_name || null,
       level: 1,
+      self_commission_amount: selfCommissionAmount,
+      total_commission_amount: totalCommission,
       children,
     };
 

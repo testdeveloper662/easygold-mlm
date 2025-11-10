@@ -14,11 +14,13 @@ const generateReferralCode = () =>
   Math.random().toString(36).substring(2, 8).toUpperCase();
 
 const BrokerRegistration = async (req, res) => {
+
   console.log("===========BrokerRegistration body = ", req.body);
   console.log("===========BrokerRegistration files = ", req.files);
 
   try {
     const {
+      veriffId,
       referralCode,
       fullName,
       company,
@@ -127,6 +129,7 @@ const BrokerRegistration = async (req, res) => {
     console.log("444444444444444444444444444");
     // ✅ Prepare form-data for external API
     const form = new FormData();
+    form.append("veriff_session_id", veriffId);
     form.append("u_display_name", username);
     form.append("u_company", company);
     form.append("u_contact_person", contactPerson);

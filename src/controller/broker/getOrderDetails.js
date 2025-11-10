@@ -6,9 +6,13 @@ const GetOrderDetails = async (req, res) => {
 
     let orderShippingMeta = [];
     let orderPivots = [];
+    let orderData = {};
 
     // Fetch order shipping details and pivots
     if (orderType === "landing_page") {
+      orderData = await db.LpOrders.findOne({
+        where: { id: orderId },
+      });
       orderShippingMeta = await db.LpOrderShippingOptions.findAll({
         where: { lp_order_id: orderId },
       });
@@ -38,6 +42,7 @@ const GetOrderDetails = async (req, res) => {
     const orderDetails = {
       order_id: orderId,
       order_type: orderType,
+      seller_id: orderData?.user_id
     };
 
     orderShippingMeta.forEach((o) => {

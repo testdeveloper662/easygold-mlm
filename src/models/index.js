@@ -35,4 +35,9 @@ db.MyStoreOrderPivots = MyStoreOrderPivots;
 db.MyStoreOrderShippingOptions = MyStoreOrderShippingOptions;
 db.Product = Product;
 
+db.BrokerCommissionHistory.belongsTo(db.Users, {
+    foreignKey: "user_id",
+    as: "commission_from_user",
+});
+
 module.exports = db;

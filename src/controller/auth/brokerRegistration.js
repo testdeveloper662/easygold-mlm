@@ -191,9 +191,8 @@ const BrokerRegistration = async (req, res) => {
     }
 
     if (req.files?.signatureData?.[0]) {
-      const sigBuffer = fs.readFileSync(req.files.signatureData[0]);
-      const sigBase64 = sigBuffer.toString("base64");
-
+      const file = req.files.signatureData[0];
+      const sigBase64 = file.buffer.toString("base64");
       form.append("signatureData", sigBase64);
     }
     console.log("==================START CALLING API==============");

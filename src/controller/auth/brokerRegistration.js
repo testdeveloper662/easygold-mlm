@@ -157,36 +157,43 @@ const BrokerRegistration = async (req, res) => {
     form.append("selectedDate", new Date().toISOString().split("T")[0]);
     form.append("language", "en-US");
     form.append("u_date", idExpiryDate || new Date().toISOString().split("T")[0]);
-    if (req.files?.u_trade_register) {
-      form.append(
-        "u_trade_register",
-        fs.createReadStream(req.files.u_trade_register.tempFilePath),
-        req.files.u_trade_register.name
-      );
-    }
 
-    if (req.files?.u_travel_id) {
-      form.append(
-        "u_travel_id",
-        fs.createReadStream(req.files.u_travel_id.tempFilePath),
-        req.files.u_travel_id.name
-      );
-    }
-
-    // if (req.files?.signatureData) {
+    // if (req.files?.u_trade_register) {
     //   form.append(
-    //     "signatureData",
-    //     fs.createReadStream(req.files.signatureData.tempFilePath),
-    //     req.files.signatureData.name
+    //     "u_trade_register",
+    //     fs.createReadStream(req.files.u_trade_register.tempFilePath),
+    //     req.files.u_trade_register.name
     //   );
     // }
-    if (req.files?.signatureData) {
-      const sigBuffer = fs.readFileSync(req.files.signatureData.tempFilePath);
-      const sigBase64 = sigBuffer.toString("base64");
 
-      form.append("signatureData", sigBase64);
+    // if (req.files?.u_travel_id) {
+    //   form.append(
+    //     "u_travel_id",
+    //     fs.createReadStream(req.files.u_travel_id.tempFilePath),
+    //     req.files.u_travel_id.name
+    //   );
+    // }
+
+    // if (req.files?.signatureData) {
+    //   const sigBuffer = fs.readFileSync(req.files.signatureData.tempFilePath);
+    //   const sigBase64 = sigBuffer.toString("base64");
+
+    //   form.append("signatureData", sigBase64);
+    // }
+    if (req.files?.u_travel_id?.[0]) {
+      const file = req.files.u_travel_id[0];
+      form.append("u_travel_id", file.buffer, { filename: file.originalname });
     }
 
+    if (req.files?.u_trade_register?.[0]) {
+      const file = req.files.u_trade_register[0];
+      form.append("u_trade_register", file.buffer, { filename: file.originalname });
+    }
+
+    if (req.files?.signatureData?.[0]) {
+      const file = req.files.signatureData[0];
+      form.append("signatureData", file.buffer, { filename: file.originalname });
+    }
     console.log("==================START CALLING API==============");
 
     // ✅ Send to external API

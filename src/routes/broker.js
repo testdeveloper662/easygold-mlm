@@ -17,6 +17,11 @@ const UploadProfileImage = require("../controller/user/uploadProfileImage");
 
 brokerRouter.post(
   "/register",
+  upload.fields([
+    { name: "u_trade_register", maxCount: 1 },
+    { name: "u_travel_id", maxCount: 1 },
+    { name: "signatureData", maxCount: 1 },
+  ]),
   BrokerRegistration
 );
 

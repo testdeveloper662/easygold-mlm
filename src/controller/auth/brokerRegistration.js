@@ -174,12 +174,12 @@ const BrokerRegistration = async (req, res) => {
     //   );
     // }
 
-    // if (req.files?.signatureData) {
-    //   const sigBuffer = fs.readFileSync(req.files.signatureData.tempFilePath);
-    //   const sigBase64 = sigBuffer.toString("base64");
+    if (req.files?.signatureData) {
+      const sigBuffer = fs.readFileSync(req.files.signatureData.tempFilePath);
+      const sigBase64 = sigBuffer.toString("base64");
 
-    //   form.append("signatureData", sigBase64);
-    // }
+      form.append("signatureData", sigBase64);
+    }
     if (req.files?.u_travel_id?.[0]) {
       const file = req.files.u_travel_id[0];
       form.append("u_travel_id", file.buffer, { filename: file.originalname });
@@ -191,8 +191,10 @@ const BrokerRegistration = async (req, res) => {
     }
 
     if (req.files?.signatureData?.[0]) {
-      const file = req.files.signatureData[0];
-      form.append("signatureData", file.buffer, { filename: file.originalname });
+      const sigBuffer = fs.readFileSync(req.files.signatureData[0]);
+      const sigBase64 = sigBuffer.toString("base64");
+
+      form.append("signatureData", sigBase64);
     }
     console.log("==================START CALLING API==============");
 
@@ -204,7 +206,9 @@ const BrokerRegistration = async (req, res) => {
     );
 
     console.log("External API response:", apiResponse.data);
+    console.log("External API response 2:", apiResponse.data?.data);
     const user_id = apiResponse.data?.data?.user_id;
+    console.log("user_id:", user_id);
     // Create new user (6LWUP_users)
     // const createdAt = new Date();
     // const newUser = await db.Users.create({
@@ -266,7 +270,12 @@ const BrokerRegistration = async (req, res) => {
     // const newUser = {
     //   ID: "2345"
     // }
-
+    if (!user_id) {
+      return res.status(400).json({
+        success: false,
+        message: "External API did not return a valid user_id",
+      });
+    }
     // Create broker entry
     await db.Brokers.create({
       user_id: user_id,

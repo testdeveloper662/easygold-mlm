@@ -174,12 +174,12 @@ const BrokerRegistration = async (req, res) => {
     //   );
     // }
 
-    if (req.files?.signatureData) {
-      const sigBuffer = fs.readFileSync(req.files.signatureData.tempFilePath);
-      const sigBase64 = sigBuffer.toString("base64");
+    // if (req.files?.signatureData) {
+    //   const sigBuffer = fs.readFileSync(req.files.signatureData.tempFilePath);
+    //   const sigBase64 = sigBuffer.toString("base64");
 
-      form.append("signatureData", sigBase64);
-    }
+    //   form.append("signatureData", sigBase64);
+    // }
     if (req.files?.u_travel_id?.[0]) {
       const file = req.files.u_travel_id[0];
       form.append("u_travel_id", file.buffer, { filename: file.originalname });

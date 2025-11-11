@@ -38,6 +38,15 @@ const GetOrderDetails = async (req, res) => {
       where: { id: productIds },
     });
 
+    // Combine product + pivot info
+    const productsDetails = orderPivots.map((pivot) => {
+      const product = products.find((p) => p.id === pivot.product_id);
+      return {
+        ...product?.dataValues,
+        quantity: pivot.quantity || 1,
+      };
+    });
+
     // Build order details object from shipping meta
     const orderDetails = {
       order_id: orderId,
@@ -49,11 +58,15 @@ const GetOrderDetails = async (req, res) => {
       const { meta_key, meta_value } = o.dataValues;
       orderDetails[meta_key] = meta_value;
     });
+    orderPivots.forEach((o) => {
+      const { quantity } = o.dataValues;
+      orderDetails["quantity"] = quantity;
+    });
 
     return res.status(200).json({
       success: true,
       data: {
-        products,
+        products: productsDetails,
         orderDetails,
       },
     });

@@ -40,4 +40,15 @@ db.BrokerCommissionHistory.belongsTo(db.Users, {
     as: "commission_from_user",
 });
 
+db.LpOrders.hasOne(db.Brokers, {
+    foreignKey: "user_id",
+    sourceKey: "user_id",
+    as: "user_broker",
+});
+db.MyStoreOrder.hasOne(db.Brokers, {
+    foreignKey: "user_id",
+    sourceKey: "user_id",
+    as: "user_broker",
+});
+
 module.exports = db;

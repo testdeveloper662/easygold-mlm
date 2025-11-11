@@ -48,8 +48,8 @@ const CaptureOrder = async (req, res) => {
 
     // Step 4: Calculate total commission % and total profit (€)
     const totalCommissionPercent =
-      ((orderPivot.price * orderPivot.quantity) / orderPivot.b2b_price - 1) * 100;
-    const totalProfitAmount = (orderPivot.price * orderPivot.quantity) - orderPivot.b2b_price;
+      (orderPivot.price / orderPivot.b2b_price - 1) * 100;
+    const totalProfitAmount = (orderPivot.price - orderPivot.b2b_price) * orderPivot.quantity;
 
     // Step 5: Get broker (seller)
     const broker = await db.Brokers.findOne({

@@ -147,6 +147,7 @@ const Login = async (req, res) => {
 
     userData.role = "BROKER";
     userData.logo = await generateImageUrl(broker.logo, "logo");
+    userData.referral_code = broker?.referral_code;
     userData.profile_image = await generateImageUrl(broker.profile_image, "profile");
 
     const token = jwt.sign(

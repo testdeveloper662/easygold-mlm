@@ -15,30 +15,14 @@ const GetOrderDetails = require("../controller/admin/getOrderDetails");
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
 
 // Commission Levels
-adminRouter.get(
-  "/broker/fixed-commissions",
-  authenticateToken,
-  GetFixedBrokerCommissions
-);
-adminRouter.post(
-  "/broker/fixed-commissions",
-  authenticateToken,
-  AdjustFixedBrokerCommissions
-);
+adminRouter.get("/broker/fixed-commissions", authenticateToken, GetFixedBrokerCommissions);
+adminRouter.post("/broker/fixed-commissions", authenticateToken, AdjustFixedBrokerCommissions);
 
 // Brokers
 adminRouter.get("/brokers", authenticateToken, GetAllBrokers);
 adminRouter.get("/brokers/list", authenticateToken, GetBrokersList);
-adminRouter.get(
-  "/commission-history",
-  authenticateToken,
-  GetAllBrokerCommissionHistory
-);
-adminRouter.post(
-  "/broker/update-payment-status",
-  authenticateToken,
-  UpdateBrokerPaymentStatus
-);
+adminRouter.get("/commission-history", authenticateToken, GetAllBrokerCommissionHistory);
+adminRouter.post("/broker/update-payment-status", authenticateToken, UpdateBrokerPaymentStatus);
 adminRouter.post("/order/detail", authenticateToken, GetOrderDetails);
 
 module.exports = adminRouter;

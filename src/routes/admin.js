@@ -10,6 +10,8 @@ const GetAllBrokerCommissionHistory = require("../controller/admin/getAllBrokerC
 const GetBrokersList = require("../controller/admin/getBrokersList");
 const UpdateBrokerPaymentStatus = require("../controller/admin/updateBrokerPaymentStatus");
 const GetOrderDetails = require("../controller/admin/getOrderDetails");
+const GetBrokerPayoutRequests = require("../controller/admin/getBrokerPayoutRequests");
+const UpdateBrokerPayoutRequest = require("../controller/admin/updateBrokerPayoutRequest");
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
@@ -40,5 +42,8 @@ adminRouter.post(
   UpdateBrokerPaymentStatus
 );
 adminRouter.post("/order/detail", authenticateToken, GetOrderDetails);
+
+adminRouter.get("/payout/requests", authenticateToken, GetBrokerPayoutRequests);
+adminRouter.put("/payout/request", UpdateBrokerPayoutRequest);
 
 module.exports = adminRouter;

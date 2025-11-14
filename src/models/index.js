@@ -14,6 +14,8 @@ const MyStoreOrder = require("./mystoreOrder");
 const MyStoreOrderPivots = require("./mystoreOrderPivots");
 const MyStoreOrderShippingOptions = require("./mystoreOrderShippingOptions");
 const Product = require("./product");
+const BrokerBankDetails = require("./broker_bank_details");
+const BrokerPayoutRequests = require("./broker_payout_requests");
 
 const db = {};
 
@@ -34,6 +36,8 @@ db.MyStoreOrder = MyStoreOrder;
 db.MyStoreOrderPivots = MyStoreOrderPivots;
 db.MyStoreOrderShippingOptions = MyStoreOrderShippingOptions;
 db.Product = Product;
+db.BrokerBankDetails = BrokerBankDetails;
+db.BrokerPayoutRequests = BrokerPayoutRequests;
 
 db.BrokerCommissionHistory.belongsTo(db.Users, {
     foreignKey: "user_id",

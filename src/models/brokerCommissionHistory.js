@@ -53,6 +53,10 @@ const BrokerCommissionHistory = sequelize.define(
       type: Sequelize.BOOLEAN,
       default: false,
     },
+    is_payment_declined: {
+      type: Sequelize.BOOLEAN,
+      default: false,
+    },
   },
   {
     timestamps: true,

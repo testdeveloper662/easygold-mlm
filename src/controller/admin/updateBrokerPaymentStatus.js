@@ -12,16 +12,16 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
     }
 
     // Update payment status to true for all brokers with this order_id
-    // const [updatedCount] = await db.BrokerCommissionHistory.update(
-    //   { is_payment_done: true },
-    //   {
-    //     where: {
-    //       order_id,
-    //       order_type,
-    //     },
-    //   }
-    // );
-    const updatedCount = 1;
+    const [updatedCount] = await db.BrokerCommissionHistory.update(
+      { is_payment_done: true },
+      {
+        where: {
+          order_id,
+          order_type,
+        },
+      }
+    );
+    // const updatedCount = 1;
     if (updatedCount === 0) {
       return res.status(404).json({
         success: false,

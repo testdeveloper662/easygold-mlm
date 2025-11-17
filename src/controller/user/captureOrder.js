@@ -128,12 +128,13 @@ const CaptureOrder = async (req, res) => {
         tree,
         is_seller: isSeller,
       });
-
-      // ✅ Increment total commission in Brokers table
-      await db.Brokers.increment(
-        { total_commission_amount: commissionAmount },
-        { where: { id: currentBroker.id } }
-      );
+      if (i === 0) {
+        // ✅ Increment total commission in Brokers table
+        await db.Brokers.increment(
+          { total_commission_amount: commissionAmount },
+          { where: { id: currentBroker.id } }
+        );
+      }
     }
 
     return res.status(200).json({

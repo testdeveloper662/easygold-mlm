@@ -73,3 +73,13 @@ exports.generateImageUrl = async (data, type) => {
         }
     });
 };
+
+exports.roundToTwoDecimalPlaces = (num) => {
+    if (num === null || num === undefined) {
+        console.log("num is required");
+    }
+    if (typeof num !== "number" || isNaN(num)) {
+        console.log("num must be a valid number");
+    }
+    return Math.round(num * 100) / 100;
+}

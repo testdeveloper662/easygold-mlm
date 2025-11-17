@@ -1,4 +1,5 @@
 const db = require("../../models");
+const { getBrokerCommissionTotals } = require("../../utils/getBrokerCommissionTotals");
 
 const GetBrokerBankDetails = async (req, res) => {
     try {
@@ -14,6 +15,13 @@ const GetBrokerBankDetails = async (req, res) => {
         }
         const brokerDetails = await db.Brokers.findOne({
             where: { id: broker_id },
+            include: [
+                {
+                    model: db.Users,
+                    as: "user",
+                    attributes: ["ID", "user_nicename", "user_login"],
+                },
+            ],
         });
 
         if (!brokerDetails) {
@@ -28,9 +36,49 @@ const GetBrokerBankDetails = async (req, res) => {
             where: { broker_id },
         });
 
+        const commissionTotals = await getBrokerCommissionTotals(brokerDetails);
+        const approvedPayouts = await db.BrokerPayoutRequests.findAll({
+            where: {
+                broker_id,
+                status: "APPROVED"
+            },
+            attributes: [
+                "payout_for",
+                [db.Sequelize.fn("SUM", db.Sequelize.col("amount")), "total_amount"]
+            ],
+            group: ["payout_for"],
+            raw: true
+        });
+
+        // Convert array → object (easy mapping)
+        const payoutDeductMap = {
+            EASYGOLD_TOKEN: 0,
+            PRIMEINVEST: 0,
+            GOLDFLEX: 0,
+            B2B_DASHBOARD: 0
+        };
+
+        approvedPayouts.forEach(p => {
+            payoutDeductMap[p.payout_for] = Number(p.total_amount || 0);
+        });
+
+        // -------------------------------------
+        // 🔹 Subtract per-wallet
+        // -------------------------------------
+        const finalTotals = {
+            EASYGOLD_TOKEN: commissionTotals.EASYGOLD_TOKEN - payoutDeductMap.EASYGOLD_TOKEN,
+            PRIMEINVEST: commissionTotals.PRIMEINVEST - payoutDeductMap.PRIMEINVEST,
+            GOLDFLEX: commissionTotals.GOLDFLEX - payoutDeductMap.GOLDFLEX,
+            B2B_DASHBOARD: commissionTotals.B2B_DASHBOARD - payoutDeductMap.B2B_DASHBOARD,
+        };
+
+        // Prevent negative values
+        Object.keys(finalTotals).forEach(key => {
+            if (finalTotals[key] < 0) finalTotals[key] = 0;
+        });
         return res.status(200).json({
             success: true,
-            data: bankDetails || {},
+            data: { ...bankDetails.dataValues, commissions_totals: finalTotals } || {}
         });
     } catch (error) {
         console.error("Error in GetBrokerBankDetails:", error);

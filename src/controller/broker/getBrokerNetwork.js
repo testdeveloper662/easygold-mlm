@@ -1,5 +1,6 @@
 const { Op } = require("sequelize");
 const db = require("../../models");
+const { roundToTwoDecimalPlaces } = require("../../utils/Helper");
 
 const MAX_LEVEL = 5;
 
@@ -191,7 +192,7 @@ const GetBrokerNetwork = async (req, res) => {
       user_email: currentBroker.user?.user_email || null,
       display_name: currentBroker.user?.display_name || null,
       level: 1,
-      commission_amount: commissionMap[currentBroker.id],
+      commission_amount: commissionMap[currentBroker.id] ? roundToTwoDecimalPlaces(commissionMap[currentBroker.id]) : 0,
       children,
     };
 

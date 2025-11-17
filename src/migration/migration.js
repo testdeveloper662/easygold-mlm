@@ -1,7 +1,14 @@
 const { sequelize } = require("../config/database");
 
 // Models
-const { Users, Brokers, AdminFixedBrokerCommission, BrokerBankDetails, BrokerPayoutRequests } = require("../models");
+const {
+  Users,
+  Brokers,
+  AdminFixedBrokerCommission,
+  BrokerBankDetails,
+  BrokerPayoutRequests,
+  TargetCustomers,
+} = require("../models");
 
 async function createTable() {
   try {
@@ -10,6 +17,7 @@ async function createTable() {
     // await AdminFixedBrokerCommission.sync({ alter: true });
     await BrokerBankDetails.sync({ alter: true });
     await BrokerPayoutRequests.sync({ alter: true });
+    await TargetCustomers.sync({ alter: true });
 
     console.log("Table created successfully.");
   } catch (error) {

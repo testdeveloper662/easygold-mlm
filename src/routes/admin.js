@@ -14,6 +14,9 @@ const SendPaymentConfirmationEmail = require("../controller/admin/sendPaymentCon
 const SendPaymentDeclineEmail = require("../controller/admin/sendPaymentDeclineEmail");
 const GetBrokerPayoutRequests = require("../controller/admin/getBrokerPayoutRequests");
 const UpdateBrokerPayoutRequest = require("../controller/admin/updateBrokerPayoutRequest");
+const GetAllTargetCustomers = require("../controller/admin/getAllTargetCustomers");
+const GetTargetCustomersByBroker = require("../controller/admin/getTargetCustomersByBroker");
+const GetTargetCustomerStatsOverall = require("../controller/admin/getTargetCustomerStatsOverall");
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
@@ -33,5 +36,10 @@ adminRouter.post("/order/detail", authenticateToken, GetOrderDetails);
 
 adminRouter.get("/payout/requests", authenticateToken, GetBrokerPayoutRequests);
 adminRouter.put("/payout/request", UpdateBrokerPayoutRequest);
+
+// Target Customers Routes
+adminRouter.get("/target-customers", authenticateToken, GetAllTargetCustomers);
+adminRouter.get("/target-customers/stats", authenticateToken, GetTargetCustomerStatsOverall);
+adminRouter.get("/target-customers/broker/:broker_id", authenticateToken, GetTargetCustomersByBroker);
 
 module.exports = adminRouter;

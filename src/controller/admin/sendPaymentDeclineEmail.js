@@ -141,11 +141,6 @@ const SendPaymentDeclineEmail = async (req, res) => {
 
     console.log("✅ Payment not yet declined - proceeding with email sending");
 
-    // Get seller's language from 6LWUP_usermeta table
-    console.log("🌐 Fetching seller's language from 6LWUP_usermeta...");
-    const language = await getSellerLanguage(seller.user_id);
-    console.log(`✅ Seller's language determined: "${language}" (user_id: ${seller.user_id})`);
-
     // Create email transporter with better connection settings
     console.log("📧 Creating email transporter...");
     const transporter = nodemailer.createTransport({
@@ -168,7 +163,9 @@ const SendPaymentDeclineEmail = async (req, res) => {
     const emailsSent = [];
 
     for (const broker of nonSellers) {
-      console.log(`\n📧 Processing broker_id: ${broker.broker_id}, email: ${broker.user_email}`);
+      console.log(
+        `\n📧 Processing broker_id: ${broker.broker_id}, user_id: ${broker.user_id}, email: ${broker.user_email}`
+      );
 
       if (!broker.user_email) {
         console.warn(`⚠️ No email found for broker_id: ${broker.broker_id} - SKIPPING`);
@@ -176,6 +173,11 @@ const SendPaymentDeclineEmail = async (req, res) => {
       }
 
       try {
+        // Get THIS recipient's language from 6LWUP_usermeta table
+        console.log(` Fetching language for recipient user_id: ${broker.user_id}...`);
+        const recipientLanguage = await getSellerLanguage(broker.user_id);
+        console.log(` Recipient's language: "${recipientLanguage}" (user_id: ${broker.user_id})`);
+
         // Template variables for email template id=86
         const templateVariables = {
           order_id: broker.order_id,
@@ -189,10 +191,10 @@ const SendPaymentDeclineEmail = async (req, res) => {
 
         console.log("📝 Template variables:", JSON.stringify(templateVariables, null, 2));
 
-        // Fetch and render email template from database (template id = 86)
-        console.log("🔍 Fetching email template id=86 from database...");
-        const emailData = await getRenderedEmail(86, language, templateVariables);
-        console.log("✅ Email template fetched and rendered");
+        // Fetch and render email template in RECIPIENT'S language (template id = 86)
+        console.log(` Fetching email template id=86 in "${recipientLanguage}" language...`);
+        const emailData = await getRenderedEmail(86, recipientLanguage, templateVariables);
+        console.log(" Email template fetched and rendered");
         console.log("Subject:", emailData.subject);
 
         const mailOptions = {

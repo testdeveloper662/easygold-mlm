@@ -1,14 +1,24 @@
 const db = require("../../models");
 const nodemailer = require("nodemailer");
+const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 
 const MAIL_SENDER = process.env.MAIL_SENDER;
 const MAIL_PASSWORD = process.env.MAIL_PASSWORD;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:8080";
 
 const ReferBroker = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, lang } = req.body;
     const { user } = req.user;
 
+    let language = "en"; // Default to English
+
+    if (lang) {
+      const langStr = String(lang).toLowerCase().trim();
+      if (langStr === "de" || langStr === "german" || langStr === "deutsch") {
+        language = "de";
+      }
+    }
     if (!user) {
       return res.status(403).json({
         success: false,
@@ -56,89 +66,80 @@ const ReferBroker = async (req, res) => {
 
     // ✅ CASE 1: User already exists → generate referral code + create broker + send login email
     if (userExist) {
-      // Generate a unique referral code (8 chars)
-      const referralCode = Math.random()
-        .toString(36)
-        .substring(2, 10)
-        .toUpperCase();
-
-      // Check if broker already exists
-      const existingBroker = await db.Brokers.findOne({
-        where: { user_id: userExist.ID },
-      });
-
-      // Create broker if not exists
-      if (!existingBroker) {
-        await db.Brokers.create({
-          user_id: userExist.ID,
-          parent_id: user.ID,
-          referral_code: referralCode,
-          referred_by_code: parentBroker.referral_code,
-          children_count: 0,
-          total_commission_amount: 0,
-        });
-      }
-
-      const loginUrl =
-        process.env.FRONTEND_URL + "/login" + `?referral_code=${referralCode}`;
-
-      mailOptions = {
-        from: MAIL_SENDER,
-        to: email,
-        subject:
-          "Welcome Back to the Hartmann & Benz Group — Access Your Broker Account",
-        html: `
-          <p>Dear Partner,</p>
-
-          <p>Welcome back to the Hartmann & Benz Group!</p>
-
-          <p>Your partner has invited you to join as a broker.</p>
-
-          <p>You can now login to your broker account using the link below:<br/>
-          👉 <a href="${loginUrl}">Login to your account</a></p>
-
-          <p><strong>Email:</strong> ${email}<br/>
-          <strong>Your Referral Code:</strong> ${referralCode}</p>
-
-          <p>If you have any questions, our team is always happy to help.</p>
-
-          <p>Best regards,<br/>
-          Your Hartmann & Benz Group Team</p>
-        `,
-      };
+      // // Generate a unique referral code (8 chars)
+      // const referralCode = Math.random()
+      //   .toString(36)
+      //   .substring(2, 10)
+      //   .toUpperCase();
+      // // Check if broker already exists
+      // const existingBroker = await db.Brokers.findOne({
+      //   where: { user_id: userExist.ID },
+      // });
+      // // Create broker if not exists
+      // if (!existingBroker) {
+      //   await db.Brokers.create({
+      //     user_id: userExist.ID,
+      //     parent_id: user.ID,
+      //     referral_code: referralCode,
+      //     referred_by_code: parentBroker.referral_code,
+      //     children_count: 0,
+      //     total_commission_amount: 0,
+      //   });
+      // }
+      // const loginUrl =
+      //   process.env.FRONTEND_URL + "/login" + `?referral_code=${referralCode}`;
+      // mailOptions = {
+      //   from: MAIL_SENDER,
+      //   to: email,
+      //   subject:
+      //     "Welcome Back to the Hartmann & Benz Group — Access Your Broker Account",
+      //   html: `
+      //     <p>Dear Partner,</p>
+      //     <p>Welcome back to the Hartmann & Benz Group!</p>
+      //     <p>Your partner has invited you to join as a broker.</p>
+      //     <p>You can now login to your broker account using the link below:<br/>
+      //     👉 <a href="${loginUrl}">Login to your account</a></p>
+      //     <p><strong>Email:</strong> ${email}<br/>
+      //     <strong>Your Referral Code:</strong> ${referralCode}</p>
+      //     <p>If you have any questions, our team is always happy to help.</p>
+      //     <p>Best regards,<br/>
+      //     Your Hartmann & Benz Group Team</p>
+      //   `,
+      // };
     }
 
     // ✅ CASE 2: User does NOT exist → send registration email
     else {
-      const registrationUrl =
-        process.env.FRONTEND_URL + "/broker-register/step1/" + btoa(parentBroker.referral_code);
-      console.log("=======registrationUrl =", registrationUrl);
+      // Create registration URL with base64 encoded referral code
+      const encodedReferralCode = Buffer.from(parentBroker.referral_code || "").toString("base64");
+      const registrationUrl = `${FRONTEND_URL}/broker-register/step1/${encodedReferralCode}`;
+
+      // Create clickable link text based on language
+    const linkText = language === "de" ? "Jetzt mit Empfehlungscode registrieren" : "Register now with referral code";
+
+      // Template variables to replace placeholders
+      const templateVariables = {
+        email: email,
+        referral_code: parentBroker.referral_code || "",
+        referal_code_link: `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${linkText}</a>`,
+        brokerName: email.split("@")[0],
+      };
+
+      // Fetch and render email template from database
+      let emailData;
+      try {
+        emailData = await getRenderedEmail(84, language, templateVariables);
+      } catch (templateError) {
+        throw new Error(
+          "Email template not found in database. Please ensure template with id 84 exists in 6lwup_email_view table."
+        );
+      }
 
       mailOptions = {
         from: MAIL_SENDER,
         to: email,
-        subject:
-          "Welcome to the Hartmann & Benz Group — Complete Your Registration",
-        html: `
-          <p>Dear Partner,</p>
-
-          <p>Welcome to the Hartmann & Benz Group!</p>
-
-          <p>We are delighted to have you on board and are confident that we can offer you real added value.</p>
-
-          <p>Your partner has sent you a referral code.</p>
-
-          <p>Please click on the following link to start your registration – the referral code will be automatically applied:<br/>
-          👉 <a href="${registrationUrl}">Register now with referral code${parentBroker.referral_code}</a></p>
-
-          <p><strong>Email:</strong> ${email}<br/>
-          <strong>Referral Code:</strong> ${parentBroker.referral_code}</p>
-
-          <p>If you have any questions, our team is always happy to help.</p>
-
-          <p>Best regards,<br/>
-          Your Hartmann & Benz Group Team</p>
-        `,
+        subject: emailData.subject,
+        html: emailData.htmlContent,
       };
     }
 

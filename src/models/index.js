@@ -14,6 +14,7 @@ const MyStoreOrder = require("./mystoreOrder");
 const MyStoreOrderPivots = require("./mystoreOrderPivots");
 const MyStoreOrderShippingOptions = require("./mystoreOrderShippingOptions");
 const Product = require("./product");
+const EmailView = require("./emailView");
 const BrokerBankDetails = require("./broker_bank_details");
 const BrokerPayoutRequests = require("./broker_payout_requests");
 
@@ -36,6 +37,7 @@ db.MyStoreOrder = MyStoreOrder;
 db.MyStoreOrderPivots = MyStoreOrderPivots;
 db.MyStoreOrderShippingOptions = MyStoreOrderShippingOptions;
 db.Product = Product;
+db.EmailView = EmailView;
 db.BrokerBankDetails = BrokerBankDetails;
 db.BrokerPayoutRequests = BrokerPayoutRequests;
 

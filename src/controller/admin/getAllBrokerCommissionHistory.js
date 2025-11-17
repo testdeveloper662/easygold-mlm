@@ -3,6 +3,21 @@ const { sequelize } = require("../../config/database");
 
 const GetAllBrokerCommissionHistory = async (req, res) => {
   try {
+    // Check if is_payment_declined column exists, if not create it
+    const [columnCheck] = await sequelize.query(
+      "SHOW COLUMNS FROM broker_commission_histories LIKE 'is_payment_declined'"
+    );
+
+    if (columnCheck.length === 0) {
+      console.log("⚠️ is_payment_declined column doesn't exist. Creating it now...");
+      await sequelize.query(`
+        ALTER TABLE broker_commission_histories
+        ADD COLUMN is_payment_declined TINYINT(1) NOT NULL DEFAULT 0
+        AFTER is_payment_done
+      `);
+      console.log("✅ is_payment_declined column created successfully");
+    }
+
     // Get pagination parameters from query
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -61,6 +76,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
         bch.commission_amount,
         bch.is_seller,
         bch.is_payment_done,
+        bch.is_payment_declined,
         bch.tree,
         bch.createdAt,
         bch.updatedAt,
@@ -100,6 +116,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
         commission_amount: record.commission_amount,
         is_seller: record.is_seller,
         is_payment_done: record.is_payment_done,
+        is_payment_declined: record.is_payment_declined,
         tree: record.tree,
       });
 

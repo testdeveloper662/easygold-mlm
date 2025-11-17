@@ -1,13 +1,15 @@
 const { sequelize } = require("../config/database");
 
 // Models
-const { Users, Brokers, AdminFixedBrokerCommission } = require("../models");
+const { Users, Brokers, AdminFixedBrokerCommission, BrokerBankDetails, BrokerPayoutRequests } = require("../models");
 
 async function createTable() {
   try {
     // await Users.sync({ alter: true });
-    await Brokers.sync({ alter: true });
+    // await Brokers.sync({ alter: true });
     // await AdminFixedBrokerCommission.sync({ alter: true });
+    await BrokerBankDetails.sync({ alter: true });
+    await BrokerPayoutRequests.sync({ alter: true });
 
     console.log("Table created successfully.");
   } catch (error) {

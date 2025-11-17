@@ -14,6 +14,9 @@ const BrokerRegistration = require("../controller/auth/brokerRegistration");
 const GetOrderDetails = require("../controller/broker/getOrderDetails");
 const UploadLogoImage = require("../controller/user/uploadLogoImage");
 const UploadProfileImage = require("../controller/user/uploadProfileImage");
+const AddUpdateBrokerBankDetails = require("../controller/broker/addUpdateBrokerBankDetails");
+const GetBrokerBankDetails = require("../controller/broker/getBrokerBankDetails");
+const CreateBrokerPayoutRequest = require("../controller/broker/createBrokerPayoutRequest");
 
 brokerRouter.post(
   "/register",
@@ -40,5 +43,9 @@ brokerRouter.get(
 brokerRouter.post("/order/detail", authenticateToken, GetOrderDetails);
 brokerRouter.post("/logo-image", authenticateToken, upload.single("logo"), UploadLogoImage);
 brokerRouter.post("/profile-image", authenticateToken, upload.single("profile"), UploadProfileImage);
+
+brokerRouter.post("/bank/detail", authenticateToken, AddUpdateBrokerBankDetails);
+brokerRouter.get("/bank/detail", authenticateToken, GetBrokerBankDetails);
+brokerRouter.post("/payout/request", authenticateToken, CreateBrokerPayoutRequest);
 
 module.exports = brokerRouter;

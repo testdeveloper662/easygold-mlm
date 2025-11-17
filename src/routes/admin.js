@@ -12,6 +12,8 @@ const UpdateBrokerPaymentStatus = require("../controller/admin/updateBrokerPayme
 const GetOrderDetails = require("../controller/admin/getOrderDetails");
 const SendPaymentConfirmationEmail = require("../controller/admin/sendPaymentConfirmationEmail");
 const SendPaymentDeclineEmail = require("../controller/admin/sendPaymentDeclineEmail");
+const GetBrokerPayoutRequests = require("../controller/admin/getBrokerPayoutRequests");
+const UpdateBrokerPayoutRequest = require("../controller/admin/updateBrokerPayoutRequest");
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
@@ -28,5 +30,8 @@ adminRouter.post("/broker/update-payment-status", authenticateToken, UpdateBroke
 adminRouter.post("/commission/send-payment-confirmation-email", authenticateToken, SendPaymentConfirmationEmail);
 adminRouter.post("/commission/send-payment-decline-email", authenticateToken, SendPaymentDeclineEmail);
 adminRouter.post("/order/detail", authenticateToken, GetOrderDetails);
+
+adminRouter.get("/payout/requests", authenticateToken, GetBrokerPayoutRequests);
+adminRouter.put("/payout/request", UpdateBrokerPayoutRequest);
 
 module.exports = adminRouter;

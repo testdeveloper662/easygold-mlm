@@ -64,48 +64,12 @@ const ReferBroker = async (req, res) => {
 
     let mailOptions;
 
-    // ✅ CASE 1: User already exists → generate referral code + create broker + send login email
+    // ✅ CASE 1: User already exists → return error
     if (userExist) {
-      // // Generate a unique referral code (8 chars)
-      // const referralCode = Math.random()
-      //   .toString(36)
-      //   .substring(2, 10)
-      //   .toUpperCase();
-      // // Check if broker already exists
-      // const existingBroker = await db.Brokers.findOne({
-      //   where: { user_id: userExist.ID },
-      // });
-      // // Create broker if not exists
-      // if (!existingBroker) {
-      //   await db.Brokers.create({
-      //     user_id: userExist.ID,
-      //     parent_id: user.ID,
-      //     referral_code: referralCode,
-      //     referred_by_code: parentBroker.referral_code,
-      //     children_count: 0,
-      //     total_commission_amount: 0,
-      //   });
-      // }
-      // const loginUrl =
-      //   process.env.FRONTEND_URL + "/login" + `?referral_code=${referralCode}`;
-      // mailOptions = {
-      //   from: MAIL_SENDER,
-      //   to: email,
-      //   subject:
-      //     "Welcome Back to the Hartmann & Benz Group — Access Your Broker Account",
-      //   html: `
-      //     <p>Dear Partner,</p>
-      //     <p>Welcome back to the Hartmann & Benz Group!</p>
-      //     <p>Your partner has invited you to join as a broker.</p>
-      //     <p>You can now login to your broker account using the link below:<br/>
-      //     👉 <a href="${loginUrl}">Login to your account</a></p>
-      //     <p><strong>Email:</strong> ${email}<br/>
-      //     <strong>Your Referral Code:</strong> ${referralCode}</p>
-      //     <p>If you have any questions, our team is always happy to help.</p>
-      //     <p>Best regards,<br/>
-      //     Your Hartmann & Benz Group Team</p>
-      //   `,
-      // };
+      return res.status(400).json({
+        success: false,
+        message: "A user with this email already exists. They cannot be referred again.",
+      });
     }
 
     // ✅ CASE 2: User does NOT exist → send registration email
@@ -115,7 +79,7 @@ const ReferBroker = async (req, res) => {
       const registrationUrl = `${FRONTEND_URL}/broker-register/step1/${encodedReferralCode}`;
 
       // Create clickable link text based on language
-    const linkText = language === "de" ? "Jetzt mit Empfehlungscode registrieren" : "Register now with referral code";
+      const linkText = language === "de" ? "Jetzt mit Empfehlungscode registrieren" : "Register now with referral code";
 
       // Template variables to replace placeholders
       const templateVariables = {

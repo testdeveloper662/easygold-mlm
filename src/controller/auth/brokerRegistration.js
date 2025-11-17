@@ -10,11 +10,9 @@ const path = require("path");
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 
 // Generate random referral code
-const generateReferralCode = () =>
-  Math.random().toString(36).substring(2, 8).toUpperCase();
+const generateReferralCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
 const BrokerRegistration = async (req, res) => {
-
   console.log("===========BrokerRegistration body = ", req.body);
   console.log("===========BrokerRegistration files = ", req.files);
 
@@ -50,7 +48,9 @@ const BrokerRegistration = async (req, res) => {
       bankName,
       bankAddress,
       idExpiryDate,
-      veriff_session_id
+      veriff_session_id,
+      lang,
+      language: languageParam, // Accept both 'lang' and 'language' from frontend (rename to avoid conflict)
     } = req.body;
 
     if (
@@ -80,15 +80,27 @@ const BrokerRegistration = async (req, res) => {
     }
     console.log("111111111111111111111111");
 
-    // Check if user already exists
-    const existingUser = await db.Users.findOne({
+    // Check if user already exists by email
+    const existingUserByEmail = await db.Users.findOne({
       where: { user_email: email },
     });
 
-    if (existingUser) {
+    if (existingUserByEmail) {
       return res.status(400).json({
         success: false,
-        message: "User already exists",
+        message: "A user with this email already exists. Please use a different email address.",
+      });
+    }
+
+    // Check if username already exists
+    const existingUserByUsername = await db.Users.findOne({
+      where: { user_login: username },
+    });
+
+    if (existingUserByUsername) {
+      return res.status(400).json({
+        success: false,
+        message: "This username is already taken. Please choose a different username.",
       });
     }
     console.log("222222222222222222222222222");
@@ -158,7 +170,21 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_country_origin", u_country_origin);
     form.append("u_recipient_country", u_recipient_country);
     form.append("selectedDate", new Date().toISOString().split("T")[0]);
-    form.append("language", "en-US");
+    
+    // Determine language from request body (accept both 'lang' and 'language')
+    // Map frontend language codes to database format
+    const langForApi = lang || languageParam; // Use 'lang' if provided, otherwise use 'language'
+    let languageForApi = "en-US"; // Default to English
+    if (langForApi) {
+      const langStr = String(langForApi).toLowerCase().trim();
+      if (langStr === "de" || langStr === "german" || langStr === "deutsch") {
+        languageForApi = "de-DE"; // German format
+      } else if (langStr === "en" || langStr === "english") {
+        languageForApi = "en-US"; // English format
+      }
+    }
+    console.log("[BrokerRegistration] Language for external API - lang:", lang, "language:", languageParam, "using:", langForApi, "-> Mapped to:", languageForApi);
+    form.append("language", languageForApi);
     form.append("u_date", idExpiryDate || new Date().toISOString().split("T")[0]);
 
     // if (req.files?.u_trade_register) {
@@ -201,14 +227,21 @@ const BrokerRegistration = async (req, res) => {
     console.log("==================START CALLING API==============");
 
     // ✅ Send to external API
-    const apiResponse = await axios.post(
-      `${process.env.EASY_GOLD_URL}/api/Register`,
-      form,
-      { headers: form.getHeaders() }
-    );
+    const apiResponse = await axios.post(`${process.env.EASY_GOLD_URL}/api/Register`, form, {
+      headers: form.getHeaders(),
+    });
 
     console.log("External API response:", apiResponse.data);
     console.log("External API response 2:", apiResponse.data?.data);
+
+    // Check if external API returned an error
+    if (!apiResponse.data?.success) {
+      return res.status(400).json({
+        success: false,
+        message: apiResponse.data?.message || "Registration failed at external API",
+      });
+    }
+
     const user_id = apiResponse.data?.data?.user_id;
     console.log("user_id:", user_id);
     // Create new user (6LWUP_users)
@@ -278,20 +311,46 @@ const BrokerRegistration = async (req, res) => {
         message: "External API did not return a valid user_id",
       });
     }
+
+    // Verify user exists in database before creating broker
+    const userExists = await db.Users.findOne({
+      where: { ID: user_id },
+    });
+
+    if (!userExists) {
+      return res.status(500).json({
+        success: false,
+        message: "User was created in external system but not found in database. Please try again in a few moments.",
+      });
+    }
+
+    // Map frontend language codes to database format (we'll save this at the end)
+    // Accept both 'lang' and 'language' from request body (frontend sends 'language')
+    const langParam = lang || languageParam; // Use 'lang' if provided, otherwise use 'language'
+    let languageValue = "en-US"; // Default to English
+    
+    if (langParam) {
+      const langStr = String(langParam).toLowerCase().trim();
+      if (langStr === "de" || langStr === "german" || langStr === "deutsch") {
+        languageValue = "de-DE"; // German format
+      } else if (langStr === "en" || langStr === "english") {
+        languageValue = "en-US"; // English format
+      }
+    }
+    console.log(`[BrokerRegistration] Language mapping - lang: "${lang}", language: "${languageParam}", using: "${langParam}", mapped to: "${languageValue}"`);
+
     // Create broker entry
     await db.Brokers.create({
       user_id: user_id,
       parent_id: isAdminParent ? null : parentBroker?.id || null,
       referral_code: newReferralCode,
-      referred_by_code: isAdminParent
-        ? process.env.ADMIN_REFERRAL_CODE
-        : parentBroker.referral_code,
+      referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
       children_count: 0,
       total_commission_amount: 0,
       veriff_session_id: veriff_session_id || null,
     });
 
-    // Update parent’s children count
+    // Update parent's children count
     if (!isAdminParent && parentBroker) {
       await parentBroker.update({
         children_count: parentBroker.children_count + 1,
@@ -304,6 +363,52 @@ const BrokerRegistration = async (req, res) => {
     //   category: "all",
     //   paymentOption: "Cash_question, Card_question, Bank_Transfer_question",
     // });
+
+    // ✅ Save language to UsersMeta table
+    console.log(`[BrokerRegistration] Saving language to UsersMeta - user_id: ${user_id}, language: "${languageValue}"`);
+    
+    try {
+      // Check if language meta already exists
+      const existingLanguageMeta = await db.UsersMeta.findOne({
+        where: {
+          user_id: user_id,
+          meta_key: "language",
+        },
+      });
+
+      if (existingLanguageMeta) {
+        // Update existing entry
+        await existingLanguageMeta.update({
+          meta_value: languageValue,
+        });
+        console.log(`[BrokerRegistration] ✅ Updated language meta: "${languageValue}"`);
+      } else {
+        // Create new entry
+        await db.UsersMeta.create({
+          user_id: user_id,
+          meta_key: "language",
+          meta_value: languageValue,
+        });
+        console.log(`[BrokerRegistration] ✅ Created language meta: "${languageValue}"`);
+      }
+
+      // Verify it was saved
+      const verifyMeta = await db.UsersMeta.findOne({
+        where: {
+          user_id: user_id,
+          meta_key: "language",
+        },
+      });
+      
+      if (verifyMeta) {
+        console.log(`[BrokerRegistration] ✅ Verified language saved: "${verifyMeta.meta_value}"`);
+      } else {
+        console.error(`[BrokerRegistration] ❌ ERROR: Language meta not found after save`);
+      }
+    } catch (langError) {
+      console.error(`[BrokerRegistration] ❌ Error saving language:`, langError);
+      // Don't fail the registration if language save fails
+    }
 
     // Create user object for frontend
     const userResponse = {

@@ -17,6 +17,7 @@ const Product = require("./product");
 const EmailView = require("./emailView");
 const BrokerBankDetails = require("./broker_bank_details");
 const BrokerPayoutRequests = require("./broker_payout_requests");
+const TargetCustomers = require("./targetCustomers");
 
 const db = {};
 
@@ -40,21 +41,33 @@ db.Product = Product;
 db.EmailView = EmailView;
 db.BrokerBankDetails = BrokerBankDetails;
 db.BrokerPayoutRequests = BrokerPayoutRequests;
+db.TargetCustomers = TargetCustomers;
+
+// Relationships
+db.TargetCustomers.belongsTo(db.Brokers, {
+  foreignKey: "broker_id",
+  as: "broker",
+});
+
+db.Brokers.hasMany(db.TargetCustomers, {
+  foreignKey: "broker_id",
+  as: "target_customers",
+});
 
 db.BrokerCommissionHistory.belongsTo(db.Users, {
-    foreignKey: "user_id",
-    as: "commission_from_user",
+  foreignKey: "user_id",
+  as: "commission_from_user",
 });
 
 db.LpOrders.hasOne(db.Brokers, {
-    foreignKey: "user_id",
-    sourceKey: "user_id",
-    as: "user_broker",
+  foreignKey: "user_id",
+  sourceKey: "user_id",
+  as: "user_broker",
 });
 db.MyStoreOrder.hasOne(db.Brokers, {
-    foreignKey: "user_id",
-    sourceKey: "user_id",
-    as: "user_broker",
+  foreignKey: "user_id",
+  sourceKey: "user_id",
+  as: "user_broker",
 });
 
 module.exports = db;

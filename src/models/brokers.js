@@ -18,7 +18,7 @@ const Brokers = sequelize.define(
       allowNull: true,
     },
     user_id: {
-      type: Sequelize.BIGINT.UNSIGNED, // ✅ match 6LWUP_users.ID
+      type: Sequelize.BIGINT.UNSIGNED, 
       allowNull: false,
       references: {
         model: "6LWUP_users",
@@ -27,7 +27,7 @@ const Brokers = sequelize.define(
       onDelete: "CASCADE",
     },
     parent_id: {
-      type: Sequelize.INTEGER.UNSIGNED, // self reference (same as brokers.id)
+      type: Sequelize.INTEGER.UNSIGNED, 
       allowNull: true,
       references: {
         model: "brokers",

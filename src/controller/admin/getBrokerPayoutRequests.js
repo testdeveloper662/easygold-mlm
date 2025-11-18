@@ -3,8 +3,8 @@ const { Op } = require("sequelize");
 
 const GetBrokerPayoutRequests = async (req, res) => {
     try {
-        // Optional filter
-        const { broker_id } = req.query;
+        // Optional filters
+        const { broker_id, email } = req.query;
 
         // Pagination
         const page = parseInt(req.query.page) || 1;
@@ -15,27 +15,45 @@ const GetBrokerPayoutRequests = async (req, res) => {
         const whereClause = {};
         if (broker_id) whereClause.broker_id = broker_id;
 
-        // Count total rows
-        const totalCount = await db.BrokerPayoutRequests.count({
+        // Build include clause with optional email filter
+        const brokerInclude = {
+            model: db.Brokers,
+            as: "broker",
+            include: [
+                {
+                    model: db.Users,
+                    as: "user",
+                    attributes: ["ID", "user_nicename", "user_login", "user_email"],
+                },
+            ],
+        };
+
+        // Add email filter to user include if email is provided
+        if (email) {
+            brokerInclude.include[0].where = {
+                [Op.or]: [
+                    { user_login: email },
+                    { user_email: email },
+                ],
+            };
+            brokerInclude.include[0].required = true;
+            brokerInclude.required = true;
+        }
+
+
+        const countOptions = {
             where: whereClause,
-        });
+        };
+        if (email) {
+            countOptions.include = [brokerInclude];
+            countOptions.distinct = true;
+        }
+        const totalCount = await db.BrokerPayoutRequests.count(countOptions);
 
         // Fetch data
         const payoutList = await db.BrokerPayoutRequests.findAll({
             where: whereClause,
-            include: [
-                {
-                    model: db.Brokers,
-                    as: "broker",
-                    include: [
-                        {
-                            model: db.Users,
-                            as: "user",
-                            attributes: ["ID", "user_nicename", "user_login"],
-                        },
-                    ],
-                },
-            ],
+            include: [brokerInclude],
             order: [["createdAt", "DESC"]],
             limit: limit,
             offset: offset,

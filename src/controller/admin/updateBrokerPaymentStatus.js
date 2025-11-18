@@ -2,7 +2,7 @@ const db = require("../../models");
 
 const UpdateBrokerPaymentStatus = async (req, res) => {
   try {
-    const { order_id, order_type } = req.body;
+    const { order_id, order_type, tree } = req.body;
 
     if (!order_id) {
       return res.status(400).json({
@@ -11,14 +11,37 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
       });
     }
 
-    // Update payment status to true for all brokers with this order_id
+    // Build where clause
+    const whereClause = { order_id };
+    
+    // If order_type is provided, add it to where clause
+    if (order_type) {
+      whereClause.order_type = order_type;
+    }
+    
+    // If tree is provided, add it to where clause
+    if (tree) {
+      whereClause.tree = tree;
+    }
+
+    // If neither order_type nor tree provided, get order_type from first record
+    if (!order_type && !tree) {
+      const firstRecord = await db.BrokerCommissionHistory.findOne({
+        where: { order_id },
+        attributes: ["order_type"],
+        raw: true,
+      });
+      
+      if (firstRecord && firstRecord.order_type) {
+        whereClause.order_type = firstRecord.order_type;
+      }
+    }
+
+    // Update payment status to true for all brokers matching the where clause
     const [updatedCount] = await db.BrokerCommissionHistory.update(
       { is_payment_done: true },
       {
-        where: {
-          order_id,
-          order_type,
-        },
+        where: whereClause,
       }
     );
     // const updatedCount = 1;

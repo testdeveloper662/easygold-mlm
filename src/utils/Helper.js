@@ -83,3 +83,54 @@ exports.roundToTwoDecimalPlaces = (num) => {
     }
     return Math.round(num * 100) / 100;
 }
+
+exports.companyAddressMap = () => ({
+    EASYGOLD_TOKEN: `
+HARTMANN & BENZ, LLC
+a District of Columbia limited liability company
+1717 N Street, NW STE 1
+Washington, DC 20036
+www.easygold.io
+    `.trim(),
+
+    PRIMEINVEST: `
+Hartmann & Benz Inc
+8 The Green, Suite A
+19901 Dover Kent County
+United States of America (USA)
+    `.trim(),
+
+    GOLDFLEX: `
+HARTMANN & BENZ LIMITED 
+28B , ONIKEPO AKANDE, LEKKI 
+PHASE 1, LAGOS,
+NIGERIA
+    `.trim(),
+
+    B2B_DASHBOARD: `
+Hartmann & Benz GmbH
+Gutenbergstraße 40
+70736 Fellbach
+Deutschland
+    `.trim()
+});
+
+
+exports.payoutForType = (value) => {
+    switch (value) {
+        case "EASYGOLD_TOKEN":
+            return "Easygold Tokens";
+
+        case "PRIMEINVEST":
+            return "Primeinvest";
+
+        case "GOLDFLEX":
+            return "Goldflex";
+
+        case "B2B_DASHBOARD":
+            return "B2B Dashboard";
+
+        default:
+            return value; // fallback (no crash)
+    }
+}

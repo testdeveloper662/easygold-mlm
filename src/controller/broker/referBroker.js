@@ -15,8 +15,8 @@ const ReferBroker = async (req, res) => {
 
     if (lang) {
       const langStr = String(lang).toLowerCase().trim();
-      if (langStr === "de" || langStr === "german" || langStr === "deutsch") {
-        language = "de";
+      if (langStr === "de-DE" || langStr === "de" || langStr === "german" || langStr === "deutsch") {
+        language = "de-DE";
       }
     }
     if (!user) {
@@ -79,7 +79,7 @@ const ReferBroker = async (req, res) => {
       const registrationUrl = `${FRONTEND_URL}/broker-register/step1/${encodedReferralCode}`;
 
       // Create clickable link text based on language
-      const linkText = language === "de" ? "Jetzt mit Empfehlungscode registrieren" : "Register now with referral code";
+      const linkText = language === "de" || language === "de-DE" ? "Jetzt mit Empfehlungscode registrieren" : "Register now with referral code";
 
       // Template variables to replace placeholders
       const templateVariables = {

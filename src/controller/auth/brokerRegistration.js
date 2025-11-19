@@ -36,7 +36,7 @@ const BrokerRegistration = async (req, res) => {
       username,
       password,
       u_street_no,
-      u_street,
+      street,
       u_location,
       u_describe_business,
       u_business_purpose,
@@ -146,8 +146,8 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_company", company);
     form.append("u_contact_person", contactPerson);
     form.append("u_street_no", u_street_no);
-    form.append("u_street", u_street);
-    form.append("u_location", u_location);
+    form.append("u_street", street);
+    form.append("u_location", city);
     form.append("u_postcode", postalCode);
     form.append("u_country", country);
     form.append("u_vat_no", vatId || "");
@@ -170,14 +170,14 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_country_origin", u_country_origin);
     form.append("u_recipient_country", u_recipient_country);
     form.append("selectedDate", new Date().toISOString().split("T")[0]);
-    
+
     // Determine language from request body (accept both 'lang' and 'language')
     // Map frontend language codes to database format
     const langForApi = lang || languageParam; // Use 'lang' if provided, otherwise use 'language'
     let languageForApi = "en-US"; // Default to English
     if (langForApi) {
       const langStr = String(langForApi).toLowerCase().trim();
-      if (langStr === "de" || langStr === "german" || langStr === "deutsch") {
+      if (langStr === "de-DE" || langStr === "de" || langStr === "german" || langStr === "deutsch") {
         languageForApi = "de-DE"; // German format
       } else if (langStr === "en" || langStr === "english") {
         languageForApi = "en-US"; // English format
@@ -328,10 +328,10 @@ const BrokerRegistration = async (req, res) => {
     // Accept both 'lang' and 'language' from request body (frontend sends 'language')
     const langParam = lang || languageParam; // Use 'lang' if provided, otherwise use 'language'
     let languageValue = "en-US"; // Default to English
-    
+
     if (langParam) {
       const langStr = String(langParam).toLowerCase().trim();
-      if (langStr === "de" || langStr === "german" || langStr === "deutsch") {
+      if (langStr === "de-DE" ||langStr === "de" || langStr === "german" || langStr === "deutsch") {
         languageValue = "de-DE"; // German format
       } else if (langStr === "en" || langStr === "english") {
         languageValue = "en-US"; // English format
@@ -366,7 +366,7 @@ const BrokerRegistration = async (req, res) => {
 
     // ✅ Save language to UsersMeta table
     console.log(`[BrokerRegistration] Saving language to UsersMeta - user_id: ${user_id}, language: "${languageValue}"`);
-    
+
     try {
       // Check if language meta already exists
       const existingLanguageMeta = await db.UsersMeta.findOne({
@@ -399,7 +399,7 @@ const BrokerRegistration = async (req, res) => {
           meta_key: "language",
         },
       });
-      
+
       if (verifyMeta) {
         console.log(`[BrokerRegistration] ✅ Verified language saved: "${verifyMeta.meta_value}"`);
       } else {

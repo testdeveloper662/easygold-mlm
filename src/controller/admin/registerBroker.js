@@ -26,7 +26,7 @@ const RegisterBroker = async (req, res) => {
     // Check req.body.lang first
     if (lang !== undefined && lang !== null) {
       const langStr = String(lang).toLowerCase().trim();
-      if (langStr === "de" || langStr === "german" || langStr === "deutsch") {
+      if (langStr === "de-DE" || langStr === "de" || langStr === "german" || langStr === "deutsch") {
         language = "de";
       } else if (langStr === "en" || langStr === "english") {
         language = "en";
@@ -44,7 +44,7 @@ const RegisterBroker = async (req, res) => {
 
           if (userLanguageMeta && userLanguageMeta.meta_value) {
             const userLang = String(userLanguageMeta.meta_value).toLowerCase().trim();
-            if (userLang === "german" || userLang === "de" || userLang === "deutsch") {
+            if (langStr === "de-DE" || userLang === "german" || userLang === "de" || userLang === "deutsch") {
               language = "de";
             }
           }
@@ -85,7 +85,7 @@ const RegisterBroker = async (req, res) => {
     const registerUrl = `${process.env.FRONTEND_URL || FRONTEND_URL}/broker-register/step1/${encodedReferralCode}`;
 
     // Create clickable link text based on language
-    const linkText = language === "de" ? "Jetzt mit Empfehlungscode registrieren" : "Register now with referral code";
+    const linkText = language === "de-DE" || language === "de" ? "Jetzt mit Empfehlungscode registrieren" : "Register now with referral code";
 
     // Template variables to replace placeholders
     // Variable names must match EXACTLY the placeholders in database template: [email], [referral_code], [referal_code_link], [brokerName], [tempPassword]

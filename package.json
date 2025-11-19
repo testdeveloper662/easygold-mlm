@@ -23,6 +23,7 @@
     "mysql2": "^3.15.1",
     "nodemailer": "^7.0.7",
     "nodemon": "^3.1.10",
+    "puppeteer": "^24.30.0",
     "sequelize": "^6.37.7"
   }
 }

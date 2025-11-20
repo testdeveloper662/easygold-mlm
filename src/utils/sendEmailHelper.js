@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-const SendEmailHelper = (subject, htmlContent, to, attachmentPath = null) => {
+const SendEmailHelper = (subject, htmlContent, to, attachmentPath = null, cc = null) => {
     try {
         return new Promise((resolve, reject) => {
             const mailOptions = {
@@ -29,6 +29,9 @@ const SendEmailHelper = (subject, htmlContent, to, attachmentPath = null) => {
                     }
                 ];
             }
+            if (cc) {
+                mailOptions.cc = cc;
+            }
 
             transporter.sendMail(mailOptions, (error, info) => {
                 if (error) {
@@ -40,7 +43,7 @@ const SendEmailHelper = (subject, htmlContent, to, attachmentPath = null) => {
             });
         });
     } catch (error) {
-
+        console.log("error = ", error);
     }
 }
 

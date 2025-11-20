@@ -142,7 +142,8 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         const emailData = await getRenderedEmail(87, language, templateVariables);
 
         const attachmentPath = pdfResult?.success ? pdfResult.filePath : null;
-        await SendEmailHelper(emailData.subject, emailData.htmlContent, process.env.EASY_GOLD_SUPPORT_EMAIL, attachmentPath);
+        const cc = user_email
+        await SendEmailHelper(emailData.subject, emailData.htmlContent, process.env.EASY_GOLD_SUPPORT_EMAIL, attachmentPath, cc);
 
         return res.status(200).json({
             success: true,

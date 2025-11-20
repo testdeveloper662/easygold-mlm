@@ -112,7 +112,7 @@ const getRenderedEmail = async (templateKey, language = "en", variables = {}) =>
     }
 
     // Select language-specific content
-    const isGerman = language === "de" || language === "german";
+    const isGerman = language === "de" || language === "german" || language === "de-DE";
     const selectedLanguage = isGerman ? "German" : "English";
 
     const subject = isGerman ? template.subject_german : template.subject_english;

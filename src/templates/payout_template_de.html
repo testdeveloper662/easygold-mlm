@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gutschrift Provision - {{payout_request_id}}</title>
+
+    <style>
+        @page {
+            margin: 10mm 0mm 5mm 0mm !important;
+        }
+
+        body {
+            padding-left: 5mm;
+            padding-right: 5mm;
+            font-family: 'Roboto', sans-serif !important;
+            color: #000;
+        }
+
+        .first_section {
+            display: table;
+            width: 100%;
+            padding-bottom: 20px !important;
+        }
+
+        .logo_block {
+            width: 55%;
+            display: table-cell;
+            vertical-align: top;
+        }
+
+        .logo_block img {
+            width: 70%;
+            margin-bottom: 10px;
+        }
+
+        .address_block {
+            width: 30%;
+            padding-left: 3%;
+            display: table-cell;
+            vertical-align: top;
+            text-align: right;
+            font-size: 12px;
+        }
+
+        .customer_address,
+        .address_info {
+            margin-bottom: 10px;
+        }
+
+        .customer_address p {
+            text-align: left;
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .pdf_title h1 {
+            font-size: 28px;
+            margin: 10px 0;
+            color: #9b373c;
+        }
+
+        .address_info p {
+            font-size: 12px;
+            margin: 0;
+            line-height: 16px;
+            text-align: left;
+        }
+
+        .email_phone_info p {
+            margin: 0;
+            font-size: 12px;
+        }
+
+        .email_phone_info a {
+            color: #000 !important;
+            text-decoration: none !important;
+        }
+
+        .middle_content {
+            position: relative;
+            margin-right: 10px !important;
+            padding-bottom: 20px;
+        }
+
+        .company_to_block {
+            line-height: 18px;
+            white-space: pre-line;
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+
+        .credit_info {
+            text-align: left;
+            color: red;
+        }
+
+        .credit_info p {
+            margin: 0 0 0 0;
+        }
+
+        table.table_section {
+            width: 100%;
+            border-spacing: 0;
+            margin-top: 20px;
+        }
+
+        table.table_section th {
+            border: solid 2px #cfcfcf !important;
+            padding: 6px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        table.table_section td {
+            font-size: 14px;
+            padding: 8px;
+            border: solid 1px #ccc;
+            text-align: center;
+        }
+
+        .footer_notes {
+            width: auto;
+            font-size: 12px;
+            line-height: 18px;
+            border-bottom: 1px solid black;
+        }
+
+        .bottom_section {
+            margin-top: 10px;
+            width: 100%;
+            display: table;
+            font-size: 11px;
+            line-height: 16px;
+        }
+
+        .bottom_section div {
+            display: table-cell;
+        }
+
+        .section_line {
+            background: #ededed;
+            height: 30px;
+            width: 100%;
+        }
+
+        .font_bold {
+            font-weight: 700;
+        }
+
+        .font_bold span {
+            margin-top: 5px;
+        }
+
+        .sub_total_section {
+            display: table;
+            width: 100%;
+            padding: 20px 0 !important;
+        }
+
+        .empty_block {
+            width: 80%;
+        }
+
+        .sub_total_block {
+            width: 30%;
+            display: table-cell;
+            text-align: end;
+        }
+
+        .sub_total_block p {
+            width: 100%;
+            max-width: max-content;
+            border-bottom: 1px solid black;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="HTMLtoPdfPickupOrder">
+
+        <!-- TOP SECTION -->
+        <div class="first_section">
+
+            <!-- LEFT: Logo + User Address -->
+            <div class="logo_block">
+                <img src="{{logo}}" alt="Logo">
+            </div>
+
+            <!-- RIGHT: Company Info -->
+            <div class="address_block">
+                <div class="customer_address">
+                    <p>{{company}}</p>
+                    <p>{{name}}</p>
+                    <p>{{street}}</p>
+                    <p>{{postcode}}/{{city}}</p>
+                </div>
+                <div class="address_info">
+                    <p>Telefon: {{phone}}</p>
+                    <p>E-Mail: {{user_email}}</p>
+                    <p>Web: {{web_site}}</p>
+                </div>
+
+                <div class="credit_info">
+                    <p>Gutschrift: {{payout_request_id}}</p>
+                    <p>Datum: {{date}}</p>
+                    <p>Uhrzeit: {{time}}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TITLE -->
+        <div class="pdf_title">
+            <h1>Gutschrift Provision - {{payout_request_id}}</h1>
+        </div>
+
+        <!-- COMPANY ADDRESS (TO COMPANY) -->
+        <div class="company_to_block">
+            {{to_company_address}}
+        </div>
+        <div class="section_line"></div>
+
+        <!-- PRODUCT TABLE -->
+        <div class="middle_content">
+            <table class="table_section">
+                <thead>
+                    <tr>
+                        <th>Empfohlenes Produkt</th>
+                        <th>Menge</th>
+                        <th>Provision</th>
+                        <th>Gesamt</th>
+                        <th>MwSt.</th>
+                        <th>Gesamt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{payout_for}}</td>
+                        <td>1</td>
+                        <td>{{amount}}</td>
+                        <td>{{amount}}</td>
+                        <td>00.00€</td>
+                        <td>{{amount}}€</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="sub_total_section">
+                <div class="empty_block"></div>
+                <div class="sub_total_block">
+                    <p>
+                        <b>Zwischensumme :</b> {{amount}}€ </br>
+                    </p>
+                    <p>
+                        <b>MwSt. (0)% :</b> 0.00€</br>
+                    </p>
+                    <p>
+                        <b>Gesamtbetrag :</b> {{amount}}€
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section_line"></div>
+
+        <!-- FOOTER NOTES -->
+        <div class="footer_notes">
+            <p>
+                Gemäß § 312g Abs. 2 Nr. 8 BGB besteht kein Widerrufsrecht für Fernabsatzverträge zur Lieferung von
+                Waren,
+                deren Preis Schwankungen auf dem Finanzmarkt unterliegt, auf die der Unternehmer keinen Einfluss hat und
+                die innerhalb der Widerrufsfrist auftreten können, wie z. B. die Lieferung von Edelmetallen (Münzen und
+                Barren). Die Bestellung von Edelmetallbarren und -münzen kann daher nicht widerrufen werden.
+            </p>
+            <p>
+                MwSt.-Code 00 = steuerfrei gemäß §25c UStG oder steuerfrei gemäß §13b Abs. 2 UStG. MwSt.-Code 03, 05
+                oder
+                17 = Differenzbesteuerung gemäß §25a UStG (Gebrauchtwaren/ Sammlerstücke/ Sonderregelung).</br />
+                MwSt.-Code 01 = regulär besteuert mit 19% MwSt.
+            </p>
+
+            <div class="font_bold">
+                <span>Unsere Steuernummer lautet: DE325244140.</br></br>
+                    <span>Unsere Identifikationsnummer lautet: 9049032148.</span>
+            </div></br>
+            <div class="font_bold" style="font-size: 11px;">
+                Vielen Dank für Ihre Bestellung! Falls etwas unklar ist oder Sie weitere Fragen haben,<br />
+                kontaktieren Sie uns bitte direkt per E-Mail oder Telefon.
+            </div>
+        </div>
+
+        <!-- BOTTOM COMPANY FOOTER -->
+        <div class="bottom_section">
+            <div style="width:33%;">
+                E-Mail: {{user_email}}<br>
+                Web: {{web_site}}<br>
+                Telefon: {{phone}}
+            </div>
+            <div style="width:33%;">
+                Firma: {{company}}<br>
+                Name: {{name}}<br>
+                Straße: {{street}}<br>
+                PLZ/Stadt: {{postcode}}/{{city}}
+            </div>
+            <div style="width:33%;">
+                Kontoinhaber: {{name}}<br>
+                Bank: {{bank}}<br>
+                IBAN: {{iban}}<br>
+                BIC: {{bic}}
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

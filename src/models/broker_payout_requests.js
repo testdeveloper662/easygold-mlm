@@ -22,7 +22,10 @@ const BrokerPayoutRequests = sequelize.define(
             type: Sequelize.FLOAT,
             allowNull: false,
         },
-
+        invoice: {
+            type: Sequelize.STRING,
+            allowNull: true,
+        },
         payout_for: {
             type: Sequelize.ENUM("EASYGOLD_TOKEN", "PRIMEINVEST", "GOLDFLEX", "B2B_DASHBOARD"),
             allowNull: false,

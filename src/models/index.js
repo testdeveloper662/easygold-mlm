@@ -76,4 +76,14 @@ db.MyStoreOrder.hasOne(db.Brokers, {
   as: "user_broker",
 });
 
+db.Users.hasMany(db.UsersMeta, {
+  foreignKey: "user_id",
+  as: "user_meta",
+});
+
+db.UsersMeta.belongsTo(db.Users, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
 module.exports = db;

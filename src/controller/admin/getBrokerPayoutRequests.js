@@ -1,5 +1,6 @@
 const db = require("../../models");
 const { Op } = require("sequelize");
+const { generateImageUrl } = require("../../utils/Helper");
 
 const GetBrokerPayoutRequests = async (req, res) => {
     try {
@@ -59,36 +60,40 @@ const GetBrokerPayoutRequests = async (req, res) => {
             offset: offset,
         });
 
-        const formattedData = payoutList.map((item) => {
-            const json = item.toJSON();
+        // FIXED: Use Promise.all()
+        const formattedData = await Promise.all(
+            payoutList.map(async (item) => {
+                const json = item.toJSON();
+                const invoice_url = json.invoice ? await generateImageUrl(json.invoice, "invoice") : "";
 
-            return {
-                id: json.id,
-                broker_id: json.broker_id,
-                amount: json.amount,
-                payout_for: json.payout_for,
-                status: json.status,
-                created_at: json.createdAt,
-                updated_at: json.updatedAt,
+                return {
+                    id: json.id,
+                    broker_id: json.broker_id,
+                    amount: json.amount,
+                    invoice: invoice_url,
+                    payout_for: json.payout_for,
+                    status: json.status,
+                    created_at: json.createdAt,
+                    updated_at: json.updatedAt,
 
-                broker: json.broker
-                    ? {
-                        id: json.broker.id,
-                        referral_code: json.broker.referral_code,
-                        children_count: json.broker.children_count,
-                        total_commission_amount: json.broker.total_commission_amount,
-
-                        user: json.broker.user
-                            ? {
-                                id: json.broker.user.ID,
-                                username: json.broker.user.user_login,
-                                name: json.broker.user.user_nicename,
-                            }
-                            : null,
-                    }
-                    : null,
-            };
-        });
+                    broker: json.broker
+                        ? {
+                            id: json.broker.id,
+                            referral_code: json.broker.referral_code,
+                            children_count: json.broker.children_count,
+                            total_commission_amount: json.broker.total_commission_amount,
+                            user: json.broker.user
+                                ? {
+                                    id: json.broker.user.ID,
+                                    username: json.broker.user.user_login,
+                                    name: json.broker.user.user_nicename,
+                                }
+                                : null,
+                        }
+                        : null,
+                };
+            })
+        );
 
         return res.status(200).json({
             success: true,

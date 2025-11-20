@@ -3,8 +3,14 @@ const adminRouter = express.Router();
 const authenticateToken = require("../middleware/authentication");
 
 const RegisterBroker = require("../controller/admin/registerBroker");
+const GetFixedAffiliateCommissions = require("../controller/admin/getFixedAffiliateCommissions");
+const AdjustFixedAffiliateCommissions = require("../controller/admin/adjustFixedAffiliateCommissions");
 const GetFixedBrokerCommissions = require("../controller/admin/getFixedBrokerCommissions");
 const AdjustFixedBrokerCommissions = require("../controller/admin/adjustFixedBrokerCommissions");
+const GetVariableAffiliateCommissions = require("../controller/admin/getVariableAffiliateCommissions");
+const AdjustVariableAffiliateCommissions = require("../controller/admin/adjustVariableAffiliateCommissions");
+const GetVariableBrokerCommissions = require("../controller/admin/getVariableBrokerCommissions");
+const AdjustVariableBrokerCommissions = require("../controller/admin/adjustVariableBrokerCommissions");
 const GetAllBrokers = require("../controller/admin/getAllBrokers");
 const GetAllBrokerCommissionHistory = require("../controller/admin/getAllBrokerCommissionHistory");
 const GetBrokersList = require("../controller/admin/getBrokersList");
@@ -21,9 +27,16 @@ const GetTargetCustomerStatsOverall = require("../controller/admin/getTargetCust
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
 
-// Commission Levels
 adminRouter.get("/broker/fixed-commissions", authenticateToken, GetFixedBrokerCommissions);
 adminRouter.post("/broker/fixed-commissions", authenticateToken, AdjustFixedBrokerCommissions);
+adminRouter.get("/broker/variable-commissions", authenticateToken, GetVariableBrokerCommissions);
+adminRouter.post("/broker/variable-commissions", authenticateToken, AdjustVariableBrokerCommissions);
+
+// Affiliate Commission Levels
+adminRouter.get("/affiliate/fixed-commissions", authenticateToken, GetFixedAffiliateCommissions);
+adminRouter.post("/affiliate/fixed-commissions", authenticateToken, AdjustFixedAffiliateCommissions);
+adminRouter.get("/affiliate/variable-commissions", authenticateToken, GetVariableAffiliateCommissions);
+adminRouter.post("/affiliate/variable-commissions", authenticateToken, AdjustVariableAffiliateCommissions);
 
 // Brokers
 adminRouter.get("/brokers", authenticateToken, GetAllBrokers);

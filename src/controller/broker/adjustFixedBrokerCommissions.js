@@ -21,6 +21,7 @@ const AdjustFixedBrokerCommission = async (req, res) => {
 
     await db.AdminFixedBrokerCommission.sync();
     
+    // Fix constraint: drop old unique on 'level', add composite (level, service_type)
     try {
       await db.sequelize.query(`ALTER TABLE admin_fixed_broker_commission DROP INDEX level`);
     } catch (e) {}
@@ -28,13 +29,16 @@ const AdjustFixedBrokerCommission = async (req, res) => {
       await db.sequelize.query(`ALTER TABLE admin_fixed_broker_commission ADD UNIQUE KEY unique_level_service_type (level, service_type)`);
     } catch (e) {}
 
+    // Update or create each commission level for this specific serviceType
     for (const item of updatedPercentage) {
       const { level, percentage } = item;
 
       if (!level || percentage === undefined || percentage === null) {
-        continue;
+        continue; // Skip invalid entries
       }
 
+      // Use findOrCreate to insert if not exists, or update if exists
+      // Filter by both level AND service_type
       const [record, created] = await db.AdminFixedBrokerCommission.findOrCreate({
         where: { 
           level,
@@ -77,3 +81,4 @@ const AdjustFixedBrokerCommission = async (req, res) => {
 };
 
 module.exports = AdjustFixedBrokerCommission;
+

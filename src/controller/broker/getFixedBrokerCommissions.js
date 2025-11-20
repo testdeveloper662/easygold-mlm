@@ -14,6 +14,7 @@ const GetFixedBrokerCommissions = async (req, res) => {
 
     await db.AdminFixedBrokerCommission.sync();
 
+    // Fetch only commission levels for this specific serviceType
     const brokerCommissions = await db.AdminFixedBrokerCommission.findAll({
       where: {
         service_type: serviceType,
@@ -39,3 +40,4 @@ const GetFixedBrokerCommissions = async (req, res) => {
 };
 
 module.exports = GetFixedBrokerCommissions;
+

@@ -108,12 +108,15 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
         };
       }
 
+      const commissionAmount = parseFloat(record.commission_amount || 0);
+      const commissionPercent = parseFloat(record.commission_percent || 0);
+      
       acc[orderId].broker_commissions.push({
         broker_id: record.broker_id,
         user_id: record.user_id,
         user_email: record.user_email,
-        commission_percent: record.commission_percent,
-        commission_amount: record.commission_amount,
+        commission_percent: commissionPercent,
+        commission_amount: commissionAmount,
         is_seller: record.is_seller,
         is_payment_done: record.is_payment_done,
         is_payment_declined: record.is_payment_declined,

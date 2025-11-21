@@ -1,10 +1,9 @@
 const db = require("../../models");
 
-const AdjustFixedBrokerCommission = async (req, res) => {
+const AdjustVariableBrokerCommission = async (req, res) => {
   try {
     const { serviceType, updatedPercentage } = req.body;
 
-    // Validate serviceType
     if (!serviceType || typeof serviceType !== "string" || serviceType.trim() === "") {
       return res.status(400).json({
         success: false,
@@ -19,13 +18,13 @@ const AdjustFixedBrokerCommission = async (req, res) => {
       });
     }
 
-    await db.AdminFixedBrokerCommission.sync();
+    await db.AdminVariableBrokerCommission.sync();
     
     try {
-      await db.sequelize.query(`ALTER TABLE admin_fixed_broker_commission DROP INDEX level`);
+      await db.sequelize.query(`ALTER TABLE admin_variable_broker_commission DROP INDEX level`);
     } catch (e) {}
     try {
-      await db.sequelize.query(`ALTER TABLE admin_fixed_broker_commission ADD UNIQUE KEY unique_level_service_type (level, service_type)`);
+      await db.sequelize.query(`ALTER TABLE admin_variable_broker_commission ADD UNIQUE KEY unique_level_service_type (level, service_type)`);
     } catch (e) {}
 
     for (const item of updatedPercentage) {
@@ -35,7 +34,7 @@ const AdjustFixedBrokerCommission = async (req, res) => {
         continue;
       }
 
-      const [record, created] = await db.AdminFixedBrokerCommission.findOrCreate({
+      const [record, created] = await db.AdminVariableBrokerCommission.findOrCreate({
         where: { 
           level,
           service_type: serviceType,
@@ -51,8 +50,7 @@ const AdjustFixedBrokerCommission = async (req, res) => {
       }
     }
 
-    // Fetch only commission levels for this specific serviceType
-    const brokerCommissions = await db.AdminFixedBrokerCommission.findAll({
+    const brokerCommissions = await db.AdminVariableBrokerCommission.findAll({
       where: {
         service_type: serviceType,
       },
@@ -61,13 +59,13 @@ const AdjustFixedBrokerCommission = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Broker fixed commissions updated successfully.",
+      message: "Broker variable commissions updated successfully.",
       data: {
         brokerCommissions: brokerCommissions || [],
       },
     });
   } catch (error) {
-    console.error("Error updating fixed broker commissions:", error);
+    console.error("Error updating variable broker commissions:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -76,4 +74,5 @@ const AdjustFixedBrokerCommission = async (req, res) => {
   }
 };
 
-module.exports = AdjustFixedBrokerCommission;
+module.exports = AdjustVariableBrokerCommission;
+

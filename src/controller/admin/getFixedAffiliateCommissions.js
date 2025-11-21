@@ -1,10 +1,9 @@
 const db = require("../../models");
 
-const GetFixedBrokerCommissions = async (req, res) => {
+const GetFixedAffiliateCommissions = async (req, res) => {
   try {
     const { serviceType } = req.query;
 
-    // Validate serviceType
     if (!serviceType || typeof serviceType !== "string" || serviceType.trim() === "") {
       return res.status(400).json({
         success: false,
@@ -12,9 +11,9 @@ const GetFixedBrokerCommissions = async (req, res) => {
       });
     }
 
-    await db.AdminFixedBrokerCommission.sync();
+    await db.AdminFixedAffiliateCommission.sync();
 
-    const brokerCommissions = await db.AdminFixedBrokerCommission.findAll({
+    const affiliateCommissions = await db.AdminFixedAffiliateCommission.findAll({
       where: {
         service_type: serviceType,
       },
@@ -23,13 +22,12 @@ const GetFixedBrokerCommissions = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Broker fixed commission levels fetched successfully",
       data: {
-        brokerCommissions: brokerCommissions || [],
+        affiliateCommissions: affiliateCommissions || [],
       },
     });
   } catch (error) {
-    console.error("Error fetching fixed broker commissions:", error);
+    console.error("Error fetching fixed affiliate commissions:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -38,4 +36,5 @@ const GetFixedBrokerCommissions = async (req, res) => {
   }
 };
 
-module.exports = GetFixedBrokerCommissions;
+module.exports = GetFixedAffiliateCommissions;
+

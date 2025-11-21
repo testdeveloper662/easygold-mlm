@@ -1,7 +1,7 @@
 const { Sequelize, sequelize } = require("../config/database");
 
-const AdminFixedBrokerCommission = sequelize.define(
-  "admin_fixed_broker_commission",
+const AdminVariableAffiliateCommission = sequelize.define(
+  "admin_variable_affiliate_commission",
   {
     id: {
       type: Sequelize.INTEGER,
@@ -22,7 +22,7 @@ const AdminFixedBrokerCommission = sequelize.define(
     },
   },
   {
-    tableName: "admin_fixed_broker_commission",
+    tableName: "admin_variable_affiliate_commission",
     timestamps: true,
     indexes: [
       {
@@ -34,4 +34,5 @@ const AdminFixedBrokerCommission = sequelize.define(
   }
 );
 
-module.exports = AdminFixedBrokerCommission;
+module.exports = AdminVariableAffiliateCommission;
+

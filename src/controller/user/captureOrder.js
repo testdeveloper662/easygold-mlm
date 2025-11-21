@@ -80,9 +80,24 @@ const CaptureOrder = async (req, res) => {
         .json({ success: false, message: "Order pivot not found" });
 
     // Step 4: Calculate total commission % and total profit (€)
+    console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
+    console.log(`   - Price: €${orderPivot.price}`);
+    console.log(`   - B2B Price: €${orderPivot.b2b_price}`);
+    console.log(`   - Quantity: ${orderPivot.quantity}`);
+    
     const totalCommissionPercent =
       (orderPivot.price / orderPivot.b2b_price - 1) * 100;
     const totalProfitAmount = (orderPivot.price - orderPivot.b2b_price) * orderPivot.quantity;
+    
+    console.log(` [CAPTURE ORDER] Profit Calculation:`);
+    console.log(`   - Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
+    console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
+    console.log(`   - Formula: (${orderPivot.price} - ${orderPivot.b2b_price}) * ${orderPivot.quantity} = ${totalProfitAmount}`);
+    
+    if (totalProfitAmount <= 0) {
+      console.error(` [CAPTURE ORDER] WARNING: Total Profit Amount is ${totalProfitAmount}. Commission will be 0!`);
+      console.error(` [CAPTURE ORDER] Check if price (${orderPivot.price}) > b2b_price (${orderPivot.b2b_price})`);
+    }
 
     // Step 5: Get broker (seller)
     const broker = await db.Brokers.findOne({
@@ -200,7 +215,19 @@ const CaptureOrder = async (req, res) => {
 
       const isSeller = i === 0;
 
-      console.log(` [CAPTURE ORDER] Level ${i + 1} - Broker ID: ${currentBroker.id}, User ID: ${currentBroker.user_id}, Commission %: ${commissionPercent}%, Amount: €${commissionAmount}, Is Seller: ${isSeller}`);
+      console.log(`\n [CAPTURE ORDER] Level ${i + 1} Commission Calculation:`);
+      console.log(`   - Broker ID: ${currentBroker.id}`);
+      console.log(`   - User ID: ${currentBroker.user_id}`);
+      console.log(`   - Commission Percent: ${commissionPercent}%`);
+      console.log(`   - Total Profit Amount: €${totalProfitAmount}`);
+      console.log(`   - Formula: (${commissionPercent} / 100) * ${totalProfitAmount} = ${commissionAmount}`);
+      console.log(`   - Commission Amount: €${commissionAmount}`);
+      console.log(`   - Is Seller: ${isSeller}`);
+      
+      if (commissionAmount <= 0) {
+        console.error(` [CAPTURE ORDER] WARNING: Commission Amount is ${commissionAmount} for Level ${i + 1}!`);
+        console.error(` [CAPTURE ORDER] Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${totalProfitAmount}`);
+      }
 
       distribution.push({
         level: i + 1,
@@ -225,15 +252,20 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Tree: ${tree}`);
       console.log(`   - Distribution Timestamp: ${distributionTimestamp.toISOString()}`);
 
+      // Validate commission_amount before saving
+      if (isNaN(commissionAmount) || commissionAmount < 0) {
+        console.error(` [CAPTURE ORDER] ERROR: Invalid commission_amount: ${commissionAmount}`);
+        console.error(` [CAPTURE ORDER] commissionPercent: ${commissionPercent}, totalProfitAmount: ${totalProfitAmount}`);
+      }
+
       const commissionRecord = await db.BrokerCommissionHistory.create({
         broker_id: currentBroker.id,
         user_id: currentBroker.user_id,
         order_id: orderId,
         order_type: orderType,
-        order_amount: orderPivot.price * orderPivot.quantity,
-        profit_amount: totalProfitAmount,
-        commission_percent: commissionPercent,  
-        commission_amount: commissionAmount,
+        order_amount: parseFloat((orderPivot.price * orderPivot.quantity).toFixed(2)),
+        profit_amount: parseFloat(totalProfitAmount.toFixed(2)),
+        commission_percent: parseFloat(commissionPercent.toFixed(2)),  
         tree,
         is_seller: isSeller,
       });
@@ -242,8 +274,15 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Database Record ID: ${commissionRecord.id}`);
       console.log(`   - Commission Percent (DB): ${commissionRecord.commission_percent}%`);
       console.log(`   - Commission Amount (DB): €${commissionRecord.commission_amount}`);
+      console.log(`   - Profit Amount (DB): €${commissionRecord.profit_amount}`);
       console.log(`   - Created At (DB): ${commissionRecord.createdAt}`);
-      console.log(`   - This commission_percent will be shown in frontend via getAllBrokerCommissionHistory API\n`);
+      
+      // Verify saved values
+      if (commissionRecord.commission_amount === 0 || commissionRecord.commission_amount === null) {
+        console.error(` [CAPTURE ORDER] WARNING: commission_amount is ${commissionRecord.commission_amount} in database!`);
+        console.error(` [CAPTURE ORDER] Check: commissionPercent=${commissionPercent}, totalProfitAmount=${totalProfitAmount}`);
+      }
+      console.log(`   - This commission_percent and commission_amount will be shown in frontend via getAllBrokerCommissionHistory API\n`);
       
       if (i === 0) {
         // ✅ Increment total commission in Brokers table

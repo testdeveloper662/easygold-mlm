@@ -209,24 +209,41 @@ const CaptureOrder = async (req, res) => {
       const currentBroker = activeLevels[i];
       const commissionPercent = normalizedPercents[i];
 
-      const commissionAmount = parseFloat(
-        ((commissionPercent / 100) * totalProfitAmount).toFixed(2)
-      );
-
-      const isSeller = i === 0;
-
-      console.log(`\n [CAPTURE ORDER] Level ${i + 1} Commission Calculation:`);
+      console.log(`\n [CAPTURE ORDER] ==========================================`);
+      console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation START`);
+      console.log(` [CAPTURE ORDER] ==========================================`);
+      console.log(` [CAPTURE ORDER] Input Values:`);
       console.log(`   - Broker ID: ${currentBroker.id}`);
       console.log(`   - User ID: ${currentBroker.user_id}`);
-      console.log(`   - Commission Percent: ${commissionPercent}%`);
-      console.log(`   - Total Profit Amount: €${totalProfitAmount}`);
-      console.log(`   - Formula: (${commissionPercent} / 100) * ${totalProfitAmount} = ${commissionAmount}`);
-      console.log(`   - Commission Amount: €${commissionAmount}`);
+      console.log(`   - Commission Percent (raw): ${commissionPercent}`);
+      console.log(`   - Commission Percent (type): ${typeof commissionPercent}`);
+      console.log(`   - Total Profit Amount (raw): ${totalProfitAmount}`);
+      console.log(`   - Total Profit Amount (type): ${typeof totalProfitAmount}`);
+
+      // Calculate commission amount with detailed logging
+      const rawCalculation = (commissionPercent / 100) * totalProfitAmount;
+      console.log(` [CAPTURE ORDER] Calculation Steps:`);
+      console.log(`   - Step 1: (${commissionPercent} / 100) = ${commissionPercent / 100}`);
+      console.log(`   - Step 2: ${commissionPercent / 100} * ${totalProfitAmount} = ${rawCalculation}`);
+      console.log(`   - Step 3: ${rawCalculation}.toFixed(2) = ${rawCalculation.toFixed(2)}`);
+      
+      const commissionAmount = parseFloat(rawCalculation.toFixed(2));
+      console.log(`   - Step 4: parseFloat(${rawCalculation.toFixed(2)}) = ${commissionAmount}`);
+      console.log(` [CAPTURE ORDER] Final Commission Amount:`);
+      console.log(`   - Value: ${commissionAmount}`);
+      console.log(`   - Type: ${typeof commissionAmount}`);
+      console.log(`   - Is NaN: ${isNaN(commissionAmount)}`);
+      console.log(`   - Is Null: ${commissionAmount === null}`);
+      console.log(`   - Is Undefined: ${commissionAmount === undefined}`);
+
+      const isSeller = i === 0;
+      console.log(` [CAPTURE ORDER] Additional Info:`);
       console.log(`   - Is Seller: ${isSeller}`);
       
-      if (commissionAmount <= 0) {
-        console.error(` [CAPTURE ORDER] WARNING: Commission Amount is ${commissionAmount} for Level ${i + 1}!`);
-        console.error(` [CAPTURE ORDER] Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${totalProfitAmount}`);
+      if (commissionAmount <= 0 || isNaN(commissionAmount)) {
+        console.error(` [CAPTURE ORDER] ⚠️ WARNING: Commission Amount is ${commissionAmount} for Level ${i + 1}!`);
+        console.error(` [CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ⚠️ Raw calculation result: ${rawCalculation}`);
       }
 
       distribution.push({
@@ -240,46 +257,123 @@ const CaptureOrder = async (req, res) => {
 
       // ✅ Save in BrokerCommissionHistory with order_type and distribution timestamp
       const distributionTimestamp = new Date();
-      console.log(`\n [CAPTURE ORDER] Saving commission to database:`);
-      console.log(`   - Broker ID: ${currentBroker.id}`);
-      console.log(`   - User ID: ${currentBroker.user_id}`);
-      console.log(`   - Order ID: ${orderId}`);
-      console.log(`   - Order Type: ${orderType}`);
-      console.log(`   - Commission Percent: ${commissionPercent}%`);
-      console.log(`   - Commission Amount: €${commissionAmount}`);
-      console.log(`   - Profit Amount: €${totalProfitAmount}`);
-      console.log(`   - Is Seller: ${isSeller}`);
-      console.log(`   - Tree: ${tree}`);
+      console.log(`\n [CAPTURE ORDER] ==========================================`);
+      console.log(` [CAPTURE ORDER] Preparing Database Save`);
+      console.log(` [CAPTURE ORDER] ==========================================`);
+      console.log(` [CAPTURE ORDER] All Values Before Save:`);
+      console.log(`   - Broker ID: ${currentBroker.id} (type: ${typeof currentBroker.id})`);
+      console.log(`   - User ID: ${currentBroker.user_id} (type: ${typeof currentBroker.user_id})`);
+      console.log(`   - Order ID: ${orderId} (type: ${typeof orderId})`);
+      console.log(`   - Order Type: ${orderType} (type: ${typeof orderType})`);
+      console.log(`   - Commission Percent: ${commissionPercent} (type: ${typeof commissionPercent})`);
+      console.log(`   - Commission Amount (raw): ${commissionAmount} (type: ${typeof commissionAmount})`);
+      console.log(`   - Profit Amount: ${totalProfitAmount} (type: ${typeof totalProfitAmount})`);
+      console.log(`   - Order Amount: ${orderPivot.price * orderPivot.quantity} (type: ${typeof (orderPivot.price * orderPivot.quantity)})`);
+      console.log(`   - Is Seller: ${isSeller} (type: ${typeof isSeller})`);
+      console.log(`   - Tree: ${tree} (type: ${typeof tree})`);
       console.log(`   - Distribution Timestamp: ${distributionTimestamp.toISOString()}`);
 
       // Validate commission_amount before saving
+      console.log(`\n [CAPTURE ORDER] Validation Checks:`);
+      console.log(`   - isNaN(commissionAmount): ${isNaN(commissionAmount)}`);
+      console.log(`   - commissionAmount < 0: ${commissionAmount < 0}`);
+      console.log(`   - commissionAmount === null: ${commissionAmount === null}`);
+      console.log(`   - commissionAmount === undefined: ${commissionAmount === undefined}`);
+      
       if (isNaN(commissionAmount) || commissionAmount < 0) {
-        console.error(` [CAPTURE ORDER] ERROR: Invalid commission_amount: ${commissionAmount}`);
-        console.error(` [CAPTURE ORDER] commissionPercent: ${commissionPercent}, totalProfitAmount: ${totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ ERROR: Invalid commission_amount: ${commissionAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ commissionPercent type: ${typeof commissionPercent}`);
+        console.error(` [CAPTURE ORDER] ❌ totalProfitAmount type: ${typeof totalProfitAmount}`);
       }
 
-      const commissionRecord = await db.BrokerCommissionHistory.create({
+      // Calculate safe commission amount
+      const safeCommissionAmount = isNaN(commissionAmount) || commissionAmount < 0 
+        ? 0.00 
+        : parseFloat(commissionAmount.toFixed(2));
+      
+      console.log(`\n [CAPTURE ORDER] Safe Commission Amount Calculation:`);
+      console.log(`   - Input: ${commissionAmount}`);
+      console.log(`   - Is NaN: ${isNaN(commissionAmount)}`);
+      console.log(`   - Is < 0: ${commissionAmount < 0}`);
+      console.log(`   - Safe Value: ${safeCommissionAmount}`);
+      console.log(`   - Safe Value Type: ${typeof safeCommissionAmount}`);
+      console.log(`   - Safe Value Is NaN: ${isNaN(safeCommissionAmount)}`);
+
+      // Prepare data object for database
+      const commissionData = {
         broker_id: currentBroker.id,
         user_id: currentBroker.user_id,
         order_id: orderId,
         order_type: orderType,
         order_amount: parseFloat((orderPivot.price * orderPivot.quantity).toFixed(2)),
         profit_amount: parseFloat(totalProfitAmount.toFixed(2)),
-        commission_percent: parseFloat(commissionPercent.toFixed(2)),  
+        commission_percent: parseFloat(commissionPercent.toFixed(2)),
+        commission_amount: safeCommissionAmount,
         tree,
         is_seller: isSeller,
-      });
+      };
 
-      console.log(` [CAPTURE ORDER] Commission saved successfully:`);
-      console.log(`   - Database Record ID: ${commissionRecord.id}`);
-      console.log(`   - Commission Percent (DB): ${commissionRecord.commission_percent}%`);
-      console.log(`   - Commission Amount (DB): €${commissionRecord.commission_amount}`);
-      console.log(`   - Profit Amount (DB): €${commissionRecord.profit_amount}`);
+      console.log(`\n [CAPTURE ORDER] Database Create Object:`);
+      console.log(`   - broker_id: ${commissionData.broker_id} (type: ${typeof commissionData.broker_id})`);
+      console.log(`   - user_id: ${commissionData.user_id} (type: ${typeof commissionData.user_id})`);
+      console.log(`   - order_id: ${commissionData.order_id} (type: ${typeof commissionData.order_id})`);
+      console.log(`   - order_type: ${commissionData.order_type} (type: ${typeof commissionData.order_type})`);
+      console.log(`   - order_amount: ${commissionData.order_amount} (type: ${typeof commissionData.order_amount})`);
+      console.log(`   - profit_amount: ${commissionData.profit_amount} (type: ${typeof commissionData.profit_amount})`);
+      console.log(`   - commission_percent: ${commissionData.commission_percent} (type: ${typeof commissionData.commission_percent})`);
+      console.log(`   - commission_amount: ${commissionData.commission_amount} (type: ${typeof commissionData.commission_amount})`);
+      console.log(`   - commission_amount is null: ${commissionData.commission_amount === null}`);
+      console.log(`   - commission_amount is undefined: ${commissionData.commission_amount === undefined}`);
+      console.log(`   - commission_amount is NaN: ${isNaN(commissionData.commission_amount)}`);
+      console.log(`   - tree: ${commissionData.tree} (type: ${typeof commissionData.tree})`);
+      console.log(`   - is_seller: ${commissionData.is_seller} (type: ${typeof commissionData.is_seller})`);
+
+      console.log(`\n [CAPTURE ORDER] Attempting Database Create...`);
+      
+      let commissionRecord;
+      try {
+        commissionRecord = await db.BrokerCommissionHistory.create(commissionData);
+        console.log(` [CAPTURE ORDER] ✅ Database create successful!`);
+      } catch (createError) {
+        console.error(`\n [CAPTURE ORDER] ❌❌❌ DATABASE CREATE ERROR ❌❌❌`);
+        console.error(` [CAPTURE ORDER] Error Type: ${createError.name}`);
+        console.error(` [CAPTURE ORDER] Error Message: ${createError.message}`);
+        console.error(` [CAPTURE ORDER] Error Stack: ${createError.stack}`);
+        if (createError.errors && createError.errors.length > 0) {
+          console.error(` [CAPTURE ORDER] Validation Errors:`);
+          createError.errors.forEach((err, idx) => {
+            console.error(`   ${idx + 1}. Field: ${err.path}`);
+            console.error(`      Type: ${err.type}`);
+            console.error(`      Message: ${err.message}`);
+            console.error(`      Value: ${err.value}`);
+            console.error(`      Origin: ${err.origin}`);
+          });
+        }
+        console.error(` [CAPTURE ORDER] Commission Data that failed:`);
+        console.error(JSON.stringify(commissionData, null, 2));
+        console.error(` [CAPTURE ORDER] ❌❌❌ END ERROR ❌❌❌\n`);
+        throw createError; // Re-throw to stop execution
+      }
+
+      console.log(`\n [CAPTURE ORDER] ✅ Commission saved successfully!`);
+      console.log(` [CAPTURE ORDER] Database Record Details:`);
+      console.log(`   - Record ID: ${commissionRecord.id}`);
+      console.log(`   - Commission Percent (DB): ${commissionRecord.commission_percent} (type: ${typeof commissionRecord.commission_percent})`);
+      console.log(`   - Commission Amount (DB): ${commissionRecord.commission_amount} (type: ${typeof commissionRecord.commission_amount})`);
+      console.log(`   - Commission Amount is null: ${commissionRecord.commission_amount === null}`);
+      console.log(`   - Commission Amount is undefined: ${commissionRecord.commission_amount === undefined}`);
+      console.log(`   - Commission Amount is NaN: ${isNaN(commissionRecord.commission_amount)}`);
+      console.log(`   - Profit Amount (DB): ${commissionRecord.profit_amount} (type: ${typeof commissionRecord.profit_amount})`);
+      console.log(`   - Order Amount (DB): ${commissionRecord.order_amount} (type: ${typeof commissionRecord.order_amount})`);
       console.log(`   - Created At (DB): ${commissionRecord.createdAt}`);
+      console.log(` [CAPTURE ORDER] ==========================================`);
+      console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation END`);
+      console.log(` [CAPTURE ORDER] ==========================================\n`);
       
       // Verify saved values
-      if (commissionRecord.commission_amount === 0 || commissionRecord.commission_amount === null) {
-        console.error(` [CAPTURE ORDER] WARNING: commission_amount is ${commissionRecord.commission_amount} in database!`);
+      if (commissionRecord.commission_amount === null || commissionRecord.commission_amount === undefined) {
+        console.error(` [CAPTURE ORDER] ⚠️ WARNING: commission_amount is ${commissionRecord.commission_amount} in database!`);
         console.error(` [CAPTURE ORDER] Check: commissionPercent=${commissionPercent}, totalProfitAmount=${totalProfitAmount}`);
       }
       console.log(`   - This commission_percent and commission_amount will be shown in frontend via getAllBrokerCommissionHistory API\n`);

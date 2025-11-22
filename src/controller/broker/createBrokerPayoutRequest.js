@@ -4,7 +4,6 @@ const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 const { companyAddressMap, generateImageUrl, payoutForType } = require("../../utils/Helper");
 const { generatePDF } = require("../../utils/pdfGenerator");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
-const path = require("path");
 
 const CreateBrokerPayoutRequest = async (req, res) => {
     try {
@@ -92,6 +91,9 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         const addressMap = companyAddressMap();
         const to_company_address = addressMap[payout_for] || "";
 
+        // Format payout_request_id to 5 digits (zero-padded)
+        const formattedPayoutRequestId = String(newRequest?.id || '').padStart(5, '0');
+
         const paylodForMailPDF = {
             logo: await generateImageUrl(brokerDetails?.logo, 'profile'),
             company,
@@ -101,7 +103,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             phone,
             user_email,
             web_site,
-            payout_request_id: newRequest?.id,
+            payout_request_id: formattedPayoutRequestId,
             payout_for: payoutForType(payout_for),
             amount: amount,
             street,
@@ -137,19 +139,43 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             });
         }
         const templateVariables = {
-            invoice_number: newRequest?.id
-        }
+            invoice_number: newRequest?.id || formattedPayoutRequestId,
+        };
+        
         const emailData = await getRenderedEmail(87, language, templateVariables);
 
+        const formatBrokerDetails = (isGerman) => {
+            const details = [];
+            if (company) details.push(company);
+            if (account_owner) details.push(account_owner);
+            if (user_email) details.push(` ${user_email}`);
+            return details.join('<br>');
+        };
+
+        const isGerman = language?.includes("de");
+        const brokerDetailsHtml = formatBrokerDetails(isGerman);
+        let updatedHtmlContent = emailData.htmlContent;
+        
+        if (isGerman) {
+            updatedHtmlContent = updatedHtmlContent.replace(
+                /(Ihr Team)/gi,
+                `$1<br><br>${brokerDetailsHtml}`
+            );
+        } else {
+            updatedHtmlContent = updatedHtmlContent.replace(
+                /(Your team)/gi,
+                `$1<br><br>${brokerDetailsHtml}`
+            );
+        }
+
         const attachmentPath = pdfResult?.success ? pdfResult.filePath : null;
-        const cc = user_email
-        await SendEmailHelper(emailData.subject, emailData.htmlContent, process.env.EASY_GOLD_SUPPORT_EMAIL, attachmentPath, cc);
+        const cc = user_email;
+        await SendEmailHelper(emailData.subject, updatedHtmlContent, process.env.EASY_GOLD_SUPPORT_EMAIL, attachmentPath, cc);
 
         return res.status(200).json({
             success: true,
             message: "Payout request created successfully.",
             data: newRequest
-            // pdfResult
         });
     } catch (error) {
         console.error("Error creating payout request:", error);

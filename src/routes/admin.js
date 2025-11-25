@@ -23,6 +23,7 @@ const UpdateBrokerPayoutRequest = require("../controller/admin/updateBrokerPayou
 const GetAllTargetCustomers = require("../controller/admin/getAllTargetCustomers");
 const GetTargetCustomersByBroker = require("../controller/admin/getTargetCustomersByBroker");
 const GetTargetCustomerStatsOverall = require("../controller/admin/getTargetCustomerStatsOverall");
+const GetBrokerBankDetails = require("../controller/admin/getBrokerBankDetails");
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
@@ -49,6 +50,8 @@ adminRouter.post("/order/detail", authenticateToken, GetOrderDetails);
 
 adminRouter.get("/payout/requests", authenticateToken, GetBrokerPayoutRequests);
 adminRouter.put("/payout/request", UpdateBrokerPayoutRequest);
+
+adminRouter.get("/broker/:brokerId/bank-details", authenticateToken, GetBrokerBankDetails);
 
 // Target Customers Routes
 adminRouter.get("/target-customers", authenticateToken, GetAllTargetCustomers);

@@ -58,17 +58,25 @@ exports.uploadProfilePicture = async (file, dir, type, isFileExist) => {
 };
 
 exports.generateImageUrl = async (data, type) => {
-
     return new Promise((resolve, reject) => {
+        if (!process.env.NODE_URL) {
+            return reject(new Error("NODE_URL is not defined in environment variables. Please set it in .env file."));
+        }
+
+        const baseUrl = process.env.NODE_URL;
+        
+        const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+        
         if (data !== null && data !== "" && data) {
-            const file = process.env.NODE_URL + "uploads" + data;
+            const normalizedData = data.startsWith("/") ? data.substring(1) : data;
+            const file = normalizedBaseUrl + "uploads/" + normalizedData;
             resolve(file);
         } else {
             const default_path =
                 type === "logo"
-                    ? `/public/default/logo.png`
-                    : `/public/default/default_org.png`;
-            const file = process.env.NODE_URL + default_path;
+                    ? `public/default/logo.png`
+                    : `public/default/default_org.png`;
+            const file = normalizedBaseUrl + default_path;
             resolve(file);
         }
     });

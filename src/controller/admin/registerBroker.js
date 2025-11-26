@@ -1,8 +1,6 @@
 const db = require("../../models");
-const nodemailer = require("nodemailer");
-const axios = require("axios");
-const bcrypt = require("bcrypt");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
+const SendEmailHelper = require("../../utils/sendEmailHelper");
 
 const MAIL_SENDER = process.env.MAIL_SENDER;
 const MAIL_PASSWORD = process.env.MAIL_PASSWORD;
@@ -71,15 +69,6 @@ const RegisterBroker = async (req, res) => {
       });
     }
 
-    // Create transporter
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: MAIL_SENDER,
-        pass: MAIL_PASSWORD,
-      },
-    });
-
     // Create register URL with base64 encoded referral code (Node.js uses Buffer, not btoa)
     const encodedReferralCode = Buffer.from(ADMIN_REFERRAL_CODE || "ADMIN").toString("base64");
     const registerUrl = `${process.env.FRONTEND_URL || FRONTEND_URL}/broker-register/step1/${encodedReferralCode}`;
@@ -113,8 +102,9 @@ const RegisterBroker = async (req, res) => {
       html: emailData.htmlContent,
     };
 
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to);
     // Send email
-    await transporter.sendMail(mailOptions);
+    // await transporter.sendMail(mailOptions);
 
     return res.status(200).json({
       success: true,

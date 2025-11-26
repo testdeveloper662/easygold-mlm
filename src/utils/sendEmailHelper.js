@@ -1,13 +1,26 @@
 require("dotenv").config();
 const nodemailer = require("nodemailer");
 
+// const transporter = nodemailer.createTransport({
+//     service: "gmail",
+//     auth: {
+//         user: process.env.MAIL_SENDER,
+//         pass: process.env.MAIL_PASSWORD,
+//     },
+// });
 const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: process.env.MAIL_HOST,
+    port: Number(process.env.MAIL_PORT),
+    secure: Number(process.env.MAIL_PORT) === 465, // true for port 465
     auth: {
         user: process.env.MAIL_SENDER,
         pass: process.env.MAIL_PASSWORD,
     },
+    tls: {
+        rejectUnauthorized: false, // optional, fixes some SSL issues
+    },
 });
+
 
 const SendEmailHelper = (subject, htmlContent, to, attachmentPath = null, cc = null) => {
     try {

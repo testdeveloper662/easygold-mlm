@@ -1,21 +1,54 @@
 const { Op } = require("sequelize");
 const db = require("../../models");
-const { roundToTwoDecimalPlaces } = require("../../utils/Helper");
+const { roundToTwoDecimalPlaces, generateImageUrl } = require("../../utils/Helper");
 
 const MAX_LEVEL = 5;
 
-const buildBrokerTree = (brokers, parentId = null, level = 1, commissionMap = {}) => {
+// const buildBrokerTree = (brokers, parentId = null, level = 1, commissionMap = {}) => {
+//   if (level > MAX_LEVEL) return [];
+
+//   return brokers
+//     .filter((b) => Number(b.parent_id) === Number(parentId))
+//     .map((b) => {
+//       const children = buildBrokerTree(brokers, b.id, level + 1, commissionMap);
+//       const commissionAmount = commissionMap[b.id] || 0;
+
+//       return {
+//         broker_id: b.id,
+//         user_id: b.user?.ID || null,
+//         profile_image: generateImageUrl(b.profile_image, "profile"),
+//         user_email: b.user?.user_email || null,
+//         display_name: b.user?.display_name || null,
+//         referral_code: b.referral_code || null,
+//         commission_amount: commissionAmount,
+//         level,
+//         children,
+//         children_count: children.length,
+//       };
+//     });
+// };
+const buildBrokerTree = async (brokers, parentId = null, level = 1, commissionMap = {}) => {
   if (level > MAX_LEVEL) return [];
 
-  return brokers
-    .filter((b) => Number(b.parent_id) === Number(parentId))
-    .map((b) => {
-      const children = buildBrokerTree(brokers, b.id, level + 1, commissionMap);
+  const filtered = brokers.filter(
+    (b) => Number(b.parent_id) === Number(parentId)
+  );
+
+  const result = await Promise.all(
+    filtered.map(async (b) => {
+      const children = await buildBrokerTree(
+        brokers,
+        b.id,
+        level + 1,
+        commissionMap
+      );
+
       const commissionAmount = commissionMap[b.id] || 0;
 
       return {
         broker_id: b.id,
         user_id: b.user?.ID || null,
+        profile_image: await generateImageUrl(b.profile_image, "profile"),
         user_email: b.user?.user_email || null,
         display_name: b.user?.display_name || null,
         referral_code: b.referral_code || null,
@@ -24,8 +57,12 @@ const buildBrokerTree = (brokers, parentId = null, level = 1, commissionMap = {}
         children,
         children_count: children.length,
       };
-    });
+    })
+  );
+
+  return result;
 };
+
 
 const GetBrokerNetworkById = async (req, res) => {
   try {
@@ -147,11 +184,12 @@ const GetBrokerNetworkById = async (req, res) => {
     });
 
     // 7️⃣ Build full tree
-    const children = buildBrokerTree(allBrokers, targetBroker.id, 2, commissionMap);
+    const children = await buildBrokerTree(allBrokers, targetBroker.id, 2, commissionMap);
 
     // 8️⃣ Final network object
     const network = {
       broker_id: targetBroker.id,
+      profile_image: await generateImageUrl(targetBroker.profile_image, "profile"),
       user_id: targetBroker.user?.ID || null,
       user_email: targetBroker.user?.user_email || null,
       display_name: targetBroker.user?.display_name || null,

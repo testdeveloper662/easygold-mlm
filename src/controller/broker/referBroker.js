@@ -1,6 +1,6 @@
 const db = require("../../models");
-const nodemailer = require("nodemailer");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
+const SendEmailHelper = require("../../utils/sendEmailHelper");
 
 const MAIL_SENDER = process.env.MAIL_SENDER;
 const MAIL_PASSWORD = process.env.MAIL_PASSWORD;
@@ -31,7 +31,7 @@ const ReferBroker = async (req, res) => {
     });
     console.log(email, "email");
     console.log(userExist, "userExist");
-    if(userExist) {
+    if (userExist) {
       return res.status(400).json({
         success: false,
         message: "A user with this email already exists. They cannot be referred again.",
@@ -60,15 +60,6 @@ const ReferBroker = async (req, res) => {
         message: "You have already referred the maximum of 4 brokers.",
       });
     }
-
-    // Setup transporter
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: MAIL_SENDER,
-        pass: MAIL_PASSWORD,
-      },
-    });
 
     let mailOptions;
 
@@ -115,7 +106,7 @@ const ReferBroker = async (req, res) => {
       };
     }
 
-    await transporter.sendMail(mailOptions);
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to);
 
     return res.status(200).json({
       success: true,

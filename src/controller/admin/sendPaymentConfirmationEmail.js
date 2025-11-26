@@ -1,7 +1,7 @@
 const db = require("../../models");
-const nodemailer = require("nodemailer");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 const { getSellerLanguage } = require("../../utils/getSellerLanguage");
+const SendEmailHelper = require("../../utils/sendEmailHelper");
 
 const MAIL_SENDER = process.env.MAIL_SENDER;
 const MAIL_PASSWORD = process.env.MAIL_PASSWORD;
@@ -120,18 +120,6 @@ const SendPaymentConfirmationEmail = async (req, res) => {
 
     // Create transporter with better connection settings
     console.log("📧 Creating email transporter...");
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: MAIL_SENDER,
-        pass: MAIL_PASSWORD,
-      },
-      pool: true, // Use connection pooling
-      maxConnections: 5, // Max concurrent connections
-      maxMessages: 10, // Max messages per connection
-      rateDelta: 1000, // Time between messages (1 second)
-      rateLimit: 5, // Max messages per rateDelta
-    });
     console.log("✅ Email transporter created with connection pooling");
 
     // Send emails to all non-sellers
@@ -185,8 +173,7 @@ const SendPaymentConfirmationEmail = async (req, res) => {
 
         // Add to promises array with error handling
         emailPromises.push(
-          transporter
-            .sendMail(mailOptions)
+          SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to)
             .then(() => {
               emailsSent.push(broker.user_email);
               console.log(`✅ Email successfully sent to: ${broker.user_email}`);
@@ -196,6 +183,17 @@ const SendPaymentConfirmationEmail = async (req, res) => {
               console.error(`❌ Failed to send email to ${broker.user_email}:`, sendError.message);
               console.error("Error details:", sendError);
               return { success: false, email: broker.user_email, error: sendError.message };
+              // transporter
+              //   .sendMail(mailOptions)
+              //   .then(() => {
+              //     emailsSent.push(broker.user_email);
+              //     console.log(`✅ Email successfully sent to: ${broker.user_email}`);
+              //     return { success: true, email: broker.user_email };
+              //   })
+              //   .catch((sendError) => {
+              //     console.error(`❌ Failed to send email to ${broker.user_email}:`, sendError.message);
+              //     console.error("Error details:", sendError);
+              //     return { success: false, email: broker.user_email, error: sendError.message };
             })
         );
       } catch (emailError) {

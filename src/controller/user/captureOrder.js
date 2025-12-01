@@ -327,7 +327,7 @@ const CaptureOrder = async (req, res) => {
         user_id: currentBroker.user_id,
         order_id: orderId,
         order_type: orderType,
-        order_amount: isGoldPurchase ? order.confirmed_price : parseFloat((orderPivot.price * orderPivot.quantity).toFixed(2)),
+        order_amount: isGoldPurchase ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat((orderPivot.price * orderPivot.quantity).toFixed(2)),
         profit_amount: isGoldPurchase ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
         commission_amount: safeCommissionAmount,

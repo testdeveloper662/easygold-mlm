@@ -30,7 +30,7 @@ async function getBrokerCommissionTotals(broker) {
     if (!commissionRows.length) return totals;
 
     // Allowed order types for B2B dashboard commissions
-    const B2B_TYPES = ["my_store", "api", "landing_page"];
+    const B2B_TYPES = ["my_store", "api", "landing_page", "gold_purchase"];
 
     commissionRows.forEach((row) => {
         const amount = Number(row.commission_amount || 0);

@@ -76,6 +76,10 @@ const GetBrokerCommissionHistory = async (req, res) => {
       .filter((h) => h.order_type === "gold_purchase")
       .map((h) => h.order_id);
 
+    const goldPuracheSellOrdersIds = history
+      .filter((h) => h.order_type === "gold_purchase_sell_orders")
+      .map((h) => h.order_id);
+
     let myStoreOrderMap = {};
     if (myStoreOrderIds.length) {
       const myStoreOrders = await db.MyStoreOrder.findAll({
@@ -125,12 +129,25 @@ const GetBrokerCommissionHistory = async (req, res) => {
       }, {});
     }
 
+    let goldPurchaseSellOrderMap = {};
+    if (goldPuracheSellOrdersIds.length) {
+      const goldPurchaseSellOrders = await db.GoldPurchaseOrder.findAll({
+        where: { id: { [Op.in]: goldPuracheSellOrdersIds } },
+        raw: true,
+      });
+      goldPurchaseSellOrderMap = goldPurchaseSellOrders.reduce((acc, o) => {
+        acc[o.id] = o;
+        return acc;
+      }, {});
+    }
+
     // Collect user_ids from fetched orders to resolve user_login
     const orderUserIds = new Set();
     Object.values(myStoreOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
     Object.values(apiOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
     Object.values(lpOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
     Object.values(goldPurchaseOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
+    Object.values(goldPurchaseSellOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
 
     let orderUsersMap = {};
     if (orderUserIds.size) {
@@ -160,6 +177,8 @@ const GetBrokerCommissionHistory = async (req, res) => {
         order_details = lpOrderMap[json.order_id] || null;
       } else if (json.order_type === "gold_purchase") {
         order_details = goldPurchaseOrderMap[json.order_id] || null;
+      } else if (json.order_type === "gold_purchase_sell_orders") {
+        order_details = goldPurchaseSellOrderMap[json.order_id] || null;
       }
 
       const relatedUserLogin = order_details?.user_id

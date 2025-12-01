@@ -33,10 +33,9 @@ const GoldPurchaseSellOrders = sequelize.define(
         first_name: {
             type: Sequelize.STRING(100),
             allowNull: true,
-            field: "first name",
         },
 
-        lastName: {
+        last_name: {
             type: Sequelize.STRING(100),
             allowNull: true,
         },
@@ -44,7 +43,6 @@ const GoldPurchaseSellOrders = sequelize.define(
         email: {
             type: Sequelize.STRING(150),
             allowNull: true,
-            field: "e-mail",
         },
 
         phone: {
@@ -60,10 +58,9 @@ const GoldPurchaseSellOrders = sequelize.define(
         zip_code: {
             type: Sequelize.STRING(20),
             allowNull: true,
-            field: "zip code",
         },
 
-        City: {
+        city: {
             type: Sequelize.STRING(100),
             allowNull: true,
         },
@@ -78,7 +75,7 @@ const GoldPurchaseSellOrders = sequelize.define(
             allowNull: true,
         },
 
-        IBAN: {
+        iban: {
             type: Sequelize.STRING(50),
             allowNull: true,
         },
@@ -89,7 +86,7 @@ const GoldPurchaseSellOrders = sequelize.define(
         },
 
         estimated_value: {
-            type: Sequelize.DECIMAL,
+            type: Sequelize.DECIMAL(15, 2),
             allowNull: true,
         },
 
@@ -98,10 +95,9 @@ const GoldPurchaseSellOrders = sequelize.define(
             allowNull: true,
         },
 
-        pick_up: {
+        pickup: {
             type: Sequelize.TEXT("long"),
             allowNull: true,
-            field: "pick up",
         },
 
         signature: {
@@ -117,21 +113,17 @@ const GoldPurchaseSellOrders = sequelize.define(
 
         offer_price_1: {
             type: Sequelize.FLOAT,
-            allowNull: false,
-            defaultValue: 0,
+            allowNull: true,
         },
 
         offer_price_2: {
             type: Sequelize.FLOAT,
-            allowNull: false,
-            defaultValue: 0,
+            allowNull: true,
         },
 
         confirmed_price: {
             type: Sequelize.FLOAT,
-            allowNull: false,
-            defaultValue: 0,
-            field: "confirmed price",
+            allowNull: true,
         },
 
         confirm_email: {
@@ -175,8 +167,8 @@ const GoldPurchaseSellOrders = sequelize.define(
         },
     },
     {
-        timestamps: false, // Because table has custom timestamp fields
-        paranoid: true,    // To enable soft delete
+        timestamps: false,
+        paranoid: true,
         deletedAt: "deleted_at",
         tableName: "6lwup_sell_orders",
     }

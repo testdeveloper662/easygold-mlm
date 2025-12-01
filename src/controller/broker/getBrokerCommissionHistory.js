@@ -131,7 +131,7 @@ const GetBrokerCommissionHistory = async (req, res) => {
 
     let goldPurchaseSellOrderMap = {};
     if (goldPuracheSellOrdersIds.length) {
-      const goldPurchaseSellOrders = await db.GoldPurchaseOrder.findAll({
+      const goldPurchaseSellOrders = await db.GoldPurchaseSellOrders.findAll({
         where: { id: { [Op.in]: goldPuracheSellOrdersIds } },
         raw: true,
       });

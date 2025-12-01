@@ -72,6 +72,10 @@ const GetBrokerCommissionHistory = async (req, res) => {
       .filter((h) => h.order_type === "landing_page" || h.order_type === "lp_order")
       .map((h) => h.order_id);
 
+    const goldPuracheIds = history
+      .filter((h) => h.order_type === "gold_purchase")
+      .map((h) => h.order_id);
+
     let myStoreOrderMap = {};
     if (myStoreOrderIds.length) {
       const myStoreOrders = await db.MyStoreOrder.findAll({
@@ -109,11 +113,24 @@ const GetBrokerCommissionHistory = async (req, res) => {
       }, {});
     }
 
+    let goldPurchaseOrderMap = {};
+    if (goldPuracheIds.length) {
+      const goldPurchaseOrders = await db.GoldPurchaseOrder.findAll({
+        where: { id: { [Op.in]: goldPuracheIds } },
+        raw: true,
+      });
+      goldPurchaseOrderMap = goldPurchaseOrders.reduce((acc, o) => {
+        acc[o.id] = o;
+        return acc;
+      }, {});
+    }
+
     // Collect user_ids from fetched orders to resolve user_login
     const orderUserIds = new Set();
     Object.values(myStoreOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
     Object.values(apiOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
     Object.values(lpOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
+    Object.values(goldPurchaseOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
 
     let orderUsersMap = {};
     if (orderUserIds.size) {
@@ -141,6 +158,8 @@ const GetBrokerCommissionHistory = async (req, res) => {
             : apiOrderMap[json.order_id]) || null;
       } else if (json.order_type === "landing_page" || json.order_type === "lp_order") {
         order_details = lpOrderMap[json.order_id] || null;
+      } else if (json.order_type === "gold_purchase") {
+        order_details = goldPurchaseOrderMap[json.order_id] || null;
       }
 
       const relatedUserLogin = order_details?.user_id

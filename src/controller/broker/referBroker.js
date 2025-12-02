@@ -108,6 +108,25 @@ const ReferBroker = async (req, res) => {
 
     await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to);
 
+    const invitation = await db.BrokerInvitations.findOne({
+      where: {
+        email
+      },
+    });
+    if (invitation) {
+      invitation.last_invitation_sent = new Date();
+      await invitation.save();
+      console.log("===================RESEND EMAIL WITH INVITATION=====================");
+    } else {
+      await db.BrokerInvitations.create({
+        email,
+        invitation_status: "SENT",
+        invited_by: parentBroker.id,
+        last_invitation_sent: new Date(),
+      });
+      console.log("===================NEW EMAIL WITH INVITATION=====================");
+    }
+
     return res.status(200).json({
       success: true,
       message: `Email sent successfully to ${email}`,

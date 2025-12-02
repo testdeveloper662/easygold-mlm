@@ -331,7 +331,7 @@ const BrokerRegistration = async (req, res) => {
 
     if (langParam) {
       const langStr = String(langParam).toLowerCase().trim();
-      if (langStr === "de-DE" ||langStr === "de" || langStr === "german" || langStr === "deutsch") {
+      if (langStr === "de-DE" || langStr === "de" || langStr === "german" || langStr === "deutsch") {
         languageValue = "de-DE"; // German format
       } else if (langStr === "en" || langStr === "english") {
         languageValue = "en-US"; // English format
@@ -340,7 +340,7 @@ const BrokerRegistration = async (req, res) => {
     console.log(`[BrokerRegistration] Language mapping - lang: "${lang}", language: "${languageParam}", using: "${langParam}", mapped to: "${languageValue}"`);
 
     // Create broker entry
-    await db.Brokers.create({
+    const broker = await db.Brokers.create({
       user_id: user_id,
       parent_id: isAdminParent ? null : parentBroker?.id || null,
       referral_code: newReferralCode,
@@ -349,6 +349,25 @@ const BrokerRegistration = async (req, res) => {
       total_commission_amount: 0,
       veriff_session_id: veriff_session_id || null,
     });
+
+    const invitation = await db.BrokerInvitations.findOne({
+      where: {
+        email
+      },
+    });
+
+    if (invitation) {
+      try {
+        await db.BrokerInvitations.update({
+          invitation_status: "REGISTERED",
+        });
+      } catch (error) {
+        console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
+        console.log("error = ", error);
+        console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
+      }
+    }
+
 
     // Update parent's children count
     if (!isAdminParent && parentBroker) {

@@ -23,6 +23,7 @@ const BrokerBankDetails = require("./broker_bank_details");
 const BrokerPayoutRequests = require("./broker_payout_requests");
 const TargetCustomers = require("./targetCustomers");
 const GoldPurchaseSellOrders = require("./goldPurchaseSellOrders");
+const BrokerInvitations = require("./brokerInvitations");
 
 const db = {};
 
@@ -52,6 +53,7 @@ db.BrokerBankDetails = BrokerBankDetails;
 db.BrokerPayoutRequests = BrokerPayoutRequests;
 db.TargetCustomers = TargetCustomers;
 db.GoldPurchaseSellOrders = GoldPurchaseSellOrders;
+db.BrokerInvitations = BrokerInvitations;
 
 // Relationships
 db.TargetCustomers.belongsTo(db.Brokers, {

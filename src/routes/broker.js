@@ -24,6 +24,8 @@ const UpdateTargetCustomer = require("../controller/broker/updateTargetCustomer"
 const DeleteTargetCustomer = require("../controller/broker/deleteTargetCustomer");
 const GetTargetCustomerStats = require("../controller/broker/getTargetCustomerStats");
 const GetDashboardData = require("../controller/broker/getDashboardData");
+const InvitationCreateUpdate = require("../controller/broker/invitationCreateUpdate");
+const GetInvitations = require("../controller/broker/invitationsGet");
 
 brokerRouter.post(
   "/register",
@@ -57,5 +59,10 @@ brokerRouter.delete("/target-customers/:id", authenticateToken, DeleteTargetCust
 
 // Dashboard
 brokerRouter.get("/dashboard", authenticateToken, GetDashboardData);
+
+//Invitation
+brokerRouter.post("/invitation", authenticateToken, InvitationCreateUpdate);
+brokerRouter.get("/invitations", authenticateToken, GetInvitations);
+
 
 module.exports = brokerRouter;

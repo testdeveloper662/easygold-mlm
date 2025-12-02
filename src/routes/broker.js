@@ -61,7 +61,7 @@ brokerRouter.delete("/target-customers/:id", authenticateToken, DeleteTargetCust
 brokerRouter.get("/dashboard", authenticateToken, GetDashboardData);
 
 //Invitation
-brokerRouter.post("/invitation", authenticateToken, InvitationCreateUpdate);
+brokerRouter.post("/invitation", InvitationCreateUpdate);
 brokerRouter.get("/invitations", authenticateToken, GetInvitations);
 
 

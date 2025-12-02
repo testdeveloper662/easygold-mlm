@@ -85,10 +85,12 @@ const CaptureOrder = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Order not found" });
 
-
+    let orderPivot = null;
+    let totalProfitAmount;
+    let totalCommissionPercent;
     if (!isGoldPurchase && !isGoldPurchaseSell) {
       // Step 3: Get the pivot info
-      const orderPivot = await PivotModel.findOne({
+      orderPivot = await PivotModel.findOne({
         where: { order_id: orderId },
       });
       if (!orderPivot)
@@ -102,9 +104,9 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - B2B Price: €${orderPivot.b2b_price}`);
       console.log(`   - Quantity: ${orderPivot.quantity}`);
 
-      const totalCommissionPercent =
+      totalCommissionPercent =
         (orderPivot.price / orderPivot.b2b_price - 1) * 100;
-      const totalProfitAmount = (orderPivot.price - orderPivot.b2b_price) * orderPivot.quantity;
+      totalProfitAmount = (orderPivot.price - orderPivot.b2b_price) * orderPivot.quantity;
 
       console.log(` [CAPTURE ORDER] Profit Calculation:`);
       console.log(`   - Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
@@ -237,11 +239,6 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - User ID: ${currentBroker.user_id}`);
       console.log(`   - Commission Percent (raw): ${commissionPercent}`);
       console.log(`   - Commission Percent (type): ${typeof commissionPercent}`);
-
-      if (!isGoldPurchase && !isGoldPurchaseSell) {
-        console.log(`   - Total Profit Amount (raw): ${totalProfitAmount}`);
-        console.log(`   - Total Profit Amount (type): ${typeof totalProfitAmount}`);
-      }
 
       // Calculate commission amount with detailed logging
       const rawCalculation = (isGoldPurchase || isGoldPurchaseSell) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;

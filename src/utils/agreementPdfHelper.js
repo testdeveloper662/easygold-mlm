@@ -1,5 +1,6 @@
 const db = require("../models");
 const { generatePDF } = require("./pdfGenerator");
+require("dotenv").config();
 
 function getMeta(user, key) {
     return user?.user_meta?.find(m => m.meta_key === key)?.meta_value || "";

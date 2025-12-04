@@ -120,6 +120,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         const pdfResult = await generatePDF(
             paylodForMailPDF,
             language.includes("de") ? "payout_template_de.html" : "payout_template_en.html",
+            "payouts",
             outputFileName
         );
 
@@ -141,7 +142,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         const templateVariables = {
             invoice_number: newRequest?.id || formattedPayoutRequestId,
         };
-        
+
         const emailData = await getRenderedEmail(87, language, templateVariables);
 
         const formatBrokerDetails = (isGerman) => {
@@ -155,7 +156,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         const isGerman = language?.includes("de");
         const brokerDetailsHtml = formatBrokerDetails(isGerman);
         let updatedHtmlContent = emailData.htmlContent;
-        
+
         if (isGerman) {
             updatedHtmlContent = updatedHtmlContent.replace(
                 /(Ihr Team)/gi,

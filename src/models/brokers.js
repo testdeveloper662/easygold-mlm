@@ -18,7 +18,7 @@ const Brokers = sequelize.define(
       allowNull: true,
     },
     user_id: {
-      type: Sequelize.BIGINT.UNSIGNED, 
+      type: Sequelize.BIGINT.UNSIGNED,
       allowNull: false,
       references: {
         model: "6LWUP_users",
@@ -27,7 +27,7 @@ const Brokers = sequelize.define(
       onDelete: "CASCADE",
     },
     parent_id: {
-      type: Sequelize.INTEGER.UNSIGNED, 
+      type: Sequelize.INTEGER.UNSIGNED,
       allowNull: true,
       references: {
         model: "brokers",
@@ -54,6 +54,14 @@ const Brokers = sequelize.define(
       defaultValue: 0,
       comment: "Total commission amount accumulated by broker",
     },
+    untermaklervertrag_doc: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true
+    },
+    maklervertrag_doc: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true
+    }
   },
   {
     timestamps: true,

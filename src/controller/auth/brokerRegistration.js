@@ -6,6 +6,8 @@ const axios = require("axios");
 const FormData = require("form-data");
 const fs = require("fs");
 const path = require("path");
+const { generateAgreementPDF } = require("../../utils/agreementPdfHelper");
+const { generateImageUrl } = require("../../utils/Helper");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 
@@ -112,6 +114,32 @@ const BrokerRegistration = async (req, res) => {
     if (!isAdminParent) {
       parentBroker = await db.Brokers.findOne({
         where: { referral_code: referralCode },
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: [
+              "ID",
+              "display_name",
+            ],
+            include: [
+              {
+                model: db.UsersMeta,
+                as: "user_meta",
+                attributes: ["meta_key", "meta_value"],
+                where: {
+                  meta_key: ["u_street_no",
+                    "u_street",
+                    "u_location",
+                    "u_postcode",
+                    "signatureData",
+                    "language"]
+                },
+                required: false
+              }
+            ]
+          }
+        ]
       });
       if (!parentBroker) {
         return res.status(400).json({
@@ -226,6 +254,7 @@ const BrokerRegistration = async (req, res) => {
     }
     console.log("==================START CALLING API==============");
 
+
     // ✅ Send to external API
     const apiResponse = await axios.post(`${process.env.EASY_GOLD_URL}/api/Register`, form, {
       headers: form.getHeaders(),
@@ -241,6 +270,35 @@ const BrokerRegistration = async (req, res) => {
         message: apiResponse.data?.message || "Registration failed at external API",
       });
     }
+
+    const userSign = await db.UsersMeta.findOne({
+      where: {
+        user_id: apiResponse.data?.data?.user_id,
+        meta_key: "signatureData"
+      },
+      attributes: ["meta_value"],
+      raw: true
+    });
+
+    let brockerPdfData = {
+      name: fullName,
+      username: username,
+      address: `${address}, ${city}, ${postalCode}`,
+      u_street_no: u_street_no,
+      u_street: address,
+      u_location: city,
+      u_postcode: postalCode,
+      date: new Date().toISOString().split("T")[0],
+      signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
+      language: languageForApi,
+      stamp_logo: await generateImageUrl("agreements/stamp.png", 'agreements'),
+      mlm_structure_image: await generateImageUrl("agreements/mlm_structure.png", 'agreements')
+    };
+
+    // if (languageForApi == "en-US") {
+    let docsData = await generateAgreementPDF(brockerPdfData, parentBroker);
+    // } else if (languageForApi == "de-DE") {
+    // }
 
     const user_id = apiResponse.data?.data?.user_id;
     console.log("user_id:", user_id);
@@ -331,7 +389,7 @@ const BrokerRegistration = async (req, res) => {
 
     if (langParam) {
       const langStr = String(langParam).toLowerCase().trim();
-      if (langStr === "de-DE" ||langStr === "de" || langStr === "german" || langStr === "deutsch") {
+      if (langStr === "de-DE" || langStr === "de" || langStr === "german" || langStr === "deutsch") {
         languageValue = "de-DE"; // German format
       } else if (langStr === "en" || langStr === "english") {
         languageValue = "en-US"; // English format
@@ -348,6 +406,8 @@ const BrokerRegistration = async (req, res) => {
       children_count: 0,
       total_commission_amount: 0,
       veriff_session_id: veriff_session_id || null,
+      untermaklervertrag_doc: `uploads/agreements/${docsData.untermaklervertrag_doc}`,
+      maklervertrag_doc: `uploads/agreements/${docsData.maklervertrag_doc}`
     });
 
     // Update parent's children count

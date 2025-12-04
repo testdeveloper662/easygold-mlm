@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sub-broker Agreement</title>
+    <style>
+        /* --- A4 / print settings --- */
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+
+        html,
+        body {
+            width: 210mm;
+            height: 297mm;
+            /* margin: 0 auto; */
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            line-height: 1.6;
+            color: #111;
+        }
+
+        /* --- layout basics --- */
+        .header {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+
+        .subheader {
+            text-align: center;
+        }
+
+        .mt-30 {
+            margin-bottom: 30px;
+        }
+
+        .party-info {
+            margin-bottom: 20px;
+        }
+
+        .textright {
+            text-align: right;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #ccc;
+            margin: 20px 0;
+        }
+
+        /* --- Numbered row grid --- 
+     We use grid to create a fixed left column for numbers and a flexible right column for text.
+     This ensures 1., 1.1, 2., etc. all align vertically in a single column.
+  */
+        .numrow {
+            display: grid;
+            grid-template-columns: 60px 1fr;
+            /* fixed column for numbers, flexible content column */
+            column-gap: 12px;
+            align-items: start;
+            /* top align number with the start of text */
+            margin-bottom: 8px;
+            width: 100%;
+        }
+
+        /* number column style */
+        .num {
+            /* align number to right so number and punctuation align nicely */
+            text-align: right;
+            padding-right: 8px;
+            font-weight: 500;
+            /* keep vertical alignment with text start */
+        }
+
+        /* content column */
+        .content {
+            text-align: justify;
+        }
+
+        /* For main section headers where you want the title bolded but still aligned */
+        .section-numrow .num {
+            font-size: 1em;
+            font-weight: 700;
+        }
+
+        .section-numrow .bold-content {
+            font-weight: 700;
+        }
+
+        /* when you need an empty number cell (to continue paragraph under same numbering),
+     just put an empty .num element (can remain invisible) */
+        .num.empty {
+            visibility: hidden;
+        }
+
+        /* page break helper for PDF */
+        .page-break {
+            page-break-before: always;
+        }
+
+        /* tables and signature */
+        table {
+            width: 50%;
+            border-collapse: collapse;
+            margin: 15px auto;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background: #f2f2f2;
+        }
+
+        .signature-container {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            gap: 40px;
+        }
+
+        .signature-col {
+            width: 48%;
+            text-align: left;
+        }
+
+        .sig-title {
+            font-size: 1.6em;
+            font-weight: 700;
+            /* color: #e53935; */
+            /* red */
+        }
+
+        .sig-city-date {
+            font-size: 1.2em;
+            font-weight: 700;
+            /* color: #e53935; */
+        }
+
+        .sig-line {
+            margin-top: 10px;
+            font-size: 1.2em;
+        }
+
+        .sig-role {
+            font-weight: 700;
+            margin-top: 5px;
+        }
+
+        .sig-list {
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        .highlight-underline {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            /* space between text and underline */
+            text-decoration-thickness: 2px;
+        }
+
+        /* small responsive safety - doesn't change printed output because print uses A4 */
+        @media screen and (max-width: 700px) {
+            .numrow {
+                grid-template-columns: 48px 1fr;
+            }
+
+            body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <p><strong>Untermaklervertrag</strong></p>
+        <p><strong>Vergütungsvereinbarung</strong></p>
+        <p><strong>Vertraulichkeitsvereinbarung</strong></p>
+    </div>
+
+    <div class="party-info">
+        <p class="subheader mt-30">zwischen</p>
+        <p class="subheader"><strong>{{parent_name}},{{parent_address}}</strong></p>
+        <p class="textright indent">- nachstehend „Hauptmakler“ -</p>
+        <p class="subheader">sowie</p>
+        <p class="subheader"><strong>{{name}},{{address}}</strong></p>
+        <p class="textright indent">- nachstehend „Makler“ -</p>
+        <p class="textright indent">- nachstehend gemeinsam auch "Parteien“ -</p>
+    </div>
+
+    <!-- SECTION 1 as a "section-numrow" -->
+    <div class="numrow section-numrow">
+        <div class="num bold-content">1.</div>
+        <div class="content"><span class="bold-content">Vertragsgegenstand</span> Durch den vorliegenden Vertrag wird
+            der Makler für die Dauer dieses</div>
+    </div>
+
+    <!-- Subclauses under section 1 -->
+    <div class="numrow">
+        <div class="num">1.1</div>
+        <div class="content">Vertrages berechtigt, für den Hauptmakler in der Vermittlung von Edelmetallen, die dieser
+            für seinen jeweiligen Auftraggeber (nachfolgend „Auftraggeber“) ausführt, tätig zu werden. Das Ziel der
+            Vermittlung sind insbesondere Abschlüsse von Kaufverträgen über Goldpro-</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">1.2</div>
+        <div class="content">dukte auf dem Onlineportal www.Goldsilberstore.com der Hartmann & Benz GmbH, Gutenberstraße
+            40, 70736 Fellbach</div>
+    </div>
+
+    <!-- SECTION 2 -->
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">2.</div>
+        <div class="bold-content">Dauer des Vertrages, Kündigung</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">2.1</div>
+        <div class="content">Das Vertragsverhältnis beginnt am <span class="highlight-underline">{{date}}</span>
+            (Datum).</div>
+    </div>
+    <div class="numrow">
+        <div class="num">2.2</div>
+        <div class="content">Beide Parteien können den Vertrag mit einer Frist von einem Monat zum Monatsende ohne
+            Angabe von Gründen kündigen.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">2.3</div>
+        <div class="content">Das Recht zur fristlosen Kündigung aus wichtigem Grund bleibt hiervon unberührt.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">2.4</div>
+        <div class="content">Die Kündigungserklärung bedarf in jedem Fall der Schriftform. Maßgeblich für die Einhaltung
+            der Frist ist der Zugang des Kündigungsschreibens.</div>
+    </div>
+
+    <!-- SECTION 3 -->
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">3.</div>
+        <div class="bold-content">Rechte und Pflichten des Maklers</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.1</div>
+        <div class="content">Der Maklererbringtseine Leistungen als selbstständiger Unternehmer. Ein Arbeitsverhältnis
+            wird nicht begründet. Der Makler ist bei der Ausübung seiner Tätigkeit insbesondere örtlich und zeitlich
+            nicht gebunden. Eine Pflicht zum Tätigwerden wird durch diesen Vertrag nicht begründet. Der Makler übernimmt
+            unter Wahrung der Interessen des Hauptmaklers die</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.2</div>
+        <div class="content">Vermittlung von Verträgen mit potentiellen Kunden des jeweiligen Auftraggebers. Hierbei
+            beachtet der Mak- ler bei seinen Verhandlungen mit dem Kunden die vom jeweiligen Auftraggeber des Haupt-
+            maklers festgesetzten Preise, Konditionen (insbesondere zum Eigentumsübergang des Goldes erst bei
+            Anlieferung), Lieferfristen. Wenn und soweit mit dem Hauptmakler nicht ausdrücklich in Textform etwas
+            anderes vereinbart wurde, muss der vermittelte Auftrag in- haltlich den vom jeweiligen Auftraggeber des
+            Hauptmaklers vorgegebenen jeweils gültigen Allgemeinen Geschäftsbedingungen entsprechen. Der Makler ist
+            nicht bevollmächtigt und nicht berechtigt, im eigenen Namen oder im Namen des</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.3</div>
+        <div class="content">Hauptmaklers oder des Auftraggebers des Hauptmaklers Verträge abzuschließen. Der Makler ist
+            nach vorheriger schriftlicher Einwilligung des Hauptmaklers berechtigt, sich zur</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.4</div>
+        <div class="content">Erfüllung seiner Aufgaben Dritter zu bedienen. Der Makler hat sicherzustellen, dass die
+            Pflichten dieses Vertrages auch von diesen Dritten eingehalten werden. Gegenüber dem Hauptmakler bleibt der
+            Makler für die Verpflichtungen aus diesem Vertrag vollumfänglich verantwortlich.</div>
+    </div>
+
+    <!-- SECTION 4 -->
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">4.</div>
+        <div class="bold-content">Konkurrenzschutz, weitere Vertretungen</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">4.1</div>
+        <div class="content">Der Makler darf auch für Dritte tätig werden, soweit die Verpflichtungen aus diesem Vertrag
+            und die Interessen des Hauptmaklers nicht beeinträchtigt werden. Der Makler verpflichtet</div>
+    </div>
+    <div class="numrow">
+        <div class="num">4.2</div>
+        <div class="content">sich, während der Vertragslaufzeit und in einem Zeitraum von zwei Jahren nach Beendigung
+            dieses Vertrags keinen eigenen Maklervertrag mit der der Hartmann & Benz GmbH, Gutenbergstraße 40, 70736
+            Fellbach zu schließen. Diese Pflicht entfällt, sollte der Hauptmakler seinen Vertrag mit der Hartmann und
+            Benz GmbH beenden. Bei jedem</div>
+    </div>
+    <div class="numrow">
+        <div class="num">4.3</div>
+        <div class="content">Verstoß gegen diese Pflicht aus Ziff. 4.2. dieser Vereinbarung, verpflichtet sich der
+            Makler zur Zahlung einer Vertragsstrafe von EUR 10.000,00.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">5.</div>
+        <div class="bold-content">Rechte und Pflichten des Hauptmaklers</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">5.1</div>
+        <div class="content">Der Hauptmakler verpflichtet sich, dem Makler die zur Ausführung seiner Tätigkeit
+            erforderlichen Materialien zu überlassen und ihn bei seiner Tätigkeit zu unterstützen. Der Hauptmakler
+            stellt dem Makler alle sich auf die möglichen Geschäfte beziehenden Informationen zur Verfügung. Er
+            informiert den Makler hierbei auch über bevorstehende Preisänderungen und/oder Änderungen der
+            Vertragsprodukte des jeweiligen Auftraggebers. Werbematerial</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">5.2</div>
+        <div class="content">und sonstige Gegenstände, insbesondere auch technische Gegenstände, die der Hauptmakler dem
+            Makler zur Unterstützung seiner Tätigkeit aushändigt, sind nach Beendigung des Vertragsverhältnisses
+            unverzüglich zurückzugeben, soweit sie nicht bestimmungsgemäß verbraucht wurden.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">6.</div>
+        <div class="bold-content">Rechte am Vertragsprodukt</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num"></div>
+        <div class="content">Hat der Hauptmakler die Erlaubnis, die Marken und sonstigen Zeichen des Auftraggebers zum
+            Zwecke des Vertriebs der Vertragsprodukte zu nutzen, erteilt er diese Erlaubnis auch dem Makler.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">7.</div>
+        <div class="content"><span class="bold-content">Vergütung</span> Der Makler erhält für seine Tätigkeit eine
+            erfolgsbezogene Vergütung. Die Höhe
+        </div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">7.1</div>
+        <div class="content">der Vergütung und die sonstigen Konditionen ergeben sich aus der diesem Vertrag</div>
+    </div>
+    <div class="numrow">
+        <div class="num">7.2</div>
+        <div class="content">beigefügten Vergütungsvereinbarung. Wenn und soweit der Hauptmakler Prämien, Boni und
+            Verkaufshilfen gewährt, handelt es sich dabei grundsätzlich um freiwillige Leistungen, die –</div>
+    </div>
+    <div class="numrow">
+        <div class="num">7.3</div>
+        <div class="content">soweit nicht etwas anderes be- stimmt ist – jederzeit vom Hauptmakler ganz oder teilweise
+            widerrufen werden können. Der Makler hat keinen Anspruch darauf, dass überhaupt Prämien, Boni und
+            Verkaufshilfen gewährt werden. Werden solche gewährt, hat der Makler keinen Anspruch auf unveränderte
+            Fortzahlung derselben über die getroffenen Zusagen hinaus.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">8.</div>
+        <div class="bold-content">Entfallen bzw. Reduktion der Vergütung</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">8.1</div>
+        <div class="content">EinVergütungsanspruch entsteht nicht oder entfällt, wenn feststeht, dass der Kunde nicht
+            leistet. Die Nichtleistung des Kunden steht insbesondere fest, wenn der Kunde vom Geschäft mit dem
+            Auftraggeber zurücktritt - soweit der Auftraggeber den Rücktritt nicht zu ver- treten hat - oder wenn dem
+            Auftraggeber nach billigem Ermessen und bei Anwendung der Sorgfalt eines ordentlichen Kaufmanns die
+            Einleitung weiterer Schritte zur Herbeiführung des Leistungserfolgs durch den Kunden nicht zumutbar ist. Der
+        </div>
+    </div>
+    <div class="numrow">
+        <div class="num">8.2</div>
+        <div class="content">Vergütungsanspruch entfällt ferner im Falle der Nichtausführung des Geschäfts, wenn und
+            soweit diese auf Umständen beruht, die der Auftraggeber nicht zu vertreten hat.
+        </div>
+    </div>
+    <div class="numrow">
+        <div class="num">8.3</div>
+        <div class="content">Bereits vom Hauptmakler an den Makler geleistete Vergütungen sind in solchen Fällen zu-
+            rückzuerstatten; sie werden in der nächsten Abrechnung gemäß den abgerechneten An- sprüchen auf Vergütung
+            gegenübergestellt und mit diesen saldiert. Der Makler hat
+        </div>
+    </div>
+    <div class="numrow">
+        <div class="num">8.4</div>
+        <div class="content">weder einen Anspruch auf Vergütungsvorschuss noch auf Auslagenerstat- tung gegen den
+            Hauptmakler.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">9.</div>
+        <div class="bold-content">Auszahlung, Abrechnung und Fälligkeit der Vergütung</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">9.1</div>
+        <div class="content">Der Makler bekommt dieVergütungdirektnachjedemausgeführten Kauf auf seine virtuelle
+            Geldbörse gutgeschrieben. Der Hauptmakler wird monatlich gegenüber dem Makler eine</div>
+    </div>
+    <div class="numrow">
+        <div class="num">9.2</div>
+        <div class="content">Abrechnung über die in die- sem Zeitraum entstandenen Vergütungsansprüche des Maklers
+            erteilen. Der Makler hat diese Abrechnung unverzüglich zu prüfen und etwaige Einwände</div>
+    </div>
+    <div class="numrow">
+        <div class="num">9.3</div>
+        <div class="content">spätestens innerhalb eines Monats nach Erhalt der Abrechnung und in der vom Hauptmakler
+            bestimmten Form schriftlich gegenüber dem Hauptmakler geltend zu machen. Nach Ablauf eines Monats, gilt die
+            Abrechnung zwischen den Parteien als genehmigt. Sofern der Makler</div>
+    </div>
+    <div class="numrow">
+        <div class="num">9.4</div>
+        <div class="content">umsatzsteuerpflichtig ist, hat die Vergütungsabrechnung die auf die Ver- gütung entfallende
+            Umsatzsteuer zu enthalten. Der Hauptmakler ist berechtigt, sich zur Erfüllung seiner</div>
+    </div>
+    <div class="numrow">
+        <div class="num">9.5</div>
+        <div class="content">Aufgaben aus Ziff. 7, 8 und 9 dieses Vertrages des jeweiligen Auftraggebers zu bedienen.
+            Gegenüber dem Makler bleibt der Hauptmakler für die Verpflichtungen aus diesem Vertrag vollumfänglich
+            verantwortlich.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">10.</div>
+        <div class="bold-content">Geheimhaltungspflicht</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">10.1</div>
+        <div class="content">Beide Seiten werden den Inhalt dieses Vertrages und insbesondere der Anlage zu den
+            Vergütungsansprüchen vertraulich behandeln. Der Makler hat Geschäfts- und Betriebsgeheimnisse des jeweiligen
+            Auftraggebers, die ihm während seiner Tätigkeit für den Hauptmakler als solche anvertraut oder bekannt
+            geworden sind, auch nach Beendigung des Vertrages zu wahren. Unterlagen über geheime Geschäftsvorgänge, die
+            dem Makler anvertraut wurden,</div>
+    </div>
+    <div class="numrow">
+        <div class="num">10.2</div>
+        <div class="content">hat der Makler unverzüglich nach ihrer auftragsgemäßen Benutzung, spätestens jedoch bei der
+            Be- endigung des Vertragsverhältnisses, an den Hauptmakler zurückzugeben. Zur Verfügung gestellte Daten hat
+            der Makler zu löschen und die Löschung dem Hauptmakler zu bestäti- gen. Der Makler hat sicherzustellen, dass
+            die vorgenannten Geheimhaltungsverpflichtungen auch von seinen Angestellten und sonstigen Hilfspersonen
+        </div>
+    </div>
+    <div class="numrow">
+        <div class="num">10.3</div>
+        <div class="content">eingehalten werden. Bei jedem schuldhaften Verstoß gegen die unter dieser Ziff. 11 der
+            Vereinbarung enthalte- nen Pflichten, verpflichtet sich der Makler zur Zahlung einer</div>
+    </div>
+    <div class="numrow">
+        <div class="num">10.4</div>
+        <div class="content">Vertragsstrafe von EUR 5000,00.</div>
+    </div>
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">11.</div>
+        <div class="bold-content">Vollständigkeit und Schriftlichkeit</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">11.1</div>
+        <div class="content">Die vorliegende Vereinbarung stellt nebst Anlage die vollständige Absprache zwischen den
+            Parteien dar. Änderungen und Ergänzungen dieser Vereinbarung bedürfen zu ihrer Wirksamkeit der Schriftform.
+            Dies gilt auch für den Verzicht auf das Schriftformerfordernis.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">12.</div>
+        <div class="bold-content">Übertragbarkeit</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num"></div>
+        <div class="content">Der Makler kann die Rechte und Pflichten aus diesem Vertrag nicht ohne vorherige
+            schriftliche Einwilligung des Hauptmaklers auf Dritte übertragen.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">13.</div>
+        <div class="bold-content">Rechtswahl und Gerichtsstand</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">13.1</div>
+        <div class="content">Für den vorliegenden Vertrag gilt deutsches Recht unter Ausschluss des UN-Kaufrechtes.
+        </div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">13.2</div>
+        <div class="content">Die Parteien vereinbaren für alle aus und im Zusammenhang mit diesem Vertrag entstehenden
+            Streitigkeiten, soweit gesetzlich zulässig, die ausschließliche Zuständigkeit der Ge- richte am Sitz bzw. am
+            Wohnort des Hauptmaklers.</div>
+    </div>
+
+    <!-- Severability -->
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">14.</div>
+        <div class="bold-content">Salvatorische Klausel</div>
+    </div>
+    <div class="numrow">
+        <div class="num">14.1</div>
+        <div class="content">Im Falle der Unwirksamkeit einer oder mehrerer Bestimmungen dieses Vertrages werden die
+            Parteien eine der unwirksamen Regelung möglichst nahekommende Ersatzregelung treffen. Die Unwirksamkeit
+            einer oder mehrerer Bestimmungen dieses Vertrages lässt die</div>
+    </div>
+    <div class="numrow">
+        <div class="num">14.2</div>
+        <div class="content">Wirksam- keit im Übrigen unberührt. Eine unwirksame Bestimmung wird automatisch durch
+            diejenige wirksame Bestimmung er- setzt, die dem wirtschaftlichen Zweck dieser</div>
+    </div>
+    <div class="numrow">
+        <div class="num">14.3</div>
+        <div class="content">Vereinbarung am nächsten kommt.</div>
+    </div>
+
+    <!-- <hr> -->
+
+    <!-- Put Compensation agreement on a new page -->
+    <div class="page-break"></div>
+
+    <div class="annex" style="text-align:center; margin-top: 8px;">
+        <div class="annex-title" style="font-size:1.3em; font-weight:700; margin-bottom:6px;">Vergütungsvereinbarung für
+            die MLM- Struktur</div>
+        <div style="font-size:1em; margin-bottom: 12px;">als Ergänzung zum Untermaklervertrag</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num content">1.</div>
+        <div class="content">Umfang und Voraussetzungen der vergütungspflichtigen Geschäfte</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">1.1</div>
+        <div class="content">Der Makler erhält einen Anspruch auf Vergütung für von ihm während des
+            Vertragsverhältnisses vermittelten Verträge, sobald und soweit der Auftraggeber das Geschäft ausgeführt und
+            der Kunde gezahlt hat.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">1.2</div>
+        <div class="content">Die Vermittlung der Goldprodukte wird nach untenstehender Tabelle vergütet. Die Die
+            prozentuale Vergütung bezieht sich auf den Nettokaufpreis des vermittelten Produkts. Der daraus erzielte
+            Gewinn bildet einen 100-%-Pool, der entsprechend den Vergütungsstufen verteilt wird.</div>
+    </div>
+    <div style="text-align:center; margin: 20px 0;">
+        <img src="{{mlm_structure_image}}" alt="Commission Levels Table" style="max-width:100%; height:auto;">
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num content">2.</div>
+        <div class="content">Laufzeit und Anpassung der Vereinbarung</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">2.1</div>
+        <div class="content">Diese Vergütungsvereinbarung gilt bis zum 31. Dezember des Kalenderjahres.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">2.2</div>
+        <div class="content">Der Hauptmakler wird spätestens im Oktober des jeweiligen Kalenderjahres dem Makler eine
+            neue Vergütungsvereinbarung vorlegen. Diese kann der Makler bis Ende November des jeweiligen Kalenderjahres
+            annehmen. Sollte die Vergütungsvereinbarung zum Stichtag nicht angenommen werden, wird der Hauptmakler von
+            seinem Kündigungsrecht nach Ziff. 2.2. des Untermaklervertrages Gebrauch machen..</div>
+    </div>
+    <div class="numrow">
+        <div class="num">2.3</div>
+        <div class="content">Der Hauptmakler kann sich zur Wahrnehmung seiner Rechte und zur Erfüllung seiner Pflichten
+            aus dieser Vereinbarung seines Auftraggebers bedienen. Gegenüber dem Makler bleibt der Hauptmakler für die
+            Verpflichtungen aus diesem Vertrag vollumfänglich verantwortlich.</div>
+    </div>
+
+    <!-- <hr> -->
+    <div class="page-break"></div>
+
+    <div style="height:50vh; display:flex; flex-direction:column; justify-content:center;">
+        <div class="annex" style="text-align:center; margin-top: 8px;">
+            <div class="annex-title" style="font-size:1.3em; font-weight:700; margin-bottom:6px;">
+                Vertraulichkeitsvereinbarung
+            </div>
+        </div>
+    </div>
+    <div class="numrow section-numrow">
+        <div class="num"></div>
+        <div class="content">
+            <span class="bold-content">Präambel</span> Die Parteien beabsichtigen den beiliegenden Vertrag zu schließen,
+            durch den der Makler berechtigt wird für den Auftraggeber in der Vermittlung von Edelmetallen tätig zu
+            werden. (nachstehend<span class="bold-content">„Maklervertrag“</span>). Hierzu vereinbaren die Parteien
+            vorab Folgendes:
+        </div>
+    </div>
+
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">1.</div>
+        <div class="bold-content">Geheimhaltungspflicht</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">1.1</div>
+        <div class="content">BeideSeitenwerden den Inhalt des Maklervertrages und insbesondere der Anlage zu den
+            Vergütungsansprüchen vertraulich behandeln. Der Makler hat Geschäfts- und Betriebsgeheimnisse des
+            Auftraggebers, die ihm während seiner Tätigkeit für den Auftraggeber als solche anvertraut oder bekannt
+            geworden sind, auch nach Beendigung des Maklervertrages zu wahren. Unterlagen über</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">1.2</div>
+        <div class="content">geheime Geschäftsvorgänge, die dem Makler anvertraut wurden, hat der Makler unverzüglich
+            nach ihrer auftragsgemäßen Benutzung, spätestens jedoch bei der Beendigung des Vertragsverhältnisses, an den
+            Auftraggeber zurückzugeben. Zur Verfügung gestellte Daten hat der Makler zu löschen und die Löschung dem
+            Auftraggeber zu bestätigen. Der Makler hat</div>
+    </div>
+    <div class="numrow">
+        <div class="num">1.3</div>
+        <div class="content">sicherzustellen, dass die vorgenannten Geheimhaltungsverpflichtungen auch von seinen
+            Angestellten und sonstigen Hilfspersonen eingehalten werden.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">2.</div>
+        <div class="bold-content">Vert rags strafe</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">2.1</div>
+        <div class="content">Beieinem schuldhaften Verstoß gegen die unter dieser Ziff. 1 der Vereinbarung enthaltenen
+            Pflichten verpflichtet sich der Makler eine von dem Auftraggeber nach billigem Ermessen festzusetzende, im
+            Streitfall von der zuständigen Gerichtsbarkeit zu überprüfende, Vertragsstrafe zu bezahlen. Handelt es sich
+            bei diesem Verstoß gegen diese Vereinbarung um einen andauernden Verstoß, ist der Makler für jeden Monat,
+            den dieser Verstoß andauert, zu einer weiteren Zahlung einer gemäß dieser Zif- fer 2.1 festzusetzenden
+            Vertragsstrafe verpflichtet. Das Recht des Auftraggebers, einen
+        </div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">2.2</div>
+        <div class="content">darüberhinausgehenden Schaden – insbesondere aufgrund rufschädigender Handlungen – geltend
+            zu machen, bleibt unberührt. Eine gezahlte Vertragsstrafe ist auf etwaige Schadenersatzansprüche
+            anzurechnen.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">3.</div>
+        <div class="bold-content">Salvatorische Klausel</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.1</div>
+        <div class="content">Im Falle der Unwirksamkeit einer oder mehrerer Bestimmungen dieser Vereinbarung werden die
+            Parteien eine der unwirksamen Regelung möglichst nahekommende Ersatzregelung treffen.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.2</div>
+        <div class="content">Die Unwirksamkeit einer oder mehrerer Bestimmungen dieser Vereinbarung lässt die
+            Wirksamkeit im Übrigen unberührt.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.3</div>
+        <div class="content">Eine unwirksame Bestimmung wird automatisch durch diejenige wirksame Bestimmung ersetzt,
+            die dem wirtschaftlichen Zweck dieser Vereinbarung am nächsten kommt.</div>
+    </div>
+
+    <div class="signature-container">
+
+        <!-- LEFT COLUMN -->
+        <div class="signature-col">
+            <div class="sig-city-date"><span class="highlight-underline">{{parent_u_location}}</span>, den <span
+                    class="highlight-underline">{{date}}</span></div>
+            <br><br>
+
+            <div class="sig-title"
+                style="border-bottom: 1px solid #000; width:150px; height:100px; display:flex; align-items:center; justify-content:center;">
+
+                <img src="{{parent_signaturedata}}" alt="Signature"
+                    style="max-width:150px; max-height:100px; object-fit:contain;" onerror="this.style.display='none';">
+            </div>
+            <div class="sig-role">„Hauptmakler / Unternehmer“</div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="signature-col">
+            <div class="sig-city-date"><span class="highlight-underline">{{u_location}}</span>, den <span
+                    class="highlight-underline">{{date}}</span></div>
+            <br><br>
+
+            <div class="sig-title" style="border-bottom: 1px solid #000;"><img src="{{signature}}"
+                    alt="Commission Levels Table" style="width:150px; height:100px;"></div>
+            <div class="sig-role">„Makler / Vermittler / Unternehmer“</div>
+
+            <div class="sig-list">
+                <div>Untermaklervertrag</div>
+                <div>Vergütungsvereinbarung</div>
+                <div>Vertraulichkeitsvereinbarung</div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

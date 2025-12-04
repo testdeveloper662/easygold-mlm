@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Broker Agreement</title>
+    <style>
+        /* --- A4 / print settings --- */
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+
+        html,
+        body {
+            width: 210mm;
+            height: 297mm;
+            /* margin: 0 auto; */
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            line-height: 1.6;
+            color: #111;
+        }
+
+        /* --- layout basics --- */
+        .header {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+
+        .subheader {
+            text-align: center;
+        }
+
+        .mt-30 {
+            margin-bottom: 30px;
+        }
+
+        .party-info {
+            margin-bottom: 20px;
+        }
+
+        .textright {
+            text-align: right;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #ccc;
+            margin: 20px 0;
+        }
+
+        /* --- Numbered row grid --- 
+     We use grid to create a fixed left column for numbers and a flexible right column for text.
+     This ensures 1., 1.1, 2., etc. all align vertically in a single column.
+  */
+        .numrow {
+            display: grid;
+            grid-template-columns: 60px 1fr;
+            /* fixed column for numbers, flexible content column */
+            column-gap: 12px;
+            align-items: start;
+            /* top align number with the start of text */
+            margin-bottom: 8px;
+            width: 100%;
+        }
+
+        /* number column style */
+        .num {
+            /* align number to right so number and punctuation align nicely */
+            text-align: right;
+            padding-right: 8px;
+            font-weight: 500;
+            /* keep vertical alignment with text start */
+        }
+
+        /* content column */
+        .content {
+            text-align: justify;
+        }
+
+        /* For main section headers where you want the title bolded but still aligned */
+        .section-numrow .num {
+            font-size: 1em;
+            font-weight: 700;
+        }
+
+        .section-numrow .bold-content {
+            font-weight: 700;
+        }
+
+        /* when you need an empty number cell (to continue paragraph under same numbering),
+     just put an empty .num element (can remain invisible) */
+        .num.empty {
+            visibility: hidden;
+        }
+
+        /* page break helper for PDF */
+        .page-break {
+            page-break-before: always;
+        }
+
+        /* tables and signature */
+        table {
+            width: 50%;
+            border-collapse: collapse;
+            margin: 15px auto;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background: #f2f2f2;
+        }
+
+        .document-container {
+            display: flex;
+            justify-content: space-between;
+            /* Pushes the left and right sections to the edges */
+            max-width: 1000px;
+            /* Limit the width of the document */
+            margin: 0 auto;
+            padding: 40px 0px;
+        }
+
+        .section {
+            width: 48%;
+            /* Allocate space for each column */
+            padding: 0 10px;
+        }
+
+        /* --- Left Section Styles --- */
+        .left-section {
+            text-align: left;
+        }
+
+        .date-location-text {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .highlight-text {
+            /* color: #b76e46; */
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .stamp-wrapper {
+            /* To place the stamp image correctly relative to the signature line */
+            position: relative;
+            height: 100px;
+            /* Adjust based on the actual image size */
+            margin-bottom: 10px;
+            padding: 25px 0px;
+        }
+
+        .company-stamp {
+            width: 140px;
+            /* Set a size for the stamp */
+            height: auto;
+            /* You might need to adjust the position if the image has a lot of transparent padding */
+            position: absolute;
+            top: -20px;
+            /* Pull it up to sit on the line */
+            right: 100px;
+        }
+
+        .signature-line {
+            border: none;
+            width: 250px;
+            border-top: 1px solid #000;
+            margin-top: 30px;
+            /* Space below the stamp/logo area */
+            margin-bottom: 10px;
+        }
+
+        .company-details {
+            font-style: normal;
+            /* Removes default italic for address */
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .role-text {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+
+        /* --- Right Section Styles --- */
+        .right-section {
+            text-align: left;
+        }
+
+        .top-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .input-group {
+            text-align: center;
+            width: 45%;
+            /* Space for City and Date */
+        }
+
+        .input-line {
+            border: none;
+            border-top: 1px solid #000;
+            margin: 5px 0 5px 0;
+        }
+
+        /* Line with "City, den date" structure */
+        .city-date-line {
+            font-size: 16px;
+            margin-bottom: 40px;
+            /* Space before the signature line */
+        }
+
+        .fill-line {
+            display: inline-block;
+            border-bottom: 1px solid #000;
+            width: 150px;
+            /* Length of the line before "den" */
+            margin-right: 5px;
+        }
+
+        .fill-line.short {
+            width: 50px;
+            /* Length of the line after "den" */
+            margin-left: 5px;
+        }
+
+        .signature-group {
+            width: 100%;
+            /* Signature line spans full width */
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .signature-group .input-line {
+            margin-top: 15px;
+            width: 320px;
+            /* Adjust spacing for the signature line */
+        }
+
+        .signature-group .highlight-text {
+            display: block;
+            /* Ensures 'signatur' is centered above the line */
+        }
+
+        .signature-role {
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 5px;
+            margin-bottom: 20px;
+        }
+
+        .agreements-list {
+            text-align: left;
+            margin-top: 10px;
+        }
+
+        .agreements-list p {
+            margin: 2px 0;
+        }
+
+        .highlight-underline {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            /* space between text and underline */
+            text-decoration-thickness: 2px;
+        }
+
+        /* small responsive safety - doesn't change printed output because print uses A4 */
+        @media screen and (max-width: 700px) {
+            .numrow {
+                grid-template-columns: 48px 1fr;
+            }
+
+            body {
+                padding: 20px;
+            }
+        }
+
+        .textleftmargin {
+            margin-left: 30px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <p><strong>Broker Agreement</strong></p>
+        <p><strong>Compensation Agreement</strong></p>
+        <p><strong>Confidentiality Agreement</strong></p>
+    </div>
+
+    <div class="party-info">
+        <p class="subheader mt-30"><strong>between</strong></p>
+        <p class="textleftmargin">Hartmann & Benz GmbH, Gutenbergstrasse 40, 70736 Fellbach</p>
+        <p class="textright indent">- below <strong>„Client“</strong> -</p>
+        <p class="subheader"><strong>as well as</strong></p>
+        <p class="subheader"><strong>{{name}},{{address}}</strong></p>
+        <p class="indent textleftmargin">Name (company name), address</p>
+        <p class="textright indent">- below <strong>„broker"</strong> -</p>
+        <p class="textright indent">- also below together <strong>„Parties"</strong> -</p>
+    </div>
+
+    <!-- SECTION 1 as a "section-numrow" -->
+    <div class="numrow section-numrow">
+        <div class="num bold-content">1.</div>
+        <div class="content"><span class="bold-content">Subject of the contract</span> DThis contract appoints the
+            broker for the duration of this</div>
+    </div>
+
+    <!-- Subclauses under section 1 -->
+    <div class="numrow">
+        <div class="num">1.1</div>
+        <div class="content">The contract authorizes the agent to act on behalf of the client in the brokerage of
+            precious metals – especially in online trading. The objective of the brokerage is, in particular, the
+            conclusion of purchase contracts for gold products on the online portal.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">1.2</div>
+        <div class="content">„www.Goldsilberstore.com</div>
+    </div>
+
+    <!-- SECTION 2 -->
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">2.</div>
+        <div class="bold-content">Duration and Terminatio</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">2.1</div>
+        <div class="content">The contractual relationship begins on the <span
+                class="highlight-underline">{{date}}</span>(date).</div>
+    </div>
+    <div class="numrow">
+        <div class="num">2.2</div>
+        <div class="content">Both parties may terminate the contract with one month's notice to the end of the month
+            without giving reasons.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">2.3</div>
+        <div class="content">The right to terminate the contract without notice for good cause remains unaffected.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">2.4</div>
+        <div class="content">The notice of termination must always be in writing. The date of receipt of the notice of
+            termination is decisive for compliance with the deadline.</div>
+    </div>
+
+    <!-- SECTION 3 -->
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">3.</div>
+        <div class="content"><span class="bold-content">Rights and obligations of the real estate agent</span>The real
+            estate agent provides his services as</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.1</div>
+        <div class="content">Independent entrepreneur. No employment relationship is established. The broker is not
+            bound by any specific location or time constraints in the performance of his/her duties. This contract does
+            not establish any obligation to act. The broker undertakes, while safeguarding the client's interests, to
+            broker contracts with potential parties.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.2</div>
+        <div class="content">Customers. In his negotiations with the customer, the broker observes the prices,
+            conditions especially regarding the transfer of ownership of the gold only upon delivery), and delivery
+            deadlines set by the client. Unless and to the extent that something else has been expressly agreed upon
+            with the client in writing, the content of the brokered order must comply with the currently valid General
+            Terms and Conditions specified by the client. The broker is not</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.3</div>
+        <div class="content">The agent is authorized but not entitled to conclude contracts in his own name or in the
+            name of the client.The agent may only conclude contracts after obtaining the prior written consent of the
+            client.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.4</div>
+        <div class="content">The client is entitled to use third parties to fulfill their obligations. The broker must
+            ensure that these third parties also comply with the obligations of this contract. The broker remains fully
+            responsible to the client for the obligations arising from this contract.</div>
+    </div>
+
+    <!-- SECTION 4 -->
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">4.</div>
+        <div class="bold-content">Protection from competition, further representation</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num"></div>
+        <div class="content">The broker may also act for third parties, provided that the obligations arising from this
+            contract and the interests of the client are not impaired.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">5.</div>
+        <div class="bold-content">Rights and obligations of the client</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">5.1</div>
+        <div class="content">The client undertakes to provide the broker with the materials necessary for the
+            performance of his services and to support him in his work. The client shall provide the broker with all
+            information relating to potential transactions. He shall also inform the broker of any impending price
+            changes and/or changes to the products under contract. Advertising material and other items,</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">5.2</div>
+        <div class="content">In particular, any technical equipment provided by the client to the broker to support
+            their work remains the property of the client. It must be returned immediately upon termination of the
+            contractual relationship, unless it has been used up as intended. The client is entitled, at their own
+            discretion, to</div>
+    </div>
+    <div class="numrow">
+        <div class="num">5.3</div>
+        <div class="content">to accept or decline orders at their reasonable discretion.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">6.</div>
+        <div class="bold-content">Rights to the contract product</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num"></div>
+        <div class="content">All rights to the contract products belong to the client. However, the client grants the
+            broker permission, during the term of the contract, to use the client's trademarks and other marks for the
+            purpose of distributing the contract products.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">7.</div>
+        <div class="content"><span class="bold-content">Compensation</span></div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">7.1</div>
+        <div class="content">The broker receives a success-based remuneration for his services in accordance with the
+            provisions of this contract.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">7.2</div>
+        <div class="content">The amount of remuneration and other conditions are set out in the remuneration agreement
+            attached to this contract.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">7.3</div>
+        <div class="content">If and to the extent that the client grants premiums, bonuses and sales assistance, these
+            are generally voluntary benefits which – unless otherwise stipulated – can be revoked by the client in whole
+            or in part at any time.The broker has no right to the granting of any premiums, bonuses, or sales
+            incentives.If such payments are granted, the broker has no right to their continued payment beyond the
+            agreed-upon amount.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">8.</div>
+        <div class="bold-content">Elimination or reduction of remuneration</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">8.1</div>
+        <div class="content">No claim for payment arises or lapses if it is established that the customer is not
+            performing.The customer's non-performance is established in particular if the customer withdraws from the
+            contract with the client – provided the client is not responsible for the withdrawal – or if in the client's
+            reasonable judgment and exercising the due diligence of a prudent businessperson, it is unreasonable to
+            expect the client to take further steps to achieve the desired performance. The claim for payment lapses.
+        </div>
+    </div>
+    <div class="numrow">
+        <div class="num">8.2</div>
+        <div class="content">Furthermore, in the event of non-execution of the transaction, if and to the extent that
+            this is due to circumstances for which the client is not responsible. Already from the client to the broker
+        </div>
+    </div>
+    <div class="numrow">
+        <div class="num">8.3</div>
+        <div class="content">Payments made in such cases must be refunded; they will be offset against the invoiced
+            Claims for payment in the next statement and balanced against them. The broker has no claim to
+        </div>
+    </div>
+    <div class="numrow">
+        <div class="num">8.4</div>
+        <div class="content">Advance payment is still subject to reimbursement of expenses from the client.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">9.</div>
+        <div class="bold-content">Payment, invoicing and due date of remuneration</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">9.1</div>
+        <div class="content">The broker receives the commission directly after each completed purchase, credited to his
+            virtual wallet, as soon as the purchase price to be paid by the customer has been fully received by the
+            client.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">9.2</div>
+        <div class="content">The client will provide the broker with a monthly statement of account detailing the
+            broker's commission claims incurred during that period.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">9.3</div>
+        <div class="content">The broker must review this statement of account immediately and raise any objections in
+            writing to the client no later than one month after receiving the statement of account, in the form
+            specified by the client. After one month, the statement of account is considered approved by both parties.
+        </div>
+    </div>
+    <div class="numrow">
+        <div class="num">9.4</div>
+        <div class="content">If the broker is subject to VAT, the invoice must include the VAT due on the fee.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">10.</div>
+        <div class="bold-content">Obligation to maintain confidentiality</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">10.1</div>
+        <div class="content">Both parties will treat the contents of this contract, and in particular the appendix
+            regarding remuneration claims, as confidential.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">10.2</div>
+        <div class="content">The rights and obligations of the parties – in particular a contractual penalty – are
+            regulated in the attached pre-agreed confidentiality agreement, which becomes part of this contract
+        </div>
+    </div>
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">11.</div>
+        <div class="bold-content">Completeness and written form</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num"></div>
+        <div class="content">This agreement, including its annex, constitutes the entire agreement between the
+            contracting parties. Amendments and additions to this agreement must be in writing to be effective. This
+            also applies to any waiver of the written form requirement.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">12.</div>
+        <div class="bold-content">Transferability</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num"></div>
+        <div class="content">The broker cannot transfer the rights and obligations arising from this contract to third
+            parties without the prior written consent of the client.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">13.</div>
+        <div class="bold-content">Choice of law and jurisdiction</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">13.1</div>
+        <div class="content">This contract is governed by German law, excluding the UN Convention on Contracts for the
+            International Sale of Goods (CISG).</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">13.2</div>
+        <div class="content">The contracting parties agree that, to the extent legally permissible, the courts at the
+            client's place of business shall have exclusive jurisdiction over all disputes arising from or in connection
+            with this contract.</div>
+    </div>
+
+    <!-- Severability -->
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">14.</div>
+        <div class="bold-content">Severability clause</div>
+    </div>
+    <div class="numrow">
+        <div class="num">14.1</div>
+        <div class="content">In the event that one or more provisions of this contract are invalid, the parties shall
+            agree on a replacement provision that comes as close as possible to the invalid provision.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">14.2</div>
+        <div class="content">The invalidity of one or more provisions of this contract shall not affect the validity of
+            the remaining provisions.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">14.3</div>
+        <div class="content">An invalid provision shall automatically be replaced by the valid provision that most
+            closely approximates the economic purpose of this agreement.</div>
+    </div>
+    <hr style="border: none; border-top: 1px dashed #000;" />
+
+    <!-- <hr> -->
+
+    <!-- Put Compensation agreement on a new page -->
+    <div class="page-break"></div>
+
+    <div class="annex" style="text-align:center; margin-top: 8px;">
+        <div class="annex-title" style="font-size:1.3em; font-weight:700; margin-bottom:6px;">Compensation agreement for
+            the MLM structure</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num content">1.</div>
+        <div class="content">Scope and conditions of transactions subject to remuneration</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">1.1</div>
+        <div class="content">The broker is entitled to remuneration for contracts brokered by him during the contractual
+            relationship, as soon as and to the extent that the client has executed the transaction and the customer has
+            paid.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">1.2</div>
+        <div class="content">The brokerage of gold products is compensated according to the table below. The percentage
+            commission refers to the net purchase price of the brokered product. The resulting profit forms a 100% pool,
+            which is distributed according to the commission levels.</div>
+    </div>
+    <div style="text-align:center; margin: 20px 0;">
+        <img src="{{mlm_structure_image}}" alt="Commission Levels Table" style="max-width:100%; height:auto;">
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num content">2.</div>
+        <div class="content">Term and adjustment of the agreement</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">2.1</div>
+        <div class="content">This remuneration agreement is valid until December 31st of the calendar year.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">2.2</div>
+        <div class="content">The client will submit a new remuneration agreement to the intermediary no later than
+            October of the respective calendar year. The broker may accept this until the end of November of the
+            respective calendar year. Should The remuneration agreement not be accepted by the deadline, the client will
+            exercise their right of termination pursuant to section 2.2 of the brokerage agreement.</div>
+    </div>
+
+    <hr style="border: none; border-top: 1px dashed #000;" />
+
+    <!-- <hr> -->
+    <div class="page-break"></div>
+
+    <div style="height:50vh; display:flex; flex-direction:column; justify-content:center;">
+        <div class="annex" style="text-align:center; margin-top: 8px;">
+            <div class="annex-title" style="font-size:1.3em; font-weight:700; margin-bottom:6px;">
+                Confidentiality agreement
+            </div>
+        </div>
+    </div>
+    <div class="numrow section-numrow">
+        <div class="num"></div>
+        <div class="content">
+            <span class="bold-content">Preamble</span> The parties intend to conclude the attached contract, by which
+            the broker is authorized to act for the client in the brokerage of precious metals (hereinafter referred to
+            as the <span class="bold-content">"Brokerage Agreement"</span>). To this end, the parties agree in advance
+            to the following:
+        </div>
+    </div>
+
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">1.</div>
+        <div class="bold-content">Obligation to maintain confidentiality</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">1.1</div>
+        <div class="content">Both parties will treat the contents of the brokerage agreement, and in particular the
+            appendix regarding the remuneration claims, as confidential. The broker is obligated to maintain the
+            confidentiality of the client's business and trade secrets, which were entrusted to him or became known to
+            him during his work for the client, even after the termination of the brokerage agreement. Documents
+            concerning</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">1.2</div>
+        <div class="content">Confidential business information entrusted to the broker must be returned to the client by
+            the Broker immediately after its proper use, but no later than the termination of the contractual
+            relationship. The broker must delete any data provided and confirm the deletion to the client.</div>
+    </div>
+    <div class="numrow">
+        <div class="num">1.3</div>
+        <div class="content">to ensure that the aforementioned confidentiality obligations are also observed by his
+            employees and other assistants.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">2.</div>
+        <div class="bold-content">Contractual penalty</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">2.1</div>
+        <div class="content">In the event of a culpable breach of the obligations contained in this Section 1 of the
+            Agreement, the Broker undertakes to pay a contractual penalty to be determined by the Client at its
+            reasonable discretion, which, in the event of a dispute, is subject to review by the competent court. If
+            this breach ofthis Agreement is a continuing breach, the Broker is obligated to pay a further contractual
+            penalty, to be determined in accordance with this Section 2.1, for each month that this breach continues.
+            The Client's right to
+        </div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">2.2</div>
+        <div class="content">The right to claim further damages – in particular due to defamatory actions – remains
+            unaffected. any contractual penalty paid will be credited against any claims for damages.</div>
+    </div>
+
+    <div class="numrow section-numrow" style="margin-top:30px;">
+        <div class="num bold-content">3.</div>
+        <div class="bold-content">Severability clause</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.1</div>
+        <div class="content">In the event that one or more provisions of this agreement are invalid, the parties shall
+            agree on a replacement provision that comes as close as possible to the invalid provision.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.2</div>
+        <div class="content">The invalidity of one or more provisions of this agreement shall not affect the validity of
+            the remaining provisions.</div>
+    </div>
+
+    <div class="numrow">
+        <div class="num">3.3</div>
+        <div class="content">An invalid provision will automatically be replaced by the valid provision that comes
+            closest to the economic purpose of this agreement.</div>
+    </div>
+
+    <div class="document-container">
+        <div class="section left-section stamp-wrapper">
+            <p class="date-location-text">Stuttgart, the</p>
+            <p><span class="highlight-text">({{date}})</span></p>
+            <img src="{{stamp_logo}}" alt="Company stamp for Hartmann & Benz GmbH, Stuttgart" class="company-stamp">
+            <hr class="signature-line">
+            <address class="company-details">
+                Hartmann & Benz GmbH,<br>
+                Gutenbergstraße 40, 70736 Fellbach
+            </address>
+            <p class="role-text">„Client“</p>
+        </div>
+
+        <div class="section right-section">
+            <div class="top-row">
+                <div class="input-group">
+                    <span class="highlight-text">{{u_location}}</span>
+                </div>
+                <div class="input-group">
+                    <span class="highlight-text">{{date}}</span>
+                </div>
+            </div>
+
+            <p class="city-date-line">
+                <span class="fill-line"></span>, the <span class="fill-line"></span>
+            </p>
+
+            <div class="input-group signature-group">
+                <span class="highlight-text"><img src="{{signature}}" alt="Commission Levels Table"
+                        style="width:150px; height:100px;"></span>
+                <hr class="input-line">
+            </div>
+
+            <p class="role-text signature-role">„Broker / Intermediary / Entrepreneur“</p>
+
+            <div class="agreements-list">
+                <p>Brokerage agreement</p>
+                <p>Compensation agreement</p>
+                <p>Confidentiality agreement</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

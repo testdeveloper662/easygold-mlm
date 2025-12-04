@@ -79,6 +79,9 @@ const GetAllBrokers = async (req, res) => {
       const u = broker.user;
       const m = userMetaMap[u?.ID] || {};
 
+      const untermaklervertrag_doc = broker.untermaklervertrag_doc !== null ? `${process.env.NODE_URL}${broker.untermaklervertrag_doc}` : null;
+      const maklervertrag_doc = broker.maklervertrag_doc !== null ? `${process.env.NODE_URL}${broker.maklervertrag_doc}` : null;
+
       // Construct public URLs if exist
       const tradeRegisterUrl = m.u_trade_register
         ? `${process.env.PUBLIC_URL}${m.u_trade_register}`
@@ -119,6 +122,8 @@ const GetAllBrokers = async (req, res) => {
 
         // Document URLs
         trade_register: tradeRegisterUrl,
+        maklervertrag_doc: maklervertrag_doc,
+        untermaklervertrag_doc: untermaklervertrag_doc,
         travel_id: travelIdUrl,
         signature: signatureUrl,
 

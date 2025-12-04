@@ -126,54 +126,8 @@ const GetBrokerNetworkById = async (req, res) => {
       order: [["createdAt", "DESC"]],
       raw: true,
     });
-
-    // 4️⃣ Collect orders by type
-    const myStoreOrderIds = brokerCommissions
-      .filter((h) => h.order_type === "my_store")
-      .map((h) => h.order_id);
-
-    const apiOrderIds = brokerCommissions
-      .filter((h) => h.order_type === "api")
-      .map((h) => h.order_id);
-
-    const lpOrderIds = brokerCommissions
-      .filter((h) => ["landing_page", "lp_order"].includes(h.order_type))
-      .map((h) => h.order_id);
-
-    // 5️⃣ Fetch all orders
-    const fetchOrders = async (model, ids, alias, tableCol) => {
-      if (!ids.length) return [];
-      return await model.findAll({
-        where: { id: { [Op.in]: ids } },
-        include: [
-          {
-            model: db.Brokers,
-            as: alias,
-            required: false,
-            attributes: ["id"],
-            on: {
-              user_id: { [Op.eq]: db.Sequelize.col(`${tableCol}.user_id`) },
-            },
-          },
-        ],
-        raw: true,
-      });
-    };
-
-    const myStoreOrders = await fetchOrders(db.MyStoreOrder, myStoreOrderIds, "user_broker", "6lwup_my_store_order");
-    const apiOrders = await fetchOrders(db.MyStoreOrder, apiOrderIds, "user_broker", "6lwup_my_store_order");
-    const lpOrders = await fetchOrders(db.LpOrders, lpOrderIds, "user_broker", "6lwup_lp_order");
-
-    // 6️⃣ Build userBrokerMap + commissionMap
-    const userBrokerMap = {};
+   
     const commissionMap = {};
-
-    const allOrders = [...myStoreOrders, ...apiOrders, ...lpOrders];
-    allOrders.forEach((o) => {
-      if (o.user_id && o["user_broker.id"]) {
-        userBrokerMap[o.user_id] = o["user_broker.id"];
-      }
-    });
 
     brokerCommissions.forEach((c) => {
       if (!c.tree) return;

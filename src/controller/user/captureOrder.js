@@ -12,7 +12,7 @@ const CaptureOrder = async (req, res) => {
     const userAgent = req.headers['user-agent'] || 'Unknown';
     const referer = req.headers['referer'] || req.headers['referrer'] || 'Direct';
     const origin = req.headers['origin'] || 'Unknown';
-    
+
     console.log(` [CAPTURE ORDER] Request Source Information:`);
     console.log(`   - Client IP: ${clientIP}`);
     console.log(`   - User Agent: ${userAgent}`);
@@ -32,7 +32,10 @@ const CaptureOrder = async (req, res) => {
       });
     }
 
-    const { orderId, orderType } = req.body;
+    const { orderId, orderType, b2bCommissionAmount } = req.body;
+
+    const isGoldPurchase = orderType == 'gold_purchase';
+    const isGoldPurchaseSell = orderType == 'gold_purchase_sell_orders';
 
     console.log(` [CAPTURE ORDER] Request received - orderId: ${orderId}, orderType: ${orderType}`);
 
@@ -42,10 +45,18 @@ const CaptureOrder = async (req, res) => {
         success: false,
         message: "Missing required fields: orderId and orderType",
       });
+    } else if ((isGoldPurchase || isGoldPurchaseSell) && !b2bCommissionAmount) {
+      console.error(` [CAPTURE ORDER] Missing required fields - b2bCommissionAmount: ${b2bCommissionAmount}`);
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: b2bCommissionAmount",
+      });
     }
 
     // Step 1: 
     let OrderModel, PivotModel;
+
+
 
     if (orderType === "landing_page") {
       OrderModel = db.LpOrders;
@@ -56,6 +67,10 @@ const CaptureOrder = async (req, res) => {
     } else if (orderType === "api") {
       OrderModel = db.MyStoreOrder;
       PivotModel = db.MyStoreOrderPivots;
+    } else if (isGoldPurchase) {
+      OrderModel = db.GoldPurchaseOrder;
+    } else if (isGoldPurchaseSell) {
+      OrderModel = db.GoldPurchaseSellOrders;
     } else {
       return res.status(400).json({
         success: false,
@@ -70,33 +85,38 @@ const CaptureOrder = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Order not found" });
 
-    // Step 3: Get the pivot info
-    const orderPivot = await PivotModel.findOne({
-      where: { order_id: orderId },
-    });
-    if (!orderPivot)
-      return res
-        .status(404)
-        .json({ success: false, message: "Order pivot not found" });
+    let orderPivot = null;
+    let totalProfitAmount;
+    let totalCommissionPercent;
+    if (!isGoldPurchase && !isGoldPurchaseSell) {
+      // Step 3: Get the pivot info
+      orderPivot = await PivotModel.findOne({
+        where: { order_id: orderId },
+      });
+      if (!orderPivot)
+        return res
+          .status(404)
+          .json({ success: false, message: "Order pivot not found" });
 
-    // Step 4: Calculate total commission % and total profit (€)
-    console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
-    console.log(`   - Price: €${orderPivot.price}`);
-    console.log(`   - B2B Price: €${orderPivot.b2b_price}`);
-    console.log(`   - Quantity: ${orderPivot.quantity}`);
-    
-    const totalCommissionPercent =
-      (orderPivot.price / orderPivot.b2b_price - 1) * 100;
-    const totalProfitAmount = (orderPivot.price - orderPivot.b2b_price) * orderPivot.quantity;
-    
-    console.log(` [CAPTURE ORDER] Profit Calculation:`);
-    console.log(`   - Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
-    console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
-    console.log(`   - Formula: (${orderPivot.price} - ${orderPivot.b2b_price}) * ${orderPivot.quantity} = ${totalProfitAmount}`);
-    
-    if (totalProfitAmount <= 0) {
-      console.error(` [CAPTURE ORDER] WARNING: Total Profit Amount is ${totalProfitAmount}. Commission will be 0!`);
-      console.error(` [CAPTURE ORDER] Check if price (${orderPivot.price}) > b2b_price (${orderPivot.b2b_price})`);
+      // Step 4: Calculate total commission % and total profit (€)
+      console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
+      console.log(`   - Price: €${orderPivot.price}`);
+      console.log(`   - B2B Price: €${orderPivot.b2b_price}`);
+      console.log(`   - Quantity: ${orderPivot.quantity}`);
+
+      totalCommissionPercent =
+        (orderPivot.price / orderPivot.b2b_price - 1) * 100;
+      totalProfitAmount = (orderPivot.price - orderPivot.b2b_price) * orderPivot.quantity;
+
+      console.log(` [CAPTURE ORDER] Profit Calculation:`);
+      console.log(`   - Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
+      console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
+      console.log(`   - Formula: (${orderPivot.price} - ${orderPivot.b2b_price}) * ${orderPivot.quantity} = ${totalProfitAmount}`);
+
+      if (totalProfitAmount <= 0) {
+        console.error(` [CAPTURE ORDER] WARNING: Total Profit Amount is ${totalProfitAmount}. Commission will be 0!`);
+        console.error(` [CAPTURE ORDER] Check if price (${orderPivot.price}) > b2b_price (${orderPivot.b2b_price})`);
+      }
     }
 
     // Step 5: Get broker (seller)
@@ -128,6 +148,8 @@ const CaptureOrder = async (req, res) => {
       landing_page: "Landing page",
       my_store: "My Store",
       api: "Order Terminal",
+      gold_purchase: "Gold Purchase",
+      gold_purchase_sell_orders: "Gold Purchase"
     };
 
     const serviceType = orderTypeToServiceType[orderType];
@@ -135,7 +157,7 @@ const CaptureOrder = async (req, res) => {
       console.error(`❌ [CAPTURE ORDER] Invalid orderType: ${orderType}`);
       return res.status(400).json({
         success: false,
-        message: `Invalid orderType: ${orderType}. Must be one of: landing_page, my_store, api`,
+        message: `Invalid orderType: ${orderType}. Must be one of: landing_page, my_store, api, gold_purchase, gold_purchase_sell_orders`,
       });
     }
 
@@ -143,7 +165,7 @@ const CaptureOrder = async (req, res) => {
 
     // Step 7.1: Fetch dynamic commission percentages from database (Variable Broker Commissions)
     await db.AdminVariableBrokerCommission.sync();
-    
+
     const commissionRecords = await db.AdminVariableBrokerCommission.findAll({
       where: {
         service_type: serviceType,
@@ -172,7 +194,7 @@ const CaptureOrder = async (req, res) => {
 
     const activeLevels = [broker, ...parentBrokers];
     const activeBase = basePercentages.slice(0, activeLevels.length);
-    
+
     console.log(` [CAPTURE ORDER] Active levels count: ${activeLevels.length}, Active base percentages: [${activeBase.join(", ")}]`);
     console.log(` [CAPTURE ORDER] Broker Hierarchy: Level 1 (Seller) + ${parentBrokers.length} Parent(s)`);
 
@@ -217,16 +239,14 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - User ID: ${currentBroker.user_id}`);
       console.log(`   - Commission Percent (raw): ${commissionPercent}`);
       console.log(`   - Commission Percent (type): ${typeof commissionPercent}`);
-      console.log(`   - Total Profit Amount (raw): ${totalProfitAmount}`);
-      console.log(`   - Total Profit Amount (type): ${typeof totalProfitAmount}`);
 
       // Calculate commission amount with detailed logging
-      const rawCalculation = (commissionPercent / 100) * totalProfitAmount;
+      const rawCalculation = (isGoldPurchase || isGoldPurchaseSell) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
       console.log(` [CAPTURE ORDER] Calculation Steps:`);
       console.log(`   - Step 1: (${commissionPercent} / 100) = ${commissionPercent / 100}`);
-      console.log(`   - Step 2: ${commissionPercent / 100} * ${totalProfitAmount} = ${rawCalculation}`);
+      console.log(`   - Step 2: ${commissionPercent / 100} * ${isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);
       console.log(`   - Step 3: ${rawCalculation}.toFixed(2) = ${rawCalculation.toFixed(2)}`);
-      
+
       const commissionAmount = parseFloat(rawCalculation.toFixed(2));
       console.log(`   - Step 4: parseFloat(${rawCalculation.toFixed(2)}) = ${commissionAmount}`);
       console.log(` [CAPTURE ORDER] Final Commission Amount:`);
@@ -239,10 +259,10 @@ const CaptureOrder = async (req, res) => {
       const isSeller = i === 0;
       console.log(` [CAPTURE ORDER] Additional Info:`);
       console.log(`   - Is Seller: ${isSeller}`);
-      
+
       if (commissionAmount <= 0 || isNaN(commissionAmount)) {
         console.error(` [CAPTURE ORDER] ⚠️ WARNING: Commission Amount is ${commissionAmount} for Level ${i + 1}!`);
-        console.error(` [CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : totalProfitAmount}`);
         console.error(` [CAPTURE ORDER] ⚠️ Raw calculation result: ${rawCalculation}`);
       }
 
@@ -267,8 +287,10 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Order Type: ${orderType} (type: ${typeof orderType})`);
       console.log(`   - Commission Percent: ${commissionPercent} (type: ${typeof commissionPercent})`);
       console.log(`   - Commission Amount (raw): ${commissionAmount} (type: ${typeof commissionAmount})`);
-      console.log(`   - Profit Amount: ${totalProfitAmount} (type: ${typeof totalProfitAmount})`);
-      console.log(`   - Order Amount: ${orderPivot.price * orderPivot.quantity} (type: ${typeof (orderPivot.price * orderPivot.quantity)})`);
+      if (!isGoldPurchase && !isGoldPurchaseSell) {
+        console.log(`   - Profit Amount: ${totalProfitAmount} (type: ${typeof totalProfitAmount})`);
+        console.log(`   - Order Amount: ${orderPivot.price * orderPivot.quantity} (type: ${typeof (orderPivot.price * orderPivot.quantity)})`);
+      }
       console.log(`   - Is Seller: ${isSeller} (type: ${typeof isSeller})`);
       console.log(`   - Tree: ${tree} (type: ${typeof tree})`);
       console.log(`   - Distribution Timestamp: ${distributionTimestamp.toISOString()}`);
@@ -279,19 +301,19 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - commissionAmount < 0: ${commissionAmount < 0}`);
       console.log(`   - commissionAmount === null: ${commissionAmount === null}`);
       console.log(`   - commissionAmount === undefined: ${commissionAmount === undefined}`);
-      
+
       if (isNaN(commissionAmount) || commissionAmount < 0) {
         console.error(` [CAPTURE ORDER] ❌ ERROR: Invalid commission_amount: ${commissionAmount}`);
-        console.error(` [CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : totalProfitAmount}`);
         console.error(` [CAPTURE ORDER] ❌ commissionPercent type: ${typeof commissionPercent}`);
-        console.error(` [CAPTURE ORDER] ❌ totalProfitAmount type: ${typeof totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ totalProfitAmount type: ${typeof isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : totalProfitAmount}`);
       }
 
       // Calculate safe commission amount
-      const safeCommissionAmount = isNaN(commissionAmount) || commissionAmount < 0 
-        ? 0.00 
+      const safeCommissionAmount = isNaN(commissionAmount) || commissionAmount < 0
+        ? 0.00
         : parseFloat(commissionAmount.toFixed(2));
-      
+
       console.log(`\n [CAPTURE ORDER] Safe Commission Amount Calculation:`);
       console.log(`   - Input: ${commissionAmount}`);
       console.log(`   - Is NaN: ${isNaN(commissionAmount)}`);
@@ -306,8 +328,8 @@ const CaptureOrder = async (req, res) => {
         user_id: currentBroker.user_id,
         order_id: orderId,
         order_type: orderType,
-        order_amount: parseFloat((orderPivot.price * orderPivot.quantity).toFixed(2)),
-        profit_amount: parseFloat(totalProfitAmount.toFixed(2)),
+        order_amount: isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat((orderPivot.price * orderPivot.quantity).toFixed(2)),
+        profit_amount: isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
         commission_amount: safeCommissionAmount,
         tree,
@@ -330,7 +352,7 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - is_seller: ${commissionData.is_seller} (type: ${typeof commissionData.is_seller})`);
 
       console.log(`\n [CAPTURE ORDER] Attempting Database Create...`);
-      
+
       let commissionRecord;
       try {
         commissionRecord = await db.BrokerCommissionHistory.create(commissionData);
@@ -370,14 +392,14 @@ const CaptureOrder = async (req, res) => {
       console.log(` [CAPTURE ORDER] ==========================================`);
       console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation END`);
       console.log(` [CAPTURE ORDER] ==========================================\n`);
-      
+
       // Verify saved values
       if (commissionRecord.commission_amount === null || commissionRecord.commission_amount === undefined) {
         console.error(` [CAPTURE ORDER] ⚠️ WARNING: commission_amount is ${commissionRecord.commission_amount} in database!`);
         console.error(` [CAPTURE ORDER] Check: commissionPercent=${commissionPercent}, totalProfitAmount=${totalProfitAmount}`);
       }
       console.log(`   - This commission_percent and commission_amount will be shown in frontend via getAllBrokerCommissionHistory API\n`);
-      
+
       if (i === 0) {
         // ✅ Increment total commission in Brokers table
         await db.Brokers.increment(
@@ -390,7 +412,7 @@ const CaptureOrder = async (req, res) => {
 
     const endTime = new Date();
     const duration = endTime - startTime;
-    
+
     console.log(`\n✅ [CAPTURE ORDER] ==========================================`);
     console.log(`✅ [CAPTURE ORDER] Commission distribution completed successfully`);
     console.log(`✅ [CAPTURE ORDER] Order ID: ${orderId}`);
@@ -398,8 +420,10 @@ const CaptureOrder = async (req, res) => {
     console.log(`✅ [CAPTURE ORDER] Service Type: ${serviceType}`);
     console.log(`✅ [CAPTURE ORDER] Total Brokers: ${activeLevels.length}`);
     console.log(`✅ [CAPTURE ORDER] Tree Structure: ${tree}`);
-    console.log(`✅ [CAPTURE ORDER] Total Profit Amount: €${totalProfitAmount}`);
-    console.log(`✅ [CAPTURE ORDER] Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
+    if (!isGoldPurchase && !isGoldPurchaseSell) {
+      console.log(`✅ [CAPTURE ORDER] Total Profit Amount: €${totalProfitAmount}`);
+      console.log(`✅ [CAPTURE ORDER] Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
+    }
     console.log(`✅ [CAPTURE ORDER] Commission Distribution Summary:`);
     distribution.forEach((dist, idx) => {
       console.log(`   Level ${idx + 1}: Broker ${dist.broker_id} → ${dist.commission_percent}% (€${dist.commission_amount})`);
@@ -412,8 +436,8 @@ const CaptureOrder = async (req, res) => {
       success: true,
       message: "Commission distribution stored successfully",
       data: {
-        totalCommissionPercent: parseFloat(totalCommissionPercent.toFixed(2)),
-        totalProfitAmount: parseFloat(totalProfitAmount.toFixed(2)),
+        totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
+        totalProfitAmount: isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         distribution,
         tree,
         timestamp: endTime.toISOString(),

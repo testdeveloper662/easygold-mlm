@@ -78,7 +78,7 @@ const GetBrokerBankDetails = async (req, res) => {
         });
         return res.status(200).json({
             success: true,
-            data: { ...bankDetails.dataValues, commissions_totals: finalTotals } || {}
+            data: bankDetails ? { ...bankDetails.dataValues, commissions_totals: finalTotals } || {} : { commissions_totals: finalTotals }
         });
     } catch (error) {
         console.error("Error in GetBrokerBankDetails:", error);

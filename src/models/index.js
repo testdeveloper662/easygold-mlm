@@ -16,11 +16,14 @@ const MyStoreSetting = require("./mystoreSetting");
 const MyStoreOrder = require("./mystoreOrder");
 const MyStoreOrderPivots = require("./mystoreOrderPivots");
 const MyStoreOrderShippingOptions = require("./mystoreOrderShippingOptions");
+const GoldPurchaseOrder = require("./goldPurchaseOrder");
 const Product = require("./product");
 const EmailView = require("./emailView");
 const BrokerBankDetails = require("./broker_bank_details");
 const BrokerPayoutRequests = require("./broker_payout_requests");
 const TargetCustomers = require("./targetCustomers");
+const GoldPurchaseSellOrders = require("./goldPurchaseSellOrders");
+const BrokerInvitations = require("./brokerInvitations");
 
 const db = {};
 
@@ -43,11 +46,14 @@ db.MyStoreSetting = MyStoreSetting;
 db.MyStoreOrder = MyStoreOrder;
 db.MyStoreOrderPivots = MyStoreOrderPivots;
 db.MyStoreOrderShippingOptions = MyStoreOrderShippingOptions;
+db.GoldPurchaseOrder = GoldPurchaseOrder;
 db.Product = Product;
 db.EmailView = EmailView;
 db.BrokerBankDetails = BrokerBankDetails;
 db.BrokerPayoutRequests = BrokerPayoutRequests;
 db.TargetCustomers = TargetCustomers;
+db.GoldPurchaseSellOrders = GoldPurchaseSellOrders;
+db.BrokerInvitations = BrokerInvitations;
 
 // Relationships
 db.TargetCustomers.belongsTo(db.Brokers, {

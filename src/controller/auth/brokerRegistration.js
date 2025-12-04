@@ -398,7 +398,7 @@ const BrokerRegistration = async (req, res) => {
     console.log(`[BrokerRegistration] Language mapping - lang: "${lang}", language: "${languageParam}", using: "${langParam}", mapped to: "${languageValue}"`);
 
     // Create broker entry
-    await db.Brokers.create({
+    const broker = await db.Brokers.create({
       user_id: user_id,
       parent_id: isAdminParent ? null : parentBroker?.id || null,
       referral_code: newReferralCode,
@@ -409,6 +409,25 @@ const BrokerRegistration = async (req, res) => {
       untermaklervertrag_doc: `uploads/agreements/${docsData.untermaklervertrag_doc}`,
       maklervertrag_doc: `uploads/agreements/${docsData.maklervertrag_doc}`
     });
+
+    const invitation = await db.BrokerInvitations.findOne({
+      where: {
+        email
+      },
+    });
+
+    if (invitation) {
+      try {
+        await db.BrokerInvitations.update({
+          invitation_status: "REGISTERED",
+        });
+      } catch (error) {
+        console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
+        console.log("error = ", error);
+        console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
+      }
+    }
+
 
     // Update parent's children count
     if (!isAdminParent && parentBroker) {

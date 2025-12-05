@@ -174,7 +174,7 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_company", company);
     form.append("u_contact_person", contactPerson);
     form.append("u_street_no", u_street_no);
-    form.append("u_street", street);
+    form.append("u_street", address);
     form.append("u_location", city);
     form.append("u_postcode", postalCode);
     form.append("u_country", country);
@@ -280,10 +280,13 @@ const BrokerRegistration = async (req, res) => {
       raw: true
     });
 
+    const addressParts = [u_street_no, address, city, postalCode].filter(Boolean);
+    const formattedAddress = addressParts.join(", ");
+
     let brockerPdfData = {
       name: fullName,
       username: username,
-      address: `${address}, ${city}, ${postalCode}`,
+      address: formattedAddress,
       u_street_no: u_street_no,
       u_street: address,
       u_location: city,

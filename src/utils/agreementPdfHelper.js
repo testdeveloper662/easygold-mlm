@@ -22,7 +22,16 @@ const generateAgreementPDF = async (data, parentBroker = null) => {
             parent_city = location;
             parent_signaturedata = getMeta(parentBroker.user, "signatureData");
 
-            parent_address = `${streetNo} ${street}, ${location} ${postcode}`.trim();
+            const parts = [
+                streetNo,
+                street,
+                location,
+                postcode
+            ].filter(Boolean);         // removes null, undefined, "", 0, false
+
+            parent_address = parts.join(", ");
+
+            // parent_address = `${streetNo} ${street}, ${location} ${postcode}`.trim();
         }
 
 

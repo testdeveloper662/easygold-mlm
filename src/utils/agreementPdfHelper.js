@@ -27,7 +27,14 @@ const generateAgreementPDF = async (data, parentBroker = null) => {
                 street,
                 location,
                 postcode
-            ].filter(Boolean);         // removes null, undefined, "", 0, false
+            ].filter(
+                (item) =>
+                    item !== null &&
+                    item !== undefined &&
+                    item !== "" &&
+                    item !== "undefined" &&
+                    item !== "null"
+            );
 
             parent_address = parts.join(", ");
 

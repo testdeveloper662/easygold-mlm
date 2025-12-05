@@ -280,7 +280,10 @@ const BrokerRegistration = async (req, res) => {
       raw: true
     });
 
-    const addressParts = [u_street_no, address, city, postalCode].filter(Boolean);
+    const addressParts = [u_street_no, address, city, postalCode]
+      .map(v => v?.toString().trim())                                          // remove spaces
+      .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
+
     const formattedAddress = addressParts.join(", ");
 
     let brockerPdfData = {

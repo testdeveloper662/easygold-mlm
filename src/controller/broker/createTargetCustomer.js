@@ -1,4 +1,9 @@
+require("dotenv").config();
 const db = require("../../models");
+const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
+const SendEmailHelper = require("../../utils/sendEmailHelper");
+
+const MAIL_SENDER = process.env.MAIL_SENDER;
 
 const CreateTargetCustomer = async (req, res) => {
   try {
@@ -7,6 +12,13 @@ const CreateTargetCustomer = async (req, res) => {
     // Get broker details
     const broker = await db.Brokers.findOne({
       where: { user_id: user.ID },
+      include: [
+        {
+          model: db.Users,
+          as: "user",
+          attributes: ["display_name", "landing_page", "mystorekey"]
+        }
+      ]
     });
 
     if (!broker) {
@@ -16,6 +28,57 @@ const CreateTargetCustomer = async (req, res) => {
       });
     }
 
+    const brokerMeta = await db.UsersMeta.findAll({
+      where: {
+        user_id: user.ID,
+        meta_key: [
+          "u_company",
+          "u_street_no",
+          "u_street",
+          "u_location",
+          "u_postcode",
+          "u_country",
+          "u_phone",
+          "language"
+        ]
+      },
+      attributes: ["meta_key", "meta_value"]
+    });
+
+    const sanitizeValue = (val) => {
+      if (!val) return false;
+      const cleaned = String(val).trim();
+      const lower = cleaned.toLowerCase();
+
+      // Remove null, undefined, blank, "null", "undefined"
+      if (!cleaned || lower === "null" || lower === "undefined") return false;
+
+      return cleaned;
+    };
+
+    const metaMap = {};
+    brokerMeta.forEach((meta) => {
+      metaMap[meta.meta_key] = meta.meta_value || null;
+    });
+
+    // Address formatting with removing undefined/empty
+    const addressParts = [
+      metaMap.u_street_no,
+      metaMap.u_street,
+      metaMap.u_location,
+      metaMap.u_country,
+      metaMap.u_postcode
+    ].filter(item => item && item !== "undefined" && item !== "null");
+
+    let formattedAddress = addressParts.join(", ");
+
+    const companyInfo = sanitizeValue(metaMap.u_company) ? metaMap.u_company : "";
+    const phoneInfo = sanitizeValue(metaMap.u_phone) ? metaMap.u_phone : "";
+
+    if (companyInfo || phoneInfo) {
+      formattedAddress += " / " + [companyInfo, phoneInfo].filter(sanitizeValue).join(", ");
+    }
+
     const { customer_name, customer_email, interest_in } = req.body;
 
     // Validate required fields
@@ -23,6 +86,13 @@ const CreateTargetCustomer = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Customer name and email are required",
+      });
+    }
+
+    if (broker.user?.landing_page == 0 && interest_in == "Landingpage") {
+      return res.status(400).json({
+        success: false,
+        message: "Your landing page not activate yet, Please activate first on B2B dashboard.",
       });
     }
 
@@ -48,6 +118,55 @@ const CreateTargetCustomer = async (req, res) => {
       customer_email,
       interest_in: interest_in || null,
     });
+
+    let sending_link = "";
+
+    if (interest_in === "Landingpage") {
+      const registrationUrl = `https://goldsilberstore.com/landingpage/${broker.user?.mystorekey}`;
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+    } else if (interest_in === "easygold Token") {
+      const registrationUrl = "https://easygold.io/en/sign-up";
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+    } else if (interest_in === "Primeinvest") {
+      const registrationUrl = "https://dashboard.hb-primeinvest.com/en/sign-up";
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+    }
+
+    const templateVariables = {
+      b2b_partner: broker.user?.display_name,
+      sending_link: sending_link,
+      b2b_info: formattedAddress || "",
+    };
+
+    // "de-DE" "en-US"
+
+    let language = "en";
+
+    if (metaMap.language == "de-DE") {
+      language = "de";
+    } else {
+      language = "en";
+    }
+
+    let emailData;
+    try {
+      // Template ID 92 used (adjust as required)
+      emailData = await getRenderedEmail(92, language, templateVariables);
+    } catch (templateError) {
+      console.error(templateError);
+      throw new Error(
+        "Email template (ID: 92) not found. Please ensure it exists in 6lwup_email_view table."
+      );
+    }
+
+    mailOptions = {
+      from: MAIL_SENDER,
+      to: customer_email,
+      subject: emailData.subject,
+      html: emailData.htmlContent,
+    };
+
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to);
 
     return res.status(201).json({
       success: true,

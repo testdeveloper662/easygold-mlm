@@ -17,12 +17,50 @@ const GetBrokerCommissionHistory = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
+    // const whereClause = {
+    //   user_id: id,
+    //   [Op.or]: [
+    //     { is_seller: true },
+    //     {
+    //       [Op.and]: [{ is_seller: false }, { is_payment_done: true }],
+    //     },
+    //   ],
+    // };
+
     const whereClause = {
       user_id: id,
       [Op.or]: [
-        { is_seller: true },
+        // Seller logic
         {
-          [Op.and]: [{ is_seller: false }, { is_payment_done: true }],
+          is_seller: true,
+          [Op.or]: [
+            { selected_payment_method: 1 }, // seller + method 1 (always show)
+            {
+              [Op.and]: [
+                { selected_payment_method: 2 },
+                { is_payment_done: true }, // seller + method 2 only if payment done
+              ],
+            },
+          ],
+        },
+
+        // Non Seller logic
+        {
+          is_seller: false,
+          [Op.or]: [
+            {
+              [Op.and]: [
+                { selected_payment_method: 1 },
+                { is_payment_done: true }, // *** NEW: must be payment done ***
+              ],
+            },
+            {
+              [Op.and]: [
+                { selected_payment_method: 2 }, // method 2 only if payment done
+                { is_payment_done: true },
+              ],
+            },
+          ],
         },
       ],
     };
@@ -191,6 +229,12 @@ const GetBrokerCommissionHistory = async (req, res) => {
         seller_username: sellerInfo.user_login || null,
         user_login: relatedUserLogin,
         order_details,
+        payment_type:
+          json.selected_payment_method === 1
+            ? "Bank Transfer"
+            : json.selected_payment_method === 2
+              ? "Crypto Payment"
+              : null,
       };
     });
 

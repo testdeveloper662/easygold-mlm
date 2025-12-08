@@ -77,6 +77,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
         bch.is_seller,
         bch.is_payment_done,
         bch.is_payment_declined,
+        bch.selected_payment_method,
         bch.tree,
         bch.createdAt,
         bch.updatedAt,
@@ -105,12 +106,13 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
           updatedAt: record.updatedAt,
           broker_commissions: [],
           tree: record.tree,
+          payment_type: record.selected_payment_method === 1 ? "Bank Transfer" : record.selected_payment_method === 2 ? "Crypto Payment" : null, // Default to 1 (bank) if null
         };
       }
 
       const commissionAmount = parseFloat(record.commission_amount || 0);
       const commissionPercent = parseFloat(record.commission_percent || 0);
-      
+
       acc[orderId].broker_commissions.push({
         broker_id: record.broker_id,
         user_id: record.user_id,

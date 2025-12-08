@@ -1,4 +1,5 @@
 const db = require("../../models");
+const { Op } = db.Sequelize;
 const { roundToTwoDecimalPlaces } = require("../../utils/Helper");
 
 const MAX_LEVEL = 5;
@@ -7,28 +8,29 @@ const RECENT_ORDERS_LIMIT = 5;
 /** Calculate broker level based on parent hierarchy */
 const calculateBrokerLevel = (broker, allBrokers) => {
   if (!broker.parent_id) return 1;
-  
+
   let level = 1;
   let currentParentId = broker.parent_id;
   const visited = new Set([broker.id]);
-  
+
   while (currentParentId && level < MAX_LEVEL) {
-    if (visited.has(currentParentId)) break; 
+    if (visited.has(currentParentId)) break;
     visited.add(currentParentId);
-    
+
     const parent = allBrokers.find(b => b.id === currentParentId);
     if (!parent) break;
-    
+
     level++;
     currentParentId = parent.parent_id;
   }
-  
+
   return level;
 };
 
 const GetDashboardData = async (req, res) => {
   try {
     const { user } = req.user;
+    const { filterType, from, to } = req.query;
 
     if (!user || !user.ID) {
       return res.status(400).json({
@@ -36,6 +38,82 @@ const GetDashboardData = async (req, res) => {
         message: "User information is missing from request",
       });
     }
+
+    let startDate, endDate;
+    const now = new Date();
+
+    switch (filterType) {
+      case "today":
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+
+      case "last_7_days":
+        startDate = new Date();
+        startDate.setDate(now.getDate() - 6); // including today
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+
+      case "last_30_days":
+        startDate = new Date();
+        startDate.setDate(now.getDate() - 29);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+
+      case "this_month":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+
+      case "last_month":
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+
+      case "this_year":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), 11, 31);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+
+      case "last_year":
+        startDate = new Date(now.getFullYear() - 1, 0, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now.getFullYear() - 1, 11, 31);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+
+      case "custom":
+        if (!from || !to) {
+          return res.status(400).json({ success: false, message: "Please provide from and to dates for custom filter" });
+        }
+        startDate = new Date(from);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(to);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+
+      default:
+        // default: last 7 days
+        startDate = new Date();
+        startDate.setDate(now.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+    }
+
 
     // Find current broker
     const currentBroker = await db.Brokers.findOne({
@@ -67,11 +145,49 @@ const GetDashboardData = async (req, res) => {
     });
 
     // Get all commission history for current broker
+    // const whereClause = {
+    //   user_id: user.ID,
+    //   [db.Sequelize.Op.or]: [
+    //     { is_seller: true },
+    //     { [db.Sequelize.Op.and]: [{ is_seller: false }, { is_payment_done: true }] },
+    //   ],
+    // };
+
     const whereClause = {
       user_id: user.ID,
-      [db.Sequelize.Op.or]: [
-        { is_seller: true },
-        { [db.Sequelize.Op.and]: [{ is_seller: false }, { is_payment_done: true }] },
+      [Op.or]: [
+        // 👉 Seller Logic
+        {
+          is_seller: true,
+          [Op.or]: [
+            { selected_payment_method: 1 }, // seller + method 1 = always show
+            {
+              [Op.and]: [
+                { selected_payment_method: 2 }, // seller + method 2 only if payment done
+                { is_payment_done: true },
+              ],
+            },
+          ],
+        },
+
+        // 👉 Non-Seller Logic
+        {
+          is_seller: false,
+          [Op.or]: [
+            {
+              [Op.and]: [
+                { selected_payment_method: 1 },
+                { is_payment_done: true }, // must be payment done
+              ],
+            },
+            {
+              [Op.and]: [
+                { selected_payment_method: 2 },
+                { is_payment_done: true }, // again must be payment done
+              ],
+            },
+          ],
+        },
       ],
     };
 
@@ -86,7 +202,7 @@ const GetDashboardData = async (req, res) => {
     const currentYear = currentDate.getFullYear();
     const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
     const currentMonthStr = `${currentYear}-${currentMonth}`;
-    
+
     // Start and end of current month for filtering
     const startOfMonth = new Date(currentYear, currentDate.getMonth(), 1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -125,7 +241,7 @@ const GetDashboardData = async (req, res) => {
     // Find all sub-brokers (brokers where current broker is in their parent chain)
     const findSubBrokersWithLevel = (parentId, brokers, level = 2, result = []) => {
       if (level > MAX_LEVEL) return;
-      
+
       const children = brokers.filter(b => b.parent_id === parentId);
       children.forEach(child => {
         result.push({ broker: child, level });
@@ -153,7 +269,7 @@ const GetDashboardData = async (req, res) => {
     }
 
     // 4. Recent Orders - Latest 4-5 entries from commissions
-    const recentOrders = allCommissions.slice(0, RECENT_ORDERS_LIMIT).map(commission => ({
+    const recentOrders = allCommissions.filter(c => new Date(c.createdAt) >= startDate && new Date(c.createdAt) <= endDate).slice(0, RECENT_ORDERS_LIMIT).map(commission => ({
       id: commission.id,
       order_id: commission.order_id,
       order_type: commission.order_type,
@@ -165,13 +281,13 @@ const GetDashboardData = async (req, res) => {
 
     // 5. Commission Summary by Level
     // Group commissions by their position in the commission tree (distribution level)
- 
+
     const commissionByLevel = {};
     allCommissions.forEach(commission => {
       if (!commission.tree) return;
-      
+
       let level = 1; // Default to level 1
-      
+
       if (commission.is_seller) {
         level = 1; // Seller is always level 1
       } else {
@@ -182,11 +298,11 @@ const GetDashboardData = async (req, res) => {
           const broker = allBrokers.find(b => b.id === brokerId);
           return broker && broker.user_id === user.ID;
         });
-        
+
         // Level is position + 1 (0 = seller/level 1, 1 = first parent/level 2, etc.)
         level = currentBrokerInTree >= 0 ? currentBrokerInTree + 1 : 1;
       }
-      
+
       if (!commissionByLevel[level]) {
         commissionByLevel[level] = {
           level,
@@ -194,7 +310,7 @@ const GetDashboardData = async (req, res) => {
           count: 0,
         };
       }
-      
+
       commissionByLevel[level].total_commission += parseFloat(commission.commission_amount || 0);
       commissionByLevel[level].count += 1;
     });
@@ -252,7 +368,7 @@ const GetDashboardData = async (req, res) => {
     const earningsByLevel = {};
     currentMonthCommissions.forEach(commission => {
       if (!commission.tree) return;
-      
+
       let level = 1;
       if (commission.is_seller) {
         level = 1;
@@ -342,4 +458,3 @@ const GetDashboardData = async (req, res) => {
 };
 
 module.exports = GetDashboardData;
-

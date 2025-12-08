@@ -63,6 +63,12 @@ const LpOrder = sequelize.define(
       defaultValue: 0,
       comment: "0=red,1=green",
     },
+    selected_payment_method: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      comment: "1 - bank, 2 - crypto",
+    },
     created_at: {
       type: Sequelize.DATE,
       allowNull: false,

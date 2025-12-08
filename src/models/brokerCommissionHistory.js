@@ -57,6 +57,12 @@ const BrokerCommissionHistory = sequelize.define(
       type: Sequelize.BOOLEAN,
       default: false,
     },
+    selected_payment_method: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      comment: "1 - bank, 2 - crypto",
+    },
   },
   {
     timestamps: true,

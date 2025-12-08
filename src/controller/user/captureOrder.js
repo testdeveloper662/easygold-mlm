@@ -334,6 +334,7 @@ const CaptureOrder = async (req, res) => {
         commission_amount: safeCommissionAmount,
         tree,
         is_seller: isSeller,
+        selected_payment_method: order?.selected_payment_method || 1, // default to 1 (bank) if not present
       };
 
       console.log(`\n [CAPTURE ORDER] Database Create Object:`);

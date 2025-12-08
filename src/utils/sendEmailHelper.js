@@ -22,11 +22,11 @@ const transporter = nodemailer.createTransport({
 });
 
 
-const SendEmailHelper = (subject, htmlContent, to, attachmentPath = null, cc = null) => {
+const SendEmailHelper = (subject, htmlContent, to, attachmentPath = null, cc = null, from = null) => {
     try {
         return new Promise((resolve, reject) => {
             const mailOptions = {
-                from: process.env.MAIL_SENDER,
+                from: from || process.env.MAIL_SENDER,
                 to: to,
                 subject: subject,
                 html: htmlContent,

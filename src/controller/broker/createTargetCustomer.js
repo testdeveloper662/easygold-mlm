@@ -16,7 +16,7 @@ const CreateTargetCustomer = async (req, res) => {
         {
           model: db.Users,
           as: "user",
-          attributes: ["display_name", "landing_page", "mystorekey"]
+          attributes: ["display_name", "landing_page", "mystorekey", "user_email"]
         }
       ]
     });
@@ -159,14 +159,45 @@ const CreateTargetCustomer = async (req, res) => {
       );
     }
 
+    const blockedDomains = [
+      "yopmail.com",
+      "mailinator.com",
+      "tempmail.com",
+      "10minutemail.com",
+      "guerrillamail.com",
+      "getnada.com",
+      "fakeinbox.com",
+      "trashmail.com",
+      "moakt.com",
+    ];
+
+    const isAllowedEmail = (email) => {
+      if (!email) return false;
+      const domain = email.split("@")[1]?.toLowerCase();
+      return !blockedDomains.includes(domain);
+    };
+
+    const senderName = broker.user?.display_name || "Your broker team";
+    const senderEmail = broker.user?.user_email;
+
+    const dynamicFrom = `"${senderName}" <${senderEmail}>`;
+
+    let finalFrom;
+
+    if (isAllowedEmail(senderEmail)) {
+      finalFrom = dynamicFrom; // allow Gmail, Yahoo, Outlook, company domain
+    } else {
+      finalFrom = MAIL_SENDER; // fallback to verified sender domain
+    }
+
     mailOptions = {
-      from: MAIL_SENDER,
+      from: finalFrom,
       to: customer_email,
       subject: emailData.subject,
       html: emailData.htmlContent,
     };
 
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to);
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, null, null, finalFrom);
 
     return res.status(201).json({
       success: true,

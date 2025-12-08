@@ -322,6 +322,8 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Safe Value Type: ${typeof safeCommissionAmount}`);
       console.log(`   - Safe Value Is NaN: ${isNaN(safeCommissionAmount)}`);
 
+      console.log(`order?.selected_payment_method: ${order?.selected_payment_method}`);
+
       // Prepare data object for database
       const commissionData = {
         broker_id: currentBroker.id,

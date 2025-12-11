@@ -1,4 +1,6 @@
 const db = require("../../models");
+const path = require("path");
+const fs = require("fs");
 
 const DeleteAffiliateBanner = async (req, res) => {
     try {

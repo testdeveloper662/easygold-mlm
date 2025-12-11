@@ -30,7 +30,7 @@ const UploadLogoImage = async (req, res) => {
 
     const filePath = await uploadProfilePicture(
       req.file,
-      "../../public/uploads/logo",
+      "logo",
       "logo",
       brokerDetails && brokerDetails?.logo
     );

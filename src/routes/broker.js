@@ -26,6 +26,12 @@ const GetTargetCustomerStats = require("../controller/broker/getTargetCustomerSt
 const GetDashboardData = require("../controller/broker/getDashboardData");
 const InvitationCreateUpdate = require("../controller/broker/invitationCreateUpdate");
 const GetInvitations = require("../controller/broker/invitationsGet");
+const CreateAffiliateBanner = require("../controller/broker/createAffiliateBanner");
+const GetAffiliateBanner = require("../controller/broker/getAffiliateBanner");
+const GetAffiliateBannerById = require("../controller/broker/getAffiliateBannerById");
+const UpdateAffiliateBanner = require("../controller/broker/updateAffiliateBanner");
+const DeleteAffiliateBanner = require("../controller/broker/deleteAffiliateBanner");
+const GetUserUrls = require("../controller/broker/getUserUrls");
 
 brokerRouter.post(
   "/register",
@@ -44,6 +50,13 @@ brokerRouter.get("/commissions/:id", authenticateToken, GetBrokerCommissionHisto
 brokerRouter.post("/order/detail", authenticateToken, GetOrderDetails);
 brokerRouter.post("/logo-image", authenticateToken, upload.single("logo"), UploadLogoImage);
 brokerRouter.post("/profile-image", authenticateToken, upload.single("profile"), UploadProfileImage);
+
+brokerRouter.get("/getuserurls", authenticateToken, GetUserUrls);
+brokerRouter.post("/affiliate-banners", authenticateToken, upload.single("backgroundImage"), CreateAffiliateBanner);
+brokerRouter.get("/affiliate-banners", authenticateToken, GetAffiliateBanner);
+brokerRouter.get("/affiliate-banners/:id", authenticateToken, GetAffiliateBannerById);
+brokerRouter.put("/affiliate-banners/:id", authenticateToken, upload.single("backgroundImage"), UpdateAffiliateBanner);
+brokerRouter.delete("/affiliate-banners/:id", authenticateToken, DeleteAffiliateBanner);
 
 brokerRouter.post("/bank/detail", authenticateToken, AddUpdateBrokerBankDetails);
 brokerRouter.get("/bank/detail", authenticateToken, GetBrokerBankDetails);

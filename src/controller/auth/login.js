@@ -1,3 +1,4 @@
+require("dotenv").config();
 const db = require("../../models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -150,6 +151,18 @@ const Login = async (req, res) => {
     userData.referral_code = broker?.referral_code;
     userData.broker_id = broker?.id;
     userData.profile_image = await generateImageUrl(broker.profile_image, "profile");
+
+    let landing_pageurl = null;
+    let landing_page = false;
+    if (user.landing_page) {
+      landing_pageurl = `${process.env.EASY_GOLD_URL}/landingpage/${user?.mystorekey}`;
+      landing_page = true;
+    }
+
+    userData.landing_pageurl = landing_pageurl;
+    userData.landing_page = landing_page;
+    userData.easygoldurl = `https://easygold.io/en/sign-up`;
+    userData.primeinvesturl = `https://dashboard.hb-primeinvest.com/en/sign-up`;
 
     const token = jwt.sign(
       {

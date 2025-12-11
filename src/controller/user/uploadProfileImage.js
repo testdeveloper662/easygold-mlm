@@ -45,16 +45,16 @@ const UploadProfileImage = async (req, res) => {
     }
 
     // ✅ Upload profile image (stored under /uploads/profile)
-    const filePath = await uploadProfilePicture(
+    const uploadedPath = await uploadProfilePicture(
       req.file,
-      "../../public/uploads/profile",
+      "profile",                 // folder in /public/uploads
       "profile",
-      brokerDetails && brokerDetails?.profile_image
+      brokerDetails.profile_image // delete old file
     );
 
-    // ✅ Save new path to broker
-    if (filePath) {
-      brokerDetails.profile_image = filePath;
+    // Save in DB
+    if (uploadedPath) {
+      brokerDetails.profile_image = uploadedPath;
     }
 
     const updatedBroker = await brokerDetails.save();

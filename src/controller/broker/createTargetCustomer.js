@@ -122,7 +122,7 @@ const CreateTargetCustomer = async (req, res) => {
     let sending_link = "";
 
     if (interest_in === "Landingpage") {
-      const registrationUrl = `https://goldsilberstore.com/landingpage/${broker.user?.mystorekey}`;
+      const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "easygold Token") {
       const registrationUrl = "https://easygold.io/en/sign-up";

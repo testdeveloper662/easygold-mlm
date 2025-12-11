@@ -20,39 +20,73 @@ exports.getUserFromToken = async (token) => {
     });
 };
 
-exports.uploadProfilePicture = async (file, dir, type, isFileExist) => {
+// exports.uploadProfilePicture = async (file, dir, type, isFileExist) => {
+//     try {
+//         if (!file) return null; // No file uploaded
+
+//         const uploadDir = path.join(__dirname, dir);
+
+//         // Ensure the directory exists
+//         if (!fs.existsSync(uploadDir)) {
+//             fs.mkdirSync(uploadDir, { recursive: true });
+//         }
+
+//         const fileExtension = path.extname(file.originalname);
+//         const fileName = `${Date.now()}${fileExtension}`;
+//         const filePath = path.join(uploadDir, fileName);
+
+//         // Delete existing profile picture if exists
+//         if (isFileExist) {
+//             const oldFilePath = path.join(
+//                 uploadDir,
+//                 path.basename(isFileExist)
+//             );
+//             if (fs.existsSync(oldFilePath)) {
+//                 fs.unlinkSync(oldFilePath);
+//             }
+//         }
+
+//         // Save the new file
+//         fs.writeFileSync(filePath, file.buffer);
+
+//         // Return relative path for DB storage
+//         return `/${type}/${fileName}`;
+//     } catch (error) {
+//         console.error("Error in uploading profile picture:", error);
+//         throw new Error("file_upload_error");
+//     }
+// };
+
+exports.uploadProfilePicture = async (file, folderName, type, oldFile = null) => {
     try {
-        if (!file) return null; // No file uploaded
+        if (!file) return null;
 
-        const uploadDir = path.join(__dirname, dir);
+        // Correct absolute path (go back 2 levels and enter public/uploads/... )
+        const uploadDir = path.join(__dirname, "../../public/uploads", folderName);
 
-        // Ensure the directory exists
+        // Ensure directory exists
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
 
-        const fileExtension = path.extname(file.originalname);
-        const fileName = `${Date.now()}${fileExtension}`;
+        const ext = path.extname(file.originalname);
+        const fileName = `${Date.now()}${ext}`;
         const filePath = path.join(uploadDir, fileName);
 
-        // Delete existing profile picture if exists
-        if (isFileExist) {
-            const oldFilePath = path.join(
-                uploadDir,
-                path.basename(isFileExist)
-            );
-            if (fs.existsSync(oldFilePath)) {
-                fs.unlinkSync(oldFilePath);
-            }
+        // Delete old file
+        if (oldFile) {
+            const oldPath = path.join(uploadDir, path.basename(oldFile));
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
         }
 
-        // Save the new file
+        // Save image from memory
         fs.writeFileSync(filePath, file.buffer);
 
-        // Return relative path for DB storage
-        return `/${type}/${fileName}`;
-    } catch (error) {
-        console.error("Error in uploading profile picture:", error);
+        // DB path (correct)
+        return `/${folderName}/${fileName}`;
+
+    } catch (err) {
+        console.error("Upload error:", err);
         throw new Error("file_upload_error");
     }
 };
@@ -64,9 +98,9 @@ exports.generateImageUrl = async (data, type) => {
         }
 
         const baseUrl = process.env.NODE_URL;
-        
+
         const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
-        
+
         if (data !== null && data !== "" && data) {
             const normalizedData = data.startsWith("/") ? data.substring(1) : data;
             const file = normalizedBaseUrl + "uploads/" + normalizedData;

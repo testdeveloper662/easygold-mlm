@@ -217,6 +217,24 @@ const GetDashboardData = async (req, res) => {
       },
     };
 
+    const directCommissionWhere = {
+      user_id: user.ID,
+      is_seller: true,
+      selected_payment_method: 1,
+      is_payment_done: true,
+      createdAt: {
+        [db.Sequelize.Op.between]: [startOfMonth, endOfMonth],
+      },
+    };
+
+    const payoutWhere = {
+      broker_id: currentBroker.id,
+      status: "APPROVED",
+      createdAt: {
+        [db.Sequelize.Op.between]: [startOfMonth, endOfMonth],
+      },
+    };
+
     // 1. Total Order Sale Amount (Current Monthly basis)
     const orderSaleByMonth = await db.BrokerCommissionHistory.findAll({
       where: currentMonthWhereClause,
@@ -236,6 +254,37 @@ const GetDashboardData = async (req, res) => {
       ],
       raw: true,
     });
+
+    const directCommissionByMonth = await db.BrokerCommissionHistory.findAll({
+      where: directCommissionWhere,
+      attributes: [
+        [db.sequelize.literal(`'${currentMonthStr}'`), "month"],
+        [db.sequelize.fn("SUM", db.sequelize.col("commission_amount")), "total_commission"],
+      ],
+      raw: true,
+    });
+
+    const approvedPayouts = await db.BrokerPayoutRequests.findAll({
+      where: payoutWhere,
+      attributes: [
+        [db.sequelize.literal(`'${currentMonthStr}'`), "month"],
+        [db.Sequelize.fn("SUM", db.Sequelize.col("amount")), "total_payout"],
+      ],
+      raw: true,
+    });
+
+    const totalDirectCommission = roundToTwoDecimalPlaces(
+      parseFloat(directCommissionByMonth?.[0]?.total_commission || 0)
+    );
+
+    const totalApprovedPayout = roundToTwoDecimalPlaces(
+      parseFloat(approvedPayouts?.[0]?.total_payout || 0)
+    );
+
+    const commissionReceivedTotal = roundToTwoDecimalPlaces(
+      totalDirectCommission + totalApprovedPayout
+    );
+
 
     // 3. Number of Sub Brokers - Count total and by level
     // Find all sub-brokers (brokers where current broker is in their parent chain)
@@ -438,6 +487,12 @@ const GetDashboardData = async (req, res) => {
           month: currentMonthStr,
           total_earnings: 0,
         }],
+        total_commission_received_by_month: [{
+          month: currentMonthStr,
+          direct_commission: totalDirectCommission,
+          payout_amount: totalApprovedPayout,
+          total_commission_received: commissionReceivedTotal
+        }],
         sub_brokers: {
           total: totalSubBrokers,
           by_level: subBrokersByLevelFormatted,
@@ -445,6 +500,8 @@ const GetDashboardData = async (req, res) => {
         recent_orders: recentOrders,
         commission_summary_by_level: commissionSummaryByLevel,
         monthly_growth_chart: monthlyGrowthChart,
+        untermaklervertrag_doc: currentBroker.untermaklervertrag_doc ? `${process.env.NODE_URL}${currentBroker.untermaklervertrag_doc}` : null,
+        maklervertrag_doc: currentBroker.maklervertrag_doc ? `${process.env.NODE_URL}${currentBroker.maklervertrag_doc}` : null,
       },
     });
   } catch (error) {

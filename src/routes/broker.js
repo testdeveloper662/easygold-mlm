@@ -33,6 +33,7 @@ const UpdateAffiliateBanner = require("../controller/broker/updateAffiliateBanne
 const DeleteAffiliateBanner = require("../controller/broker/deleteAffiliateBanner");
 const GetUserUrls = require("../controller/broker/getUserUrls");
 const RemoveBrokerImage = require("../controller/broker/removeBrokerImage");
+const GetReferralDetails = require("../controller/broker/getReferralDetails");
 
 brokerRouter.post(
   "/register",
@@ -46,6 +47,7 @@ brokerRouter.post(
 
 brokerRouter.post("/referral", authenticateToken, ReferBroker);
 brokerRouter.get("/network", authenticateToken, GetBrokerNetwork);
+brokerRouter.get("/referralname", GetReferralDetails);
 brokerRouter.get("/network/:broker_id", authenticateToken, GetBrokerNetworkById);
 brokerRouter.get("/commissions/:id", authenticateToken, GetBrokerCommissionHistory);
 brokerRouter.post("/order/detail", authenticateToken, GetOrderDetails);

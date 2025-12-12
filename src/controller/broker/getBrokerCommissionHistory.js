@@ -17,6 +17,10 @@ const GetBrokerCommissionHistory = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
+    const isSellerFilter = req.query.is_seller !== undefined
+      ? req.query.is_seller === "true"
+      : null;
+
     // const whereClause = {
     //   user_id: id,
     //   [Op.or]: [
@@ -27,43 +31,53 @@ const GetBrokerCommissionHistory = async (req, res) => {
     //   ],
     // };
 
-    const whereClause = {
-      user_id: id,
-      [Op.or]: [
-        // Seller logic
-        {
-          is_seller: true,
-          [Op.or]: [
-            { selected_payment_method: 1 }, // seller + method 1 (always show)
-            {
-              [Op.and]: [
-                { selected_payment_method: 2 },
-                { is_payment_done: true }, // seller + method 2 only if payment done
-              ],
-            },
-          ],
-        },
+    let whereClause;
 
-        // Non Seller logic
-        {
-          is_seller: false,
-          [Op.or]: [
-            {
-              [Op.and]: [
-                { selected_payment_method: 1 },
-                { is_payment_done: true }, // *** NEW: must be payment done ***
-              ],
-            },
-            {
-              [Op.and]: [
-                { selected_payment_method: 2 }, // method 2 only if payment done
-                { is_payment_done: true },
-              ],
-            },
-          ],
-        },
-      ],
-    };
+    if (isSellerFilter === true) {
+      whereClause = {
+        user_id: id,
+        is_seller: true,
+        selected_payment_method: 1
+      };
+    } else {
+      whereClause = {
+        user_id: id,
+        [Op.or]: [
+          // Seller logic
+          {
+            is_seller: true,
+            [Op.or]: [
+              { selected_payment_method: 1 }, // seller + method 1 (always show)
+              {
+                [Op.and]: [
+                  { selected_payment_method: 2 },
+                  { is_payment_done: true }, // seller + method 2 only if payment done
+                ],
+              },
+            ],
+          },
+
+          // Non Seller logic
+          {
+            is_seller: false,
+            [Op.or]: [
+              {
+                [Op.and]: [
+                  { selected_payment_method: 1 },
+                  { is_payment_done: true }, // *** NEW: must be payment done ***
+                ],
+              },
+              {
+                [Op.and]: [
+                  { selected_payment_method: 2 }, // method 2 only if payment done
+                  { is_payment_done: true },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+    }
 
     // Get total count
     const totalCount = await db.BrokerCommissionHistory.count({

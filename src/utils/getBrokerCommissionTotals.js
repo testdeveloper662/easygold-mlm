@@ -23,7 +23,7 @@ async function getBrokerCommissionTotals(broker) {
                 { [Op.and]: [{ is_seller: false }, { is_payment_done: true }] },
             ],
         },
-        attributes: ["commission_amount", "order_type"],
+        attributes: ["commission_amount", "order_type","is_seller"],
         raw: true,
     });
 
@@ -35,9 +35,17 @@ async function getBrokerCommissionTotals(broker) {
     commissionRows.forEach((row) => {
         const amount = Number(row.commission_amount || 0);
 
+        // ❌ Rule: Do NOT count B2B commissions where is_seller = true
         if (B2B_TYPES.includes(row.order_type)) {
-            totals.B2B_DASHBOARD += amount ? roundToTwoDecimalPlaces(amount) : 0;
+            if (row.is_seller) return;  // ← important filter
+
+            totals.B2B_DASHBOARD += roundToTwoDecimalPlaces(amount);
             return;
+        }
+
+        // Normal commissions (non-B2B)
+        if (totals[row.order_type] !== undefined) {
+            totals[row.order_type] += roundToTwoDecimalPlaces(amount);
         }
     });
 

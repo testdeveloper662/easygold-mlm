@@ -219,11 +219,23 @@ const GetDashboardData = async (req, res) => {
 
     const directCommissionWhere = {
       user_id: user.ID,
-      is_seller: true,
-      selected_payment_method: 1,
       createdAt: {
-        [db.Sequelize.Op.between]: [startOfMonth, endOfMonth],
+        [Op.between]: [startOfMonth, endOfMonth],
       },
+      [Op.or]: [
+        // 🔹 Seller + payment method 1 (always count)
+        {
+          is_seller: true,
+          selected_payment_method: 1,
+        },
+
+        // 🔹 Non-seller + payment method 2 + payment done
+        {
+          is_seller: false,
+          selected_payment_method: 2,
+          is_payment_done: true,
+        },
+      ],
     };
 
     const payoutWhere = {

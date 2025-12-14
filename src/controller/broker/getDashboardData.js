@@ -229,12 +229,12 @@ const GetDashboardData = async (req, res) => {
           selected_payment_method: 1,
         },
 
-        // 🔹 Non-seller + payment method 2 + payment done
-        {
-          is_seller: false,
-          selected_payment_method: 2,
-          is_payment_done: true,
-        },
+        // // 🔹 Non-seller + payment method 2 + payment done
+        // {
+        //   is_seller: false,
+        //   selected_payment_method: 2,
+        //   is_payment_done: true,
+        // },
       ],
     };
 

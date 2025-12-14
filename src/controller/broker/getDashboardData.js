@@ -221,7 +221,6 @@ const GetDashboardData = async (req, res) => {
       user_id: user.ID,
       is_seller: true,
       selected_payment_method: 1,
-      is_payment_done: true,
       createdAt: {
         [db.Sequelize.Op.between]: [startOfMonth, endOfMonth],
       },

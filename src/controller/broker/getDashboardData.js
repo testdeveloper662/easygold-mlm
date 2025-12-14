@@ -219,6 +219,7 @@ const GetDashboardData = async (req, res) => {
 
     const directCommissionWhere = {
       user_id: user.ID,
+      selected_payment_method: 1,
       createdAt: {
         [Op.between]: [startOfMonth, endOfMonth],
       },

@@ -53,6 +53,16 @@ const BrokerRegistration = async (req, res) => {
       veriff_session_id,
       lang,
       language: languageParam, // Accept both 'lang' and 'language' from frontend (rename to avoid conflict)
+      business_activity_check,
+      business_activity_other,
+      businessDescription,
+      purpose_of_business_relationship_check,
+      businesspurposeother,
+      thirdPartyTransactions,
+      beneficialOwners,
+      beneficialOwnersDetails,
+      monthlyVolume,
+      investigationProceedings
     } = req.body;
 
     if (
@@ -198,6 +208,18 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_country_origin", u_country_origin);
     form.append("u_recipient_country", u_recipient_country);
     form.append("selectedDate", new Date().toISOString().split("T")[0]);
+
+    form.append("business_activity_check", business_activity_check);
+    form.append("business_activity_other", business_activity_other);
+    form.append("businessDescription", businessDescription);
+    form.append("purpose_of_business_relationship_check", purpose_of_business_relationship_check);
+    form.append("businesspurposeother", businesspurposeother);
+    form.append("thirdPartyTransactions", thirdPartyTransactions);
+    form.append("beneficialOwners", beneficialOwners);
+    form.append("beneficialOwnersDetails", beneficialOwnersDetails);
+    form.append("monthlyVolume", monthlyVolume);
+    form.append("investigationProceedings", investigationProceedings);
+    form.append("international_Trade", u_export_import);
 
     // Determine language from request body (accept both 'lang' and 'language')
     // Map frontend language codes to database format

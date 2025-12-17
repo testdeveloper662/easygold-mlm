@@ -219,7 +219,7 @@ const BrokerRegistration = async (req, res) => {
     form.append("beneficialOwnersDetails", beneficialOwnersDetails);
     form.append("monthlyVolume", monthlyVolume);
     form.append("investigationProceedings", investigationProceedings);
-    form.append("international_Trade", u_export_import);
+    form.append("internationalTrade", u_export_import);
 
     // Determine language from request body (accept both 'lang' and 'language')
     // Map frontend language codes to database format

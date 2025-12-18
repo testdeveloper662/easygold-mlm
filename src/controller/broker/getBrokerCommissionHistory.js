@@ -37,11 +37,13 @@ const GetBrokerCommissionHistory = async (req, res) => {
       whereClause = {
         user_id: id,
         is_seller: true,
-        selected_payment_method: 1
+        selected_payment_method: 1,
+        is_deleted: false
       };
     } else {
       whereClause = {
         user_id: id,
+        is_deleted: false,
         [Op.or]: [
           // Seller logic
           {

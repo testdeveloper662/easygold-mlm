@@ -102,6 +102,7 @@ const GetBrokerNetwork = async (req, res) => {
 
     const whereClause = {
       user_id: user?.ID,
+      is_deleted: false,
       [Op.or]: [
         { is_seller: true },
         {
@@ -122,7 +123,7 @@ const GetBrokerNetwork = async (req, res) => {
       order: [["createdAt", "DESC"]],
       raw: true
     });
-    
+
     const commissionMap = {};
 
     brokerCommissions.forEach((c) => {

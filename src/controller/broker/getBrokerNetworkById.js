@@ -108,6 +108,7 @@ const GetBrokerNetworkById = async (req, res) => {
     // 3️⃣ Get commission history for this broker
     const whereClause = {
       user_id: targetBroker.user?.ID,
+      is_deleted: false,
       [Op.or]: [
         { is_seller: true },
         { [Op.and]: [{ is_seller: false }, { is_payment_done: true }] },
@@ -126,7 +127,7 @@ const GetBrokerNetworkById = async (req, res) => {
       order: [["createdAt", "DESC"]],
       raw: true,
     });
-   
+
     const commissionMap = {};
 
     brokerCommissions.forEach((c) => {

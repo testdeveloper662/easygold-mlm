@@ -34,6 +34,7 @@ const DeleteAffiliateBanner = require("../controller/broker/deleteAffiliateBanne
 const GetUserUrls = require("../controller/broker/getUserUrls");
 const RemoveBrokerImage = require("../controller/broker/removeBrokerImage");
 const GetReferralDetails = require("../controller/broker/getReferralDetails");
+const GetAllBrokers = require("../controller/broker/getAllBrokers");
 
 brokerRouter.post(
   "/register",
@@ -72,6 +73,8 @@ brokerRouter.get("/target-customers/stats", authenticateToken, GetTargetCustomer
 brokerRouter.get("/target-customers/:id", authenticateToken, GetTargetCustomerById);
 brokerRouter.put("/target-customers/:id", authenticateToken, UpdateTargetCustomer);
 brokerRouter.delete("/target-customers/:id", authenticateToken, DeleteTargetCustomer);
+
+brokerRouter.get("/brokers", authenticateToken, GetAllBrokers);
 
 // Dashboard
 brokerRouter.get("/dashboard", authenticateToken, GetDashboardData);

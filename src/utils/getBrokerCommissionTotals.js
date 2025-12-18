@@ -18,12 +18,13 @@ async function getBrokerCommissionTotals(broker) {
     const commissionRows = await db.BrokerCommissionHistory.findAll({
         where: {
             user_id: userId,
+            is_deleted: false,
             [Op.or]: [
                 { is_seller: true },
                 { [Op.and]: [{ is_seller: false }, { is_payment_done: true }] },
             ],
         },
-        attributes: ["commission_amount", "order_type","is_seller"],
+        attributes: ["commission_amount", "order_type", "is_seller"],
         raw: true,
     });
 

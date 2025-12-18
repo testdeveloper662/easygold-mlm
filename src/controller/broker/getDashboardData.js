@@ -155,6 +155,7 @@ const GetDashboardData = async (req, res) => {
 
     const whereClause = {
       user_id: user.ID,
+      is_deleted: false,
       [Op.or]: [
         // 👉 Seller Logic
         {
@@ -219,6 +220,7 @@ const GetDashboardData = async (req, res) => {
 
     const directCommissionWhere = {
       user_id: user.ID,
+      is_deleted: false,
       createdAt: {
         [Op.between]: [startOfMonth, endOfMonth],
       },

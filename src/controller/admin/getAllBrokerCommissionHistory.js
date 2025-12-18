@@ -27,6 +27,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     const [countResult] = await sequelize.query(`
       SELECT COUNT(DISTINCT order_id) as total
       FROM broker_commission_histories
+      WHERE is_deleted = 0
     `);
     const totalOrders = countResult[0]?.total || 0;
 
@@ -35,6 +36,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
       `
       SELECT DISTINCT order_id
       FROM broker_commission_histories
+      WHERE is_deleted = 0
       ORDER BY createdAt DESC
       LIMIT :limit OFFSET :offset
     `,
@@ -84,7 +86,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
         u.user_email
       FROM broker_commission_histories AS bch
       LEFT JOIN 6LWUP_users AS u ON u.ID = bch.user_id
-      WHERE bch.order_id IN (:orderIds)
+      WHERE bch.is_deleted = 0 AND bch.order_id IN (:orderIds)
       ORDER BY bch.createdAt DESC
     `,
       {

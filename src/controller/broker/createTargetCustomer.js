@@ -122,6 +122,7 @@ const CreateTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "easygold Token",
           },
+          attributes: ["id", "broker_id"],
         });
         break;
 
@@ -138,12 +139,18 @@ const CreateTargetCustomer = async (req, res) => {
     }
 
     if (existingCustomer) {
+      let message = "Customer already exists in your target list";
+
+      if (interest_in === "easygold Token") {
+        message =
+          existingCustomer.broker_id === broker.id
+            ? "Customer already registered with easygold Token Product"
+            : "This customer already connected to other organization";
+      }
+
       return res.status(400).json({
         success: false,
-        message:
-          interest_in === "easygold Token"
-            ? "This customer already connected to other organization"
-            : "Customer already exists in your target list",
+        message,
       });
     }
 

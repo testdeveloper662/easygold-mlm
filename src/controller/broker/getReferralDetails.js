@@ -1,4 +1,7 @@
 const db = require("../../models");
+const geoip = require("geoip-lite");
+
+const GERMAN_COUNTRIES = ["DE", "AT", "CH"];
 
 const GetReferralDetails = async (req, res) => {
   try {
@@ -7,12 +10,25 @@ const GetReferralDetails = async (req, res) => {
     let limitReached = false;
     let totalChildren = 0;
 
+    const ip =
+      req.headers["cf-connecting-ip"] ||
+      req.headers["x-forwarded-for"]?.split(",")[0] ||
+      req.socket.remoteAddress;
+
+    const geo = geoip.lookup(ip);
+    console.log(ip, "ip");
+    console.log(geo, "geo");
+    const country = geo?.country || "US";
+
+    let language = GERMAN_COUNTRIES.includes(country) ? "de" : "en";
+
     if (!referralCode) {
       return res.json({
         success: true,
         referral_code: null,
         referral_name: null,
         limitReached: false,
+        language
       });
     }
 
@@ -60,6 +76,7 @@ const GetReferralDetails = async (req, res) => {
       referral_name: referralName,
       total_children: totalChildren,
       limitReached,
+      language
     });
   } catch (error) {
     console.error("Error fetching referral details:", error);

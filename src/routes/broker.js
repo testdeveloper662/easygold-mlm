@@ -35,6 +35,7 @@ const GetUserUrls = require("../controller/broker/getUserUrls");
 const RemoveBrokerImage = require("../controller/broker/removeBrokerImage");
 const GetReferralDetails = require("../controller/broker/getReferralDetails");
 const GetAllBrokers = require("../controller/broker/getAllBrokers");
+const customerSignupEasyGoldToken = require("../controller/broker/customerSignupEasyGoldToken");
 
 brokerRouter.post(
   "/register",
@@ -75,6 +76,7 @@ brokerRouter.put("/target-customers/:id", authenticateToken, UpdateTargetCustome
 brokerRouter.delete("/target-customers/:id", authenticateToken, DeleteTargetCustomer);
 
 brokerRouter.get("/brokers", authenticateToken, GetAllBrokers);
+brokerRouter.post("/target-customers/signup", customerSignupEasyGoldToken);
 
 // Dashboard
 brokerRouter.get("/dashboard", authenticateToken, GetDashboardData);

@@ -16,7 +16,7 @@ const CreateTargetCustomer = async (req, res) => {
         {
           model: db.Users,
           as: "user",
-          attributes: ["display_name", "landing_page", "mystorekey", "user_email"]
+          attributes: ["display_name", "landing_page", "mystorekey", "user_email", "referral_code"]
         }
       ]
     });
@@ -97,17 +97,52 @@ const CreateTargetCustomer = async (req, res) => {
     }
 
     // Check if customer email already exists for this broker
-    const existingCustomer = await db.TargetCustomers.findOne({
-      where: {
-        broker_id: broker.id,
-        customer_email: customer_email,
-      },
-    });
+    // const existingCustomer = await db.TargetCustomers.findOne({
+    //   where: {
+    //     broker_id: broker.id,
+    //     customer_email: customer_email,
+    //   },
+    // });
+
+    // if (existingCustomer) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Customer with this email already exists in your target list",
+    //   });
+    // }
+
+    let existingCustomer;
+
+    switch (interest_in) {
+      case "easygold Token":
+        // 🌍 Global uniqueness
+        existingCustomer = await db.TargetCustomers.findOne({
+          where: {
+            customer_email,
+            interest_in: "easygold Token",
+          },
+        });
+        break;
+
+      default:
+        // 🧑‍💼 Broker-level uniqueness
+        existingCustomer = await db.TargetCustomers.findOne({
+          where: {
+            broker_id: broker.id,
+            customer_email,
+            interest_in,
+          },
+        });
+        break;
+    }
 
     if (existingCustomer) {
       return res.status(400).json({
         success: false,
-        message: "Customer with this email already exists in your target list",
+        message:
+          interest_in === "easygold Token"
+            ? "This customer already connected to other organization"
+            : "Customer already exists in your target list",
       });
     }
 
@@ -116,7 +151,13 @@ const CreateTargetCustomer = async (req, res) => {
       broker_id: broker.id,
       customer_name,
       customer_email,
+      referral_code: null,
       interest_in: interest_in || null,
+      referred_by_code: broker.referral_code,
+      status: "INVITED",
+      children_count: 0,
+      bonus_points: 0,
+      parent_customer_id: null
     });
 
     let sending_link = "";

@@ -8,6 +8,8 @@ const TargetCustomers = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
+
+    /** 🔗 Broker who owns this customer */
     broker_id: {
       type: Sequelize.INTEGER.UNSIGNED,
       allowNull: false,
@@ -17,44 +19,84 @@ const TargetCustomers = sequelize.define(
       },
       onDelete: "CASCADE",
     },
+
+    /** 🔗 Customer → Customer referral */
+    parent_customer_id: {
+      type: Sequelize.INTEGER,   // ❗ NO UNSIGNED
+      allowNull: true,
+      comment: "Referring customer id",
+    },
+
+    /** 🔑 Referral Codes */
+    referral_code: {
+      type: Sequelize.STRING(12),
+      unique: true,
+      allowNull: true,
+    },
+
+    referred_by_code: {
+      type: Sequelize.STRING(12),
+      allowNull: true,
+    },
+
     customer_name: {
       type: Sequelize.STRING(255),
       allowNull: false,
     },
+
     customer_email: {
       type: Sequelize.STRING(255),
       allowNull: false,
+      unique: true,
     },
+
     interest_in: {
-      type: Sequelize.ENUM("Landingpage", "easygold Token", "Primeinvest"),
+      type: Sequelize.ENUM(
+        "Landingpage",
+        "easygold Token",
+        "Primeinvest"
+      ),
       allowNull: true,
     },
-    createdAt: {
-      type: Sequelize.DATE,
-      allowNull: false,
-      defaultValue: Sequelize.NOW,
+
+    /** 🎁 Referral Reward System */
+    children_count: {
+      type: Sequelize.INTEGER,
+      defaultValue: 0,
+      comment: "How many customers this customer referred",
     },
-    updatedAt: {
-      type: Sequelize.DATE,
-      allowNull: false,
-      defaultValue: Sequelize.NOW,
+
+    bonus_points: {
+      type: Sequelize.INTEGER,
+      defaultValue: 0,
+      comment: "Bonus points earned from referrals",
+    },
+    status: {
+      type: Sequelize.ENUM("INVITED", "REGISTERED"),
+      defaultValue: "INVITED",
     },
   },
   {
     tableName: "target_customers",
     timestamps: true,
     indexes: [
-      {
-        fields: ["broker_id"],
-      },
-      {
-        fields: ["customer_email"],
-      },
-      {
-        fields: ["interest_in"],
-      },
+      { fields: ["broker_id"] },
+      { fields: ["parent_customer_id"] },
+      { fields: ["referral_code"] },
+      { fields: ["customer_email"] },
     ],
   }
 );
+
+/** 🔗 Self-referencing associations */
+TargetCustomers.belongsTo(TargetCustomers, {
+  foreignKey: "parent_customer_id",
+  as: "parent",
+});
+
+TargetCustomers.hasMany(TargetCustomers, {
+  foreignKey: "parent_customer_id",
+  as: "children",
+});
 
 module.exports = TargetCustomers;

@@ -19,7 +19,7 @@ async function createTable() {
     // await AdminFixedBrokerCommission.sync({ alter: true });
     // await BrokerBankDetails.sync({ alter: true });
     // await BrokerPayoutRequests.sync({ alter: true });
-    // await TargetCustomers.sync({ alter: true });
+    await TargetCustomers.sync({ alter: true });
     // await BrokerInvitations.sync({ alter: true });
     // await AffiliateBanners.sync({ alter: true });
 

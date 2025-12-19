@@ -29,13 +29,12 @@ const TargetCustomers = sequelize.define(
 
     /** 🔑 Referral Codes */
     referral_code: {
-      type: Sequelize.STRING(12),
-      unique: true,
+      type: Sequelize.STRING(100),
       allowNull: true,
     },
 
     referred_by_code: {
-      type: Sequelize.STRING(12),
+      type: Sequelize.STRING(100),
       allowNull: true,
     },
 

@@ -12,11 +12,12 @@ const CreateTargetCustomer = async (req, res) => {
     // Get broker details
     const broker = await db.Brokers.findOne({
       where: { user_id: user.ID },
+      attributes: ["referral_code"],
       include: [
         {
           model: db.Users,
           as: "user",
-          attributes: ["display_name", "landing_page", "mystorekey", "user_email", "referral_code"]
+          attributes: ["display_name", "landing_page", "mystorekey", "user_email"]
         }
       ]
     });

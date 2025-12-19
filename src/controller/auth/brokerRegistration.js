@@ -200,7 +200,7 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_bank", bankName);
     form.append("u_iban", iban);
     form.append("u_bic", bic);
-    form.append("u_bank_address", "I");
+    form.append("u_bank_address", bankAddress || "");
     form.append("u_i_or_we", "I");
     form.append("u_describe_business", u_describe_business || "");
     form.append("u_business_purpose", u_business_purpose || "");
@@ -210,13 +210,13 @@ const BrokerRegistration = async (req, res) => {
     form.append("selectedDate", new Date().toISOString().split("T")[0]);
 
     form.append("business_activity_check", business_activity_check);
-    form.append("business_activity_other", business_activity_other);
-    form.append("businessDescription", businessDescription);
+    form.append("business_activity_other", business_activity_other || "");
+    form.append("businessDescription", businessDescription || "");
     form.append("purpose_of_business_relationship_check", purpose_of_business_relationship_check);
-    form.append("businesspurposeother", businesspurposeother);
+    form.append("businesspurposeother", businesspurposeother || "");
     form.append("thirdPartyTransactions", thirdPartyTransactions);
     form.append("beneficialOwners", beneficialOwners);
-    form.append("beneficialOwnersDetails", beneficialOwnersDetails);
+    form.append("beneficialOwnersDetails", beneficialOwnersDetails || "");
     form.append("monthlyVolume", monthlyVolume);
     form.append("investigationProceedings", investigationProceedings);
     form.append("internationalTrade", u_export_import);

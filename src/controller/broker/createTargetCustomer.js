@@ -12,7 +12,7 @@ const CreateTargetCustomer = async (req, res) => {
     // Get broker details
     const broker = await db.Brokers.findOne({
       where: { user_id: user.ID },
-      attributes: ["referral_code"],
+      attributes: ["id", "referral_code"],
       include: [
         {
           model: db.Users,
@@ -143,7 +143,7 @@ const CreateTargetCustomer = async (req, res) => {
 
       if (interest_in === "easygold Token") {
         message =
-          existingCustomer.broker_id === broker.id
+          existingCustomer.broker_id == broker.id
             ? "Customer already registered with easygold Token Product"
             : "This customer already connected to other organization";
       }

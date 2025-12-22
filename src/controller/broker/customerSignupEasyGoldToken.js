@@ -13,6 +13,8 @@ const customerSignupEasyGoldToken = async (req, res) => {
             type,
         } = req.body;
 
+        console.log("Signup Data:", req.body);
+
         if (!customer_name || !customer_email || !type || !referred_by_code) {
             return res.status(400).json({
                 success: false,
@@ -26,11 +28,14 @@ const customerSignupEasyGoldToken = async (req, res) => {
             transaction,
         });
 
+        console.log("Existing Customer:", customer);
+
         let parentCustomer = null;
         let finalBrokerId = null;
 
         /** 2️⃣ Resolve referral */
         if (type === "CUSTOMER") {
+            console.log("Resolving CUSTOMER referral");
             parentCustomer = await db.TargetCustomers.findOne({
                 where: { referral_code: referred_by_code },
                 transaction,
@@ -47,12 +52,14 @@ const customerSignupEasyGoldToken = async (req, res) => {
         }
 
         else if (type === "BROKER") {
+            console.log("Resolving BROKER referral");
             const broker = await db.Brokers.findOne({
                 where: { referral_code: referred_by_code },
                 transaction,
             });
 
             if (!broker) {
+                console.log("Invalid broker referral code");
                 return res.status(400).json({
                     success: false,
                     message: "Invalid broker referral code",
@@ -60,9 +67,11 @@ const customerSignupEasyGoldToken = async (req, res) => {
             }
 
             finalBrokerId = broker.id;
+            console.log("Referred by Broker ID:", finalBrokerId);
         }
 
         else {
+            console.log("Invalid referral type:", type);
             return res.status(400).json({
                 success: false,
                 message: "Invalid referral type",
@@ -71,12 +80,16 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         /** 3️⃣ Update invited customer */
         if (customer) {
+            console.log("Updating existing invited customer");
             if (customer.status === "REGISTERED") {
+                console.log("Customer already registered");
                 return res.status(400).json({
                     success: false,
                     message: "Customer already registered",
                 });
             }
+
+            console.log("Proceeding to update customer record");
 
             await db.TargetCustomers.update(
                 {
@@ -92,6 +105,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         /** 4️⃣ New signup */
         else {
+            console.log("Creating new customer record");
             customer = await db.TargetCustomers.create(
                 {
                     customer_name,
@@ -109,6 +123,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         /** 5️⃣ Reward ONLY customer parent */
         if (parentCustomer && type === "CUSTOMER") {
+            console.log("Rewarding parent customer ID:", parentCustomer.id);
             await db.TargetCustomers.increment(
                 {
                     children_count: 1,

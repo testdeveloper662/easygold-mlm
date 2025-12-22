@@ -80,7 +80,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         /** 3️⃣ Update invited customer */
         if (customer) {
-            console.log("Updating existing invited customer");
+            console.log("Updating existing invited customer", customer.status);
             if (customer.status === "REGISTERED") {
                 console.log("Customer already registered");
                 return res.status(400).json({
@@ -98,8 +98,9 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     parent_customer_id: parentCustomer?.id || null,
                     referred_by_code,
                     status: "REGISTERED",
+                    referral_code: referral_code,
                 },
-                { transaction }
+                { where: { id: customer.id }, transaction }
             );
         }
 

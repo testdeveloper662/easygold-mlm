@@ -32,16 +32,24 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         let parentCustomer = null;
         let finalBrokerId = null;
+        let decoded_referred_by_code = null;
+
+        if (type == "BROKER") {
+            decoded_referred_by_code = Buffer.from(referred_by_code, "base64").toString("utf-8");
+        } else {
+            decoded_referred_by_code = referred_by_code;
+        }
 
         /** 2️⃣ Resolve referral */
         if (type === "CUSTOMER") {
-            console.log("Resolving CUSTOMER referral");
             parentCustomer = await db.TargetCustomers.findOne({
                 where: { referral_code: referred_by_code },
                 transaction,
             });
 
             if (!parentCustomer) {
+                console.log("Invalid customer referral code");
+
                 return res.status(400).json({
                     success: false,
                     message: "Invalid customer referral code",
@@ -54,7 +62,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
         else if (type === "BROKER") {
             console.log("Resolving BROKER referral");
             const broker = await db.Brokers.findOne({
-                where: { referral_code: referred_by_code },
+                where: { referral_code: broker_referred_by_code },
                 transaction,
             });
 
@@ -96,7 +104,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     customer_name,
                     broker_id: finalBrokerId,
                     parent_customer_id: parentCustomer?.id || null,
-                    referred_by_code,
+                    referred_by_code: decoded_referred_by_code,
                     status: "REGISTERED",
                     referral_code: referral_code,
                 },
@@ -106,7 +114,6 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         /** 4️⃣ New signup */
         else {
-            console.log("Creating new customer record");
             customer = await db.TargetCustomers.create(
                 {
                     customer_name,
@@ -114,7 +121,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     broker_id: finalBrokerId,
                     interest_in: "easygold Token",
                     parent_customer_id: parentCustomer?.id || null,
-                    referred_by_code,
+                    referred_by_code: decoded_referred_by_code,
                     referral_code: referral_code,
                     status: "REGISTERED",
                 },

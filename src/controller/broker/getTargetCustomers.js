@@ -1,3 +1,4 @@
+require("dotenv").config();
 const db = require("../../models");
 const { Op } = require("sequelize");
 
@@ -8,6 +9,13 @@ const GetTargetCustomers = async (req, res) => {
     // Get broker details
     const broker = await db.Brokers.findOne({
       where: { user_id: user.ID },
+      include: [
+        {
+          model: db.Users,
+          as: "user",
+          attributes: ["display_name", "landing_page", "mystorekey", "user_email"]
+        }
+      ]
     });
 
     if (!broker) {
@@ -49,10 +57,31 @@ const GetTargetCustomers = async (req, res) => {
       offset: offset,
     });
 
+    let brockerLanguage = "en"; // Default to English
+    const brokerMeta = await db.UsersMeta.findOne({
+      where: {
+        user_id: user.ID,
+        meta_key: "language"
+      },
+      attributes: ["meta_value"]
+    });
+
+    if (brokerMeta && brokerMeta.meta_value) {
+      const langStr = String(brokerMeta.meta_value).toLowerCase().trim();
+      if (langStr === "de-de" || langStr === "de") {
+        brockerLanguage = "de";
+      }
+    }
+
+    let easyGoldReferralCode = Buffer.from(String(broker.referral_code), "utf-8").toString("base64")
+
     return res.status(200).json({
       success: true,
       message: "Target customers retrieved successfully",
       data: {
+        easyGoldReferralLink: `https://easygold.io/${brockerLanguage}/broker/${easyGoldReferralCode}`,
+        primeInvestReferralLink: `https://dashboard.hb-primeinvest.com/${brockerLanguage}/sign-up`,
+        landingPageReferralLink: `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`,
         customers: targetCustomers,
         total: totalCount,
         currentPage: page,

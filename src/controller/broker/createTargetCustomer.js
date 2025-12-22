@@ -170,14 +170,23 @@ const CreateTargetCustomer = async (req, res) => {
 
     let sending_link = "";
 
+    let brokerLanguage = "en";
+    if (metaMap.language == "de-DE") {
+      brokerLanguage = "de";
+    } else {
+      brokerLanguage = "en";
+    }
+
+    let easyGoldReferralCode = Buffer.from(String(broker.referral_code), "utf-8").toString("base64")
+
     if (interest_in === "Landingpage") {
       const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "easygold Token") {
-      const registrationUrl = "https://easygold.io/en/sign-up";
+      const registrationUrl = `https://easygold.io/${brokerLanguage}/broker/${easyGoldReferralCode}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "Primeinvest") {
-      const registrationUrl = "https://dashboard.hb-primeinvest.com/en/sign-up";
+      const registrationUrl = `https://dashboard.hb-primeinvest.com/${brockerLanguage}/sign-up`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     }
 

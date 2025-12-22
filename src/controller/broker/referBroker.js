@@ -54,12 +54,12 @@ const ReferBroker = async (req, res) => {
       where: { parent_id: parentBroker.id },
     });
 
-    if (childrenCount >= 4) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already referred the maximum of 4 brokers.",
-      });
-    }
+    // if (childrenCount >= 4) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "You have already referred the maximum of 4 brokers.",
+    //   });
+    // }
 
     let mailOptions;
 

@@ -54,9 +54,9 @@ const GetReferralDetails = async (req, res) => {
     });
 
     // 3️⃣ Check limit (max 4)
-    if (totalChildren >= 4) {
-      limitReached = true;
-    }
+    // if (totalChildren >= 4) {
+    //   limitReached = true;
+    // }
 
     // 4️⃣ Get referral user's display name
     const user = await db.Users.findOne({

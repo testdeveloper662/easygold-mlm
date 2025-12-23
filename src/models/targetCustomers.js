@@ -53,7 +53,8 @@ const TargetCustomers = sequelize.define(
       type: Sequelize.ENUM(
         "Landingpage",
         "easygold Token",
-        "Primeinvest"
+        "Primeinvest",
+        "goldflex"
       ),
       allowNull: true,
     },

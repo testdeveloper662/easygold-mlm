@@ -11,6 +11,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
             referred_by_code,
             referral_code,
             type,
+            product_type
         } = req.body;
 
         console.log("Signup Data:", req.body);
@@ -53,6 +54,14 @@ const customerSignupEasyGoldToken = async (req, res) => {
                 return res.status(400).json({
                     success: false,
                     message: "Invalid customer referral code",
+                });
+            }
+
+            if (parentCustomer.referred_by_code !== referred_by_code) {
+                console.log("Parent customer code mismatch");
+                return res.status(400).json({
+                    success: false,
+                    message: "Referral code does not match parent customer's code",
                 });
             }
 
@@ -107,6 +116,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     referred_by_code: decoded_referred_by_code,
                     status: "REGISTERED",
                     referral_code: referral_code,
+                    interest_in: product_type,
                 },
                 { where: { id: customer.id }, transaction }
             );
@@ -119,7 +129,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     customer_name,
                     customer_email,
                     broker_id: finalBrokerId,
-                    interest_in: "easygold Token",
+                    interest_in: product_type,
                     parent_customer_id: parentCustomer?.id || null,
                     referred_by_code: decoded_referred_by_code,
                     referral_code: referral_code,

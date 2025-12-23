@@ -57,7 +57,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                 });
             }
 
-            if (parentCustomer.referred_by_code !== referred_by_code) {
+            if (parentCustomer.referral_code !== referred_by_code) {
                 console.log("Parent customer code mismatch");
                 return res.status(400).json({
                     success: false,

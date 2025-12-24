@@ -71,7 +71,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
         else if (type === "BROKER") {
             console.log("Resolving BROKER referral");
             const broker = await db.Brokers.findOne({
-                where: { referral_code: broker_referred_by_code },
+                where: { referral_code: decoded_referred_by_code },
                 transaction,
             });
 

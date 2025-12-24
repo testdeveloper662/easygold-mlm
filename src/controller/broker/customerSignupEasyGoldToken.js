@@ -43,10 +43,13 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         /** 2️⃣ Resolve referral */
         if (type === "CUSTOMER") {
+            const normalizedReferralCode = String(decoded_referred_by_code).trim();
             parentCustomer = await db.TargetCustomers.findOne({
-                where: { referral_code: referred_by_code },
+                where: { referral_code: normalizedReferralCode },
                 transaction,
             });
+
+            console.log("Resolving CUSTOMER referral:", parentCustomer);
 
             if (!parentCustomer) {
                 console.log("Invalid customer referral code");

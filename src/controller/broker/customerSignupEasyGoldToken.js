@@ -50,6 +50,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
             });
 
             console.log("Resolving CUSTOMER referral:", parentCustomer);
+            console.log("Decoded Referred By Code:", parentCustomer.referral_code, referred_by_code);
 
             if (!parentCustomer) {
                 console.log("Invalid customer referral code");
@@ -60,7 +61,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                 });
             }
 
-            if (parentCustomer.referral_code !== referred_by_code) {
+            if (parentCustomer.referral_code !== normalizedReferralCode) {
                 console.log("Parent customer code mismatch");
                 return res.status(400).json({
                     success: false,

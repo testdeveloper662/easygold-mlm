@@ -151,7 +151,7 @@ const CreateTargetCustomer = async (req, res) => {
     if (existingCustomer) {
       let message = "Customer already exists in your target list";
 
-      if (interest_in === "easygold Token") {
+      if (interest_in === "easygold Token" || interest_in === "goldflex") {
         message =
           existingCustomer.broker_id == broker.id
             ? "Customer already registered with this Product"

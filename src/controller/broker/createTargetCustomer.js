@@ -126,6 +126,16 @@ const CreateTargetCustomer = async (req, res) => {
         });
         break;
 
+      case "goldflex":
+        existingCustomer = await db.TargetCustomers.findOne({
+          where: {
+            customer_email,
+            interest_in: "goldflex",
+          },
+          attributes: ["id", "broker_id"],
+        });
+        break;
+
       default:
         // 🧑‍💼 Broker-level uniqueness
         existingCustomer = await db.TargetCustomers.findOne({
@@ -144,7 +154,7 @@ const CreateTargetCustomer = async (req, res) => {
       if (interest_in === "easygold Token") {
         message =
           existingCustomer.broker_id == broker.id
-            ? "Customer already registered with easygold Token Product"
+            ? "Customer already registered with this Product"
             : "This customer already connected to other organization";
       }
 
@@ -187,6 +197,9 @@ const CreateTargetCustomer = async (req, res) => {
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "Primeinvest") {
       const registrationUrl = `https://dashboard.hb-primeinvest.com/${brockerLanguage}/sign-up`;
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+    } else if (interest_in === "goldflex") {
+      const registrationUrl = `https://goldflex.goldsilberstore.com/register?ref=${easyGoldReferralCode}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     }
 

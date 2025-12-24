@@ -14,8 +14,6 @@ const customerSignupEasyGoldToken = async (req, res) => {
             product_type
         } = req.body;
 
-        console.log("Signup Data:", req.body);
-
         if (!customer_name || !customer_email || !type || !referred_by_code) {
             return res.status(400).json({
                 success: false,
@@ -25,11 +23,9 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         /** 1️⃣ Check if customer already exists */
         let customer = await db.TargetCustomers.findOne({
-            where: { customer_email },
+            where: { customer_email, interest_in: product_type },
             transaction,
         });
-
-        console.log("Existing Customer:", customer);
 
         let parentCustomer = null;
         let finalBrokerId = null;
@@ -49,12 +45,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                 transaction,
             });
 
-            console.log("Resolving CUSTOMER referral:", parentCustomer);
-            console.log("Decoded Referred By Code:", parentCustomer.referral_code, referred_by_code);
-
             if (!parentCustomer) {
-                console.log("Invalid customer referral code");
-
                 return res.status(400).json({
                     success: false,
                     message: "Invalid customer referral code",
@@ -62,7 +53,6 @@ const customerSignupEasyGoldToken = async (req, res) => {
             }
 
             if (parentCustomer.referral_code !== normalizedReferralCode) {
-                console.log("Parent customer code mismatch");
                 return res.status(400).json({
                     success: false,
                     message: "Referral code does not match parent customer's code",
@@ -88,11 +78,9 @@ const customerSignupEasyGoldToken = async (req, res) => {
             }
 
             finalBrokerId = broker.id;
-            console.log("Referred by Broker ID:", finalBrokerId);
         }
 
         else {
-            console.log("Invalid referral type:", type);
             return res.status(400).json({
                 success: false,
                 message: "Invalid referral type",
@@ -101,7 +89,6 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         /** 3️⃣ Update invited customer */
         if (customer) {
-            console.log("Updating existing invited customer", customer.status);
             if (customer.status === "REGISTERED") {
                 console.log("Customer already registered");
                 return res.status(400).json({
@@ -109,8 +96,6 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     message: "Customer already registered",
                 });
             }
-
-            console.log("Proceeding to update customer record");
 
             await db.TargetCustomers.update(
                 {
@@ -145,7 +130,6 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         /** 5️⃣ Reward ONLY customer parent */
         if (parentCustomer && type === "CUSTOMER") {
-            console.log("Rewarding parent customer ID:", parentCustomer.id);
             await db.TargetCustomers.increment(
                 {
                     children_count: 1,

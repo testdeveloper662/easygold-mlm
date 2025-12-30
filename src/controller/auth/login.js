@@ -37,13 +37,14 @@ const Login = async (req, res) => {
     const user = await db.Users.findOne({
       where: {
         user_email: email,
+        deleted_at: null,
       },
     });
 
     if (!user) {
       return res.status(404).send({
         success: false,
-        message: "User not exists",
+        message: "Broker not exists",
       });
     }
 

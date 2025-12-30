@@ -145,6 +145,31 @@ const CaptureOrder = async (req, res) => {
           },
         ],
       });
+
+      if (!broker) {
+        let interest_in;
+        if (orderType == "goldflex") {
+          interest_in = "goldflex";
+        } else if (orderType == "easygoldtoken") {
+          interest_in = "easygold Token";
+        }
+        let customer = await db.TargetCustomers.findOne({
+          where: { customer_email: b2bEmail, interest_in, status: "REGISTERED" },
+        });
+
+        broker = await db.Brokers.findOne({
+          where: {
+            id: customer.broker_id, // 👈 broker id condition
+          },
+          include: [
+            {
+              model: db.Users,
+              as: "user",
+              attributes: ["ID", "user_email", "display_name"],
+            },
+          ],
+        });
+      }
     } else {
       // Step 5: Get broker (seller)
       broker = await db.Brokers.findOne({

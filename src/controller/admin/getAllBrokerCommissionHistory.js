@@ -108,7 +108,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
           updatedAt: record.updatedAt,
           broker_commissions: [],
           tree: record.tree,
-          payment_type: record.selected_payment_method === 1 ? "Bank Transfer" : record.selected_payment_method === 2 ? "Crypto Payment" : null, // Default to 1 (bank) if null
+          payment_type: record.selected_payment_method === 1 ? "Bank Transfer" : record.selected_payment_method === 2 ? "Crypto Payment" : record.selected_payment_method === 3 ? "Cash" : record.selected_payment_method === 4 ? "Card" : null, // Default to 1 (bank) if null
         };
       }
 
@@ -131,6 +131,20 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     }, {});
 
     // Convert grouped map to array and sort based on tree structure
+    // const grouped = Object.values(groupedMap)
+    //   .map((order) => {
+    //     const treeStr = order.broker_commissions[0]?.tree || "";
+    //     const treeOrder = treeStr.split("->").map((id) => parseInt(id.trim()));
+
+    //     order.broker_commissions.sort((a, b) => {
+    //       const posA = treeOrder.indexOf(a.broker_id);
+    //       const posB = treeOrder.indexOf(b.broker_id);
+    //       return posA - posB;
+    //     });
+
+    //     return order;
+    //   })
+    //   .sort((a, b) => b.order_id - a.order_id);
     const grouped = Object.values(groupedMap)
       .map((order) => {
         const treeStr = order.broker_commissions[0]?.tree || "";
@@ -144,7 +158,9 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
 
         return order;
       })
-      .sort((a, b) => b.order_id - a.order_id);
+      // ✅ DATE WISE DESC SORT
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
 
     return res.status(200).json({
       success: true,

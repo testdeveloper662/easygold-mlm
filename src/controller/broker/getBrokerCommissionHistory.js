@@ -37,8 +37,20 @@ const GetBrokerCommissionHistory = async (req, res) => {
       whereClause = {
         user_id: id,
         is_seller: true,
-        selected_payment_method: 1,
-        is_deleted: false
+        is_deleted: false,
+        [Op.or]: [
+          // Method 1 → seller, not declined
+          {
+            selected_payment_method: 1,
+            is_payment_declined: false,
+          },
+
+          // Method 3 & 4 → seller, payment must be done
+          {
+            selected_payment_method: { [Op.in]: [3, 4] },
+            is_payment_declined: false,
+          },
+        ],
       };
     } else {
       whereClause = {
@@ -49,11 +61,17 @@ const GetBrokerCommissionHistory = async (req, res) => {
           {
             is_seller: true,
             [Op.or]: [
-              { selected_payment_method: 1 }, // seller + method 1 (always show)
+              { selected_payment_method: 1, is_payment_declined: false }, // seller + method 1 (always show)
               {
                 [Op.and]: [
                   { selected_payment_method: 2 },
                   { is_payment_done: true }, // seller + method 2 only if payment done
+                ],
+              },
+              {
+                [Op.and]: [
+                  { selected_payment_method: { [Op.in]: [3, 4] } },
+                  { is_payment_declined: false },
                 ],
               },
             ],
@@ -72,6 +90,12 @@ const GetBrokerCommissionHistory = async (req, res) => {
               {
                 [Op.and]: [
                   { selected_payment_method: 2 }, // method 2 only if payment done
+                  { is_payment_done: true },
+                ],
+              },
+              {
+                [Op.and]: [
+                  { selected_payment_method: { [Op.in]: [3, 4] } },
                   { is_payment_done: true },
                 ],
               },
@@ -250,7 +274,11 @@ const GetBrokerCommissionHistory = async (req, res) => {
             ? "Bank Transfer"
             : json.selected_payment_method === 2
               ? "Crypto Payment"
-              : null,
+              : json.selected_payment_method === 3
+                ? "Cash"
+                : json.selected_payment_method === 4
+                  ? "Card"
+                  : null,
       };
     });
 

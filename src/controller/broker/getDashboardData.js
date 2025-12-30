@@ -161,11 +161,17 @@ const GetDashboardData = async (req, res) => {
         {
           is_seller: true,
           [Op.or]: [
-            { selected_payment_method: 1 }, // seller + method 1 = always show
+            { selected_payment_method: 1, is_payment_declined: false }, // seller + method 1 = always show
             {
               [Op.and]: [
                 { selected_payment_method: 2 }, // seller + method 2 only if payment done
                 { is_payment_done: true },
+              ],
+            },
+            {
+              [Op.and]: [
+                { selected_payment_method: [3, 4] }, // seller + method 2 only if payment done
+                { is_payment_declined: false },
               ],
             },
           ],
@@ -185,6 +191,12 @@ const GetDashboardData = async (req, res) => {
               [Op.and]: [
                 { selected_payment_method: 2 },
                 { is_payment_done: true }, // again must be payment done
+              ],
+            },
+            {
+              [Op.and]: [
+                { selected_payment_method: { [Op.in]: [3, 4] } },
+                { is_payment_done: true },
               ],
             },
           ],
@@ -229,6 +241,12 @@ const GetDashboardData = async (req, res) => {
         {
           is_seller: true,
           selected_payment_method: 1,
+          is_payment_declined: false
+        },
+        {
+          is_seller: true,
+          selected_payment_method: { [Op.in]: [3, 4] },
+          is_payment_declined: false,
         },
 
         // // 🔹 Non-seller + payment method 2 + payment done

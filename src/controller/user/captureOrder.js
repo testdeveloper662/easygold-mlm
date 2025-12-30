@@ -130,6 +130,7 @@ const CaptureOrder = async (req, res) => {
     }
 
     let broker = null;
+    let targetCustomerBroker = false;
 
     if (isGoldFlex || isEasyGoldToken) {
       // For Gold Flex, get broker using b2bEmail
@@ -157,6 +158,12 @@ const CaptureOrder = async (req, res) => {
           where: { customer_email: b2bEmail, interest_in, status: "REGISTERED" },
         });
 
+        if (!customer) {
+          return res
+            .status(404)
+            .json({ success: false, message: "Customer not found" });
+        }
+
         broker = await db.Brokers.findOne({
           where: {
             id: customer.broker_id, // 👈 broker id condition
@@ -169,6 +176,7 @@ const CaptureOrder = async (req, res) => {
             },
           ],
         });
+        targetCustomerBroker = true;
       }
     } else {
       // Step 5: Get broker (seller)
@@ -186,7 +194,13 @@ const CaptureOrder = async (req, res) => {
     let currentParentId = broker.parent_id;
     let level = 0;
 
-    let brokerlevel = isEasyGoldToken || isGoldFlex ? 5 : 4;
+    let brokerlevel;
+
+    if (isEasyGoldToken || isGoldFlex) {
+      brokerlevel = targetCustomerBroker ? 4 : 5;
+    } else {
+      brokerlevel = 4;
+    }
 
     while (currentParentId && level < brokerlevel) {
       const parent = await db.Brokers.findOne({
@@ -261,7 +275,12 @@ const CaptureOrder = async (req, res) => {
       console.log(` [CAPTURE ORDER] Using fallback static percentages: [${basePercentages.join(", ")}]`);
     }
 
-    brokerlevel = isEasyGoldToken || isGoldFlex ? 6 : 5;
+    // brokerlevel = isEasyGoldToken || isGoldFlex ? 6 : 5;
+    if (isEasyGoldToken || isGoldFlex) {
+      brokerlevel = targetCustomerBroker ? 5 : 6;
+    } else {
+      brokerlevel = 5;
+    }
 
     // Ensure we have at least 5 levels (pad with 0 if needed)
     while (basePercentages.length < brokerlevel) {
@@ -271,8 +290,9 @@ const CaptureOrder = async (req, res) => {
     let activeLevels = [];
 
     if (isGoldFlex || isEasyGoldToken) {
-      activeLevels = [...parentBrokers];
-      console.log(" [CAPTURE ORDER] EasyGoldToken → self commission skipped");
+      activeLevels = targetCustomerBroker
+        ? [broker, ...parentBrokers]   // self included
+        : [...parentBrokers];          // self skipped
     } else {
       activeLevels = [broker, ...parentBrokers];
     }

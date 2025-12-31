@@ -10,7 +10,7 @@ const GetReferralDetails = async (req, res) => {
     let limitReached = false;
     let totalChildren = 0;
 
-    const ip =
+    let ip =
       req.headers["cf-connecting-ip"] ||
       req.headers["x-forwarded-for"]?.split(",")[0] ||
       req.socket.remoteAddress;
@@ -28,7 +28,8 @@ const GetReferralDetails = async (req, res) => {
         referral_code: null,
         referral_name: null,
         limitReached: false,
-        language
+        language,
+        country
       });
     }
 
@@ -76,7 +77,8 @@ const GetReferralDetails = async (req, res) => {
       referral_name: referralName,
       total_children: totalChildren,
       limitReached,
-      language
+      language,
+      country
     });
   } catch (error) {
     console.error("Error fetching referral details:", error);

@@ -4,6 +4,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const compression = require("compression");
 const path = require("path");
 const authRouter = require("./src/routes/auth");
 const adminRouter = require("./src/routes/admin");
@@ -15,6 +16,8 @@ const port = process.env.PORT || 4000;
 var corsOptions = {
   origin: "*",
 };
+app.set("trust proxy", true);
+app.use(compression());
 
 app.use(cors(corsOptions));
 app.use(express.json());

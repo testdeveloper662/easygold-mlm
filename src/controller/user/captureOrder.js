@@ -32,7 +32,7 @@ const CaptureOrder = async (req, res) => {
       });
     }
 
-    const { orderId, orderType, b2bCommissionAmount, b2bEmail } = req.body;
+    const { orderId, orderType, b2bCommissionAmount, b2bEmail, selected_payment_method } = req.body;
 
     const isGoldFlex = orderType == 'goldflex';
     const isEasyGoldToken = orderType == 'easygoldtoken';
@@ -431,6 +431,8 @@ const CaptureOrder = async (req, res) => {
 
       console.log(`order?.selected_payment_method: ${order?.selected_payment_method}`);
 
+      let selected_payment = order?.selected_payment_method || selected_payment_method;
+
       // Prepare data object for database
       const commissionData = {
         broker_id: currentBroker.id,
@@ -443,7 +445,7 @@ const CaptureOrder = async (req, res) => {
         commission_amount: safeCommissionAmount,
         tree,
         is_seller: isSeller,
-        selected_payment_method: order?.selected_payment_method || 1, // default to 1 (bank) if not present
+        selected_payment_method: selected_payment || 1, // default to 1 (bank) if not present
       };
 
       console.log(`\n [CAPTURE ORDER] Database Create Object:`);

@@ -14,6 +14,38 @@ const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 // Generate random referral code
 const generateReferralCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
+const validateVatNumber = async (vatNumber) => {
+  if (!vatNumber || typeof vatNumber !== "string") return { valid: false, message: "VAT number missing" };
+
+  try {
+    const response = await axios.post(
+      "https://api.vatstack.com/v1/validations",
+      { query: vatNumber },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-KEY": process.env.VATSTACK_KEY,
+        },
+        validateStatus: () => true, // Handle 400 manually
+      }
+    );
+
+    // Check if VAT format is invalid
+    if (!response.data.valid_format) {
+      return { valid: false, message: "VAT number format is invalid", data: response.data };
+    }
+
+    if (!response.data.valid) {
+      return { valid: false, message: "VAT number is not registered or inactive", data: response.data };
+    }
+
+    return { valid: true, data: response.data };
+  } catch (err) {
+    console.error("[VAT Validation Error]", err.message);
+    return { valid: false, message: "Error validating VAT number", error: err.message };
+  }
+};
+
 const BrokerRegistration = async (req, res) => {
   console.log("===========BrokerRegistration body = ", req.body);
   console.log("===========BrokerRegistration files = ", req.files);
@@ -116,6 +148,14 @@ const BrokerRegistration = async (req, res) => {
       });
     }
     console.log("222222222222222222222222222");
+
+    // ================== VAT VALIDATION ==================
+    if (vatId) {
+      const vatCheck = await validateVatNumber(vatId);
+      if (!vatCheck.valid) {
+        return res.status(400).json({ success: false, message: vatCheck.message });
+      }
+    }
 
     // Determine parent (admin or broker)
     const isAdminParent = referralCode === process.env.ADMIN_REFERRAL_CODE;

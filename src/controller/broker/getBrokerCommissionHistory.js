@@ -33,6 +33,8 @@ const GetBrokerCommissionHistory = async (req, res) => {
 
     let whereClause;
 
+    const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken"];
+
     if (isSellerFilter === true) {
       whereClause = {
         user_id: id,
@@ -43,8 +45,12 @@ const GetBrokerCommissionHistory = async (req, res) => {
           {
             selected_payment_method: 1,
             is_payment_declined: false,
+            order_type: { [Op.notIn]: GOLD_ORDER_TYPES },
           },
-
+          {
+            order_type: { [Op.in]: GOLD_ORDER_TYPES },
+            is_payment_done: true,
+          },
           // Method 3 & 4 → seller, payment must be done
           {
             selected_payment_method: { [Op.in]: [3, 4] },
@@ -61,7 +67,11 @@ const GetBrokerCommissionHistory = async (req, res) => {
           {
             is_seller: true,
             [Op.or]: [
-              { selected_payment_method: 1, is_payment_declined: false }, // seller + method 1 (always show)
+              { selected_payment_method: 1, is_payment_declined: false, order_type: { [Op.notIn]: GOLD_ORDER_TYPES }, }, // seller + method 1 (always show)
+              {
+                order_type: { [Op.in]: GOLD_ORDER_TYPES },
+                is_payment_done: true,
+              },
               {
                 [Op.and]: [
                   { selected_payment_method: 2 },
@@ -82,22 +92,12 @@ const GetBrokerCommissionHistory = async (req, res) => {
             is_seller: false,
             [Op.or]: [
               {
-                [Op.and]: [
-                  { selected_payment_method: 1 },
-                  { is_payment_done: true }, // *** NEW: must be payment done ***
-                ],
+                order_type: { [Op.in]: GOLD_ORDER_TYPES },
+                is_payment_done: true,
               },
               {
-                [Op.and]: [
-                  { selected_payment_method: 2 }, // method 2 only if payment done
-                  { is_payment_done: true },
-                ],
-              },
-              {
-                [Op.and]: [
-                  { selected_payment_method: { [Op.in]: [3, 4] } },
-                  { is_payment_done: true },
-                ],
+                selected_payment_method: { [Op.in]: [1, 2, 3, 4] },
+                is_payment_done: true
               },
             ],
           },

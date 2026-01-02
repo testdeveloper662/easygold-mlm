@@ -153,6 +153,8 @@ const GetDashboardData = async (req, res) => {
     //   ],
     // };
 
+    const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken"];
+
     const whereClause = {
       user_id: user.ID,
       is_deleted: false,
@@ -161,12 +163,16 @@ const GetDashboardData = async (req, res) => {
         {
           is_seller: true,
           [Op.or]: [
-            { selected_payment_method: 1, is_payment_declined: false }, // seller + method 1 = always show
+            { selected_payment_method: 1, is_payment_declined: false, order_type: { [Op.notIn]: GOLD_ORDER_TYPES }, }, // seller + method 1 = always show
             {
               [Op.and]: [
                 { selected_payment_method: 2 }, // seller + method 2 only if payment done
                 { is_payment_done: true },
               ],
+            },
+            {
+              order_type: { [Op.in]: GOLD_ORDER_TYPES },
+              is_payment_done: true,
             },
             {
               [Op.and]: [
@@ -182,22 +188,12 @@ const GetDashboardData = async (req, res) => {
           is_seller: false,
           [Op.or]: [
             {
-              [Op.and]: [
-                { selected_payment_method: 1 },
-                { is_payment_done: true }, // must be payment done
-              ],
+              order_type: { [Op.in]: GOLD_ORDER_TYPES },
+              is_payment_done: true,
             },
             {
-              [Op.and]: [
-                { selected_payment_method: 2 },
-                { is_payment_done: true }, // again must be payment done
-              ],
-            },
-            {
-              [Op.and]: [
-                { selected_payment_method: { [Op.in]: [3, 4] } },
-                { is_payment_done: true },
-              ],
+              selected_payment_method: { [Op.in]: [1, 2, 3, 4] },
+              is_payment_done: true
             },
           ],
         },
@@ -241,12 +237,17 @@ const GetDashboardData = async (req, res) => {
         {
           is_seller: true,
           selected_payment_method: 1,
-          is_payment_declined: false
+          is_payment_declined: false,
+          order_type: { [Op.notIn]: GOLD_ORDER_TYPES },
         },
         {
           is_seller: true,
           selected_payment_method: { [Op.in]: [3, 4] },
           is_payment_declined: false,
+        },
+        {
+          order_type: { [Op.in]: GOLD_ORDER_TYPES },
+          is_payment_done: true,
         },
 
         // // 🔹 Non-seller + payment method 2 + payment done

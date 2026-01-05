@@ -45,8 +45,7 @@ const TargetCustomers = sequelize.define(
 
     customer_email: {
       type: Sequelize.STRING(255),
-      allowNull: false,
-      unique: true,
+      allowNull: false
     },
 
     interest_in: {
@@ -82,8 +81,7 @@ const TargetCustomers = sequelize.define(
     indexes: [
       { fields: ["broker_id"] },
       { fields: ["parent_customer_id"] },
-      { fields: ["referral_code"] },
-      { fields: ["customer_email"] },
+      { fields: ["referral_code"] }
     ],
   }
 );

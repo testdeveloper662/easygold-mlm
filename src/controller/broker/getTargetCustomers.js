@@ -79,10 +79,10 @@ const GetTargetCustomers = async (req, res) => {
       success: true,
       message: "Target customers retrieved successfully",
       data: {
-        easyGoldReferralLink: `https://easygold.io/${brockerLanguage}/broker/${easyGoldReferralCode}`,
-        primeInvestReferralLink: `https://dashboard.hb-primeinvest.com/${brockerLanguage}/sign-up`,
+        easyGoldReferralLink: `${process.env.EASY_GOLD_FRONTEND_URL}/${brockerLanguage}/broker/${easyGoldReferralCode}`,
+        primeInvestReferralLink: `${process.env.PRIME_INVEST_FRONTEND_URL}/${brockerLanguage}/sign-up`,
         landingPageReferralLink: `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`,
-        goldflexReferralLink: `https://goldflex.goldsilberstore.com/register?ref=${easyGoldReferralCode}`,
+        goldflexReferralLink: `${process.env.GOLD_FLEX_FRONTEND_URL}/register?ref=${easyGoldReferralCode}`,
         customers: targetCustomers,
         total: totalCount,
         currentPage: page,

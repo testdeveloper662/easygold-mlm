@@ -187,7 +187,7 @@ const CreateTargetCustomer = async (req, res) => {
       brokerLanguage = "en";
     }
 
-    let easyGoldReferralCode = Buffer.from(String(broker.referral_code), "utf-8").toString("base64")
+    let easyGoldReferralCode = Buffer.from(String(broker.referral_code), "utf-8").toString("base64");
 
     if (interest_in === "Landingpage") {
       const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
@@ -196,7 +196,7 @@ const CreateTargetCustomer = async (req, res) => {
       const registrationUrl = `${process.env.EASY_GOLD_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "Primeinvest") {
-      const registrationUrl = `${process.env.PRIME_INVEST_FRONTEND_URL}/${brockerLanguage}/sign-up`;
+      const registrationUrl = `${process.env.PRIME_INVEST_FRONTEND_URL}/${brokerLanguage}/sign-up`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "goldflex") {
       const registrationUrl = `${process.env.GOLD_FLEX_FRONTEND_URL}/register?ref=${easyGoldReferralCode}`;

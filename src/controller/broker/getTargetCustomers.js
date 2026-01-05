@@ -57,7 +57,7 @@ const GetTargetCustomers = async (req, res) => {
       offset: offset,
     });
 
-    let brockerLanguage = "en"; // Default to English
+    let brokerLanguage = "en"; // Default to English
     const brokerMeta = await db.UsersMeta.findOne({
       where: {
         user_id: user.ID,
@@ -69,7 +69,7 @@ const GetTargetCustomers = async (req, res) => {
     if (brokerMeta && brokerMeta.meta_value) {
       const langStr = String(brokerMeta.meta_value).toLowerCase().trim();
       if (langStr === "de-de" || langStr === "de") {
-        brockerLanguage = "de";
+        brokerLanguage = "de";
       }
     }
 
@@ -79,8 +79,8 @@ const GetTargetCustomers = async (req, res) => {
       success: true,
       message: "Target customers retrieved successfully",
       data: {
-        easyGoldReferralLink: `${process.env.EASY_GOLD_FRONTEND_URL}/${brockerLanguage}/broker/${easyGoldReferralCode}`,
-        primeInvestReferralLink: `${process.env.PRIME_INVEST_FRONTEND_URL}/${brockerLanguage}/sign-up`,
+        easyGoldReferralLink: `${process.env.EASY_GOLD_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`,
+        primeInvestReferralLink: `${process.env.PRIME_INVEST_FRONTEND_URL}/${brokerLanguage}/sign-up`,
         landingPageReferralLink: `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`,
         goldflexReferralLink: `${process.env.GOLD_FLEX_FRONTEND_URL}/register?ref=${easyGoldReferralCode}`,
         customers: targetCustomers,

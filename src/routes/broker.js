@@ -36,6 +36,7 @@ const RemoveBrokerImage = require("../controller/broker/removeBrokerImage");
 const GetReferralDetails = require("../controller/broker/getReferralDetails");
 const GetAllBrokers = require("../controller/broker/getAllBrokers");
 const customerSignupEasyGoldToken = require("../controller/broker/customerSignupEasyGoldToken");
+const CheckVatnumberValid = require("../controller/broker/checkVatnumberValid");
 
 brokerRouter.post(
   "/register",
@@ -50,6 +51,7 @@ brokerRouter.post(
 brokerRouter.post("/referral", authenticateToken, ReferBroker);
 brokerRouter.get("/network", authenticateToken, GetBrokerNetwork);
 brokerRouter.get("/referralname", GetReferralDetails);
+brokerRouter.get("/checkvalidvat", CheckVatnumberValid);
 brokerRouter.get("/network/:broker_id", authenticateToken, GetBrokerNetworkById);
 brokerRouter.get("/commissions/:id", authenticateToken, GetBrokerCommissionHistory);
 brokerRouter.post("/order/detail", authenticateToken, GetOrderDetails);

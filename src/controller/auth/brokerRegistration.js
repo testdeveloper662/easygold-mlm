@@ -118,12 +118,12 @@ const BrokerRegistration = async (req, res) => {
     console.log("222222222222222222222222222");
 
     // ================== VAT VALIDATION ==================
-    if (vatId) {
-      const vatCheck = await validateVatNumber(vatId);
-      if (!vatCheck.valid) {
-        return res.status(400).json({ success: false, message: vatCheck.message });
-      }
-    }
+    // if (vatId) {
+    //   const vatCheck = await validateVatNumber(vatId);
+    //   if (!vatCheck.valid) {
+    //     return res.status(400).json({ success: false, message: vatCheck.message });
+    //   }
+    // }
 
     // Determine parent (admin or broker)
     const isAdminParent = referralCode === process.env.ADMIN_REFERRAL_CODE;

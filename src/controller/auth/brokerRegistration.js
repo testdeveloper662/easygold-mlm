@@ -18,6 +18,11 @@ const BrokerRegistration = async (req, res) => {
   console.log("===========BrokerRegistration body = ", req.body);
   console.log("===========BrokerRegistration files = ", req.files);
 
+  let ip =
+    req.headers["cf-connecting-ip"] ||
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.socket.remoteAddress;
+
   try {
     const {
       veriffId,
@@ -328,7 +333,8 @@ const BrokerRegistration = async (req, res) => {
       signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
       language: languageForApi,
       stamp_logo: await generateImageUrl("agreements/stamp.png", 'agreements'),
-      mlm_structure_image: await generateImageUrl("agreements/mlm_structure.png", 'agreements')
+      mlm_structure_image: await generateImageUrl("agreements/mlm_structure.png", 'agreements'),
+      ipaddress: ip
     };
 
     // if (languageForApi == "en-US") {

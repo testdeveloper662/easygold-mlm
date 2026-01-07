@@ -37,6 +37,17 @@ const GetReferralDetails = async (req, res) => {
     const parentBroker = await db.Brokers.findOne({
       where: { referral_code: referralCode },
       attributes: ["id", "user_id"],
+      include: [
+        {
+          model: db.Users,
+          as: "user",            // ⚠️ must match association
+          attributes: [],
+          where: {
+            deleted_at: null,     // ✅ user not deleted
+          },
+          required: true,        // ✅ inner join
+        },
+      ],
       raw: true,
     });
 
@@ -52,6 +63,17 @@ const GetReferralDetails = async (req, res) => {
       where: {
         referred_by_code: referralCode,
       },
+      include: [
+        {
+          model: db.Users,
+          as: "user",
+          attributes: [],
+          where: {
+            deleted_at: null,     // ✅ active users only
+          },
+          required: true,
+        },
+      ],
     });
 
     // 3️⃣ Check limit (max 4)

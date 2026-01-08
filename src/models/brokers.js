@@ -61,6 +61,14 @@ const Brokers = sequelize.define(
     maklervertrag_doc: {
       type: Sequelize.TEXT("long"),
       allowNull: true
+    },
+    inc_partnership_doc: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true
+    },
+    llc_partnership_doc: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true
     }
   },
   {

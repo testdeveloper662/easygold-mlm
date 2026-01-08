@@ -8,6 +8,7 @@ const fs = require("fs");
 const path = require("path");
 const { generateAgreementPDF } = require("../../utils/agreementPdfHelper");
 const { generateImageUrl } = require("../../utils/Helper");
+const { generatePartnerShipPDF } = require("../../utils/partnerShipPdfHelper");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 
@@ -339,6 +340,20 @@ const BrokerRegistration = async (req, res) => {
 
     // if (languageForApi == "en-US") {
     let docsData = await generateAgreementPDF(brockerPdfData, parentBroker);
+
+    let partnerPdfData = {
+      name: fullName,
+      address: formattedAddress,
+      date: new Date().toISOString().split("T")[0],
+      entity: company,
+      partner_signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
+      signature: await generateImageUrl("agreements/sign.png", 'agreements'),
+      ipaddress: ip
+    };
+
+    let partnerDocsData = await generatePartnerShipPDF(partnerPdfData);
+
+    console.log(partnerDocsData, "partnerDocsData");
     // } else if (languageForApi == "de-DE") {
     // }
 
@@ -449,7 +464,9 @@ const BrokerRegistration = async (req, res) => {
       total_commission_amount: 0,
       veriff_session_id: veriff_session_id || null,
       untermaklervertrag_doc: `uploads/agreements/${docsData.untermaklervertrag_doc}`,
-      maklervertrag_doc: `uploads/agreements/${docsData.maklervertrag_doc}`
+      maklervertrag_doc: `uploads/agreements/${docsData.maklervertrag_doc}`,
+      inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
+      llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`
     });
 
     const invitation = await db.BrokerInvitations.findOne({

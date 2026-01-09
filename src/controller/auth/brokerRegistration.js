@@ -592,7 +592,7 @@ const BrokerRegistration = async (req, res) => {
 
     mailOptions = {
       from: finalFrom,
-      to: parentBroker?.user_email,
+      to: parentBroker.user?.user_email,
       subject: emailData.subject,
       html: emailData.htmlContent,
     };

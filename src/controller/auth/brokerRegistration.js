@@ -588,6 +588,8 @@ const BrokerRegistration = async (req, res) => {
 
     let finalFrom = MAIL_SENDER; // fallback to verified sender domain
 
+    console.log(parentBroker, "parentBroker");
+
     mailOptions = {
       from: finalFrom,
       to: parentBroker?.user_email,
@@ -595,7 +597,7 @@ const BrokerRegistration = async (req, res) => {
       html: emailData.htmlContent,
     };
 
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, null, null, finalFrom);
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, null, null, from = null);
 
     return res.status(200).json({
       success: true,

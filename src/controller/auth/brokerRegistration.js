@@ -9,8 +9,11 @@ const path = require("path");
 const { generateAgreementPDF } = require("../../utils/agreementPdfHelper");
 const { generateImageUrl } = require("../../utils/Helper");
 const { generatePartnerShipPDF } = require("../../utils/partnerShipPdfHelper");
+const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
+const SendEmailHelper = require("../../utils/sendEmailHelper");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
+const MAIL_SENDER = process.env.MAIL_SENDER;
 
 // Generate random referral code
 const generateReferralCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -51,6 +54,7 @@ const BrokerRegistration = async (req, res) => {
       u_export_import,
       u_country_origin,
       u_recipient_country,
+      accountHolderName,
       iban,
       bic,
       bankName,
@@ -84,6 +88,7 @@ const BrokerRegistration = async (req, res) => {
       !mobile ||
       !username ||
       !password ||
+      !accountHolderName ||
       !iban ||
       !bic ||
       !bankName ||
@@ -93,7 +98,7 @@ const BrokerRegistration = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "Missing required fields: referralCode, fullName, company, contactPerson, postalCode, city, country, email, phone, mobile, username, password, iban, bic, bankName, bankAddress, idExpiryDate",
+          "Missing required fields: referralCode, fullName, company, contactPerson, postalCode, city, country, email, phone, mobile, username, password, accountHolderName, iban, bic, bankName, bankAddress, idExpiryDate",
       });
     }
     console.log("111111111111111111111111");
@@ -145,6 +150,7 @@ const BrokerRegistration = async (req, res) => {
             attributes: [
               "ID",
               "display_name",
+              "user_email"
             ],
             include: [
               {
@@ -210,7 +216,7 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_username", username);
     form.append("u_password", password);
     form.append("u_web_site", website);
-    form.append("u_account_owner", fullName);
+    form.append("u_account_owner", accountHolderName);
     form.append("u_bank", bankName);
     form.append("u_iban", iban);
     form.append("u_bic", bic);
@@ -562,6 +568,34 @@ const BrokerRegistration = async (req, res) => {
     const token = jwt.sign({ user: userResponse }, JWT_ACCESS_TOKEN, {
       expiresIn: process.env.JWT_EXPIRE || "90d",
     });
+
+    const templateVariables = {
+      name: fullName,
+      email: email,
+      mobile_number: mobile,
+    };
+
+    let emailData;
+    try {
+      // Template ID 92 used (adjust as required)
+      emailData = await getRenderedEmail(96, parentBroker.language, templateVariables);
+    } catch (templateError) {
+      console.error(templateError);
+      throw new Error(
+        "Email template (ID: 92) not found. Please ensure it exists in 6lwup_email_view table."
+      );
+    }
+
+    let finalFrom = MAIL_SENDER; // fallback to verified sender domain
+
+    mailOptions = {
+      from: finalFrom,
+      to: parentBroker?.user_email,
+      subject: emailData.subject,
+      html: emailData.htmlContent,
+    };
+
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, null, null, finalFrom);
 
     return res.status(200).json({
       success: true,

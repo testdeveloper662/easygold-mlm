@@ -37,6 +37,8 @@ const GetReferralDetails = require("../controller/broker/getReferralDetails");
 const GetAllBrokers = require("../controller/broker/getAllBrokers");
 const customerSignupEasyGoldToken = require("../controller/broker/customerSignupEasyGoldToken");
 const CheckVatnumberValid = require("../controller/broker/checkVatnumberValid");
+const GetTargetCustomersDetails = require("../controller/broker/getTargetCustomersDetails");
+const UpdateTargetCustomerByEmail = require("../controller/broker/updateTargetCustomerByEmail");
 
 brokerRouter.post(
   "/register",
@@ -72,8 +74,10 @@ brokerRouter.post("/payout/request", authenticateToken, CreateBrokerPayoutReques
 // Target Customers Routes
 brokerRouter.post("/target-customers", authenticateToken, CreateTargetCustomer);
 brokerRouter.get("/target-customers", authenticateToken, GetTargetCustomers);
+brokerRouter.get("/target-customers/getdetails", GetTargetCustomersDetails);
 brokerRouter.get("/target-customers/stats", authenticateToken, GetTargetCustomerStats);
 brokerRouter.get("/target-customers/:id", authenticateToken, GetTargetCustomerById);
+brokerRouter.put("/target-customers/updateCustomer", UpdateTargetCustomerByEmail);
 brokerRouter.put("/target-customers/:id", authenticateToken, UpdateTargetCustomer);
 brokerRouter.delete("/target-customers/:id", authenticateToken, DeleteTargetCustomer);
 

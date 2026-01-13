@@ -5,8 +5,7 @@ require("dotenv").config();
 const generatePartnerShipPDF = async (data) => {
     try {
         let pdfData = data;
-
-        console.log(pdfData, "pdfData");
+        
         let inc_partnership_doc = `inc_parternership_doc_${Date.now()}.pdf`;
         let llc_partnership_doc = `llc_parternership_doc_${Date.now()}.pdf`;
 

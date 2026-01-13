@@ -47,7 +47,26 @@ const TargetCustomers = sequelize.define(
       type: Sequelize.STRING(255),
       allowNull: false
     },
-
+    telephone: {
+      type: Sequelize.STRING(50),
+      allowNull: true,
+    },
+    tax_id: {
+      type: Sequelize.STRING(100),
+      allowNull: true,
+    },
+    address: {
+      type: Sequelize.TEXT,
+      allowNull: true,
+    },
+    pdf_url: {
+      type: Sequelize.TEXT,
+      allowNull: true,
+    },
+    consent_at: {
+      type: Sequelize.DATE,
+      allowNull: true,
+    },
     interest_in: {
       type: Sequelize.ENUM(
         "Landingpage",

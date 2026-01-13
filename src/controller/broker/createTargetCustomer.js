@@ -193,10 +193,10 @@ const CreateTargetCustomer = async (req, res) => {
       const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "easygold Token") {
-      const registrationUrl = `${process.env.EASY_GOLD_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`;
+      const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/easygold`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "Primeinvest") {
-      const registrationUrl = `${process.env.PRIME_INVEST_FRONTEND_URL}/${brokerLanguage}/sign-up`;
+      const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/primeinvest`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "goldflex") {
       const registrationUrl = `${process.env.GOLD_FLEX_FRONTEND_URL}/register?ref=${easyGoldReferralCode}`;

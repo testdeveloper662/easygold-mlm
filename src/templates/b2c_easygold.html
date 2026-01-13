@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B2C EasyGold Agreement - HARTMANN & BENZ, LLC</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+
+        html,
+        body {
+            width: 210mm;
+            height: 297mm;
+            /* margin: 0 auto; */
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            line-height: 1.6;
+            color: #111;
+        }
+
+        .header {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 40px;
+            line-height: 1.4;
+        }
+
+        .company-name {
+            font-weight: 700;
+            font-size: 20px;
+            text-transform: uppercase;
+        }
+
+        .agreement-title {
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        .section-gap {
+            margin-bottom: 50px;
+        }
+
+        .sub-section {
+            margin-bottom: 10px;
+            font-size: 16px;
+            margin-bottom: 50px;
+        }
+
+        .inner-section {
+            margin-left: 20px;
+        }
+
+        .content {
+            text-align: justify;
+        }
+
+        .field-box {
+            border-bottom: 1px solid #000;
+            min-width: 150px;
+            display: inline-block;
+            padding: 0 5px;
+        }
+
+        .signature-table {
+            width: 100%;
+            margin-top: 40px;
+            border-collapse: collapse;
+        }
+
+        .signature-table td {
+            width: 50%;
+            vertical-align: top;
+            padding-top: 50px;
+        }
+
+        .sig-line {
+            border-top: 1px solid #000;
+            width: 80%;
+            margin-top: 5px;
+        }
+
+        .highlight-underline {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            /* space between text and underline */
+            text-decoration-thickness: 2px;
+        }
+
+        .numrow {
+            display: grid;
+            grid-template-columns: 20px 1fr;
+            /* fixed column for numbers, flexible content column */
+            column-gap: 12px;
+            align-items: start;
+            /* top align number with the start of text */
+            width: 100%;
+        }
+
+        /* number column style */
+        .num {
+            /* align number to right so number and punctuation align nicely */
+            text-align: right;
+            padding-right: 8px;
+            font-weight: 500;
+            /* keep vertical alignment with text start */
+        }
+
+        /* content column */
+        .content {
+            text-align: justify;
+        }
+
+        .section-numrow .num {
+            font-size: 1em;
+            font-weight: 700;
+        }
+
+        .section-numrow .bold-content,
+        .content .bold-content {
+            font-weight: 700;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .underline {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            /* space between text and underline */
+            text-decoration-thickness: 2px;
+        }
+
+        .subscriber-form {
+            color: red;
+            font-size: 16px;
+            margin-top: 30px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .label {
+            white-space: nowrap;
+            margin-right: 10px;
+            font-weight: 500;
+        }
+
+        .subscriber-form {
+            color: #000;
+            font-size: 16px;
+            margin-top: 30px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .label {
+            white-space: nowrap;
+            margin-right: 10px;
+            font-weight: 500;
+        }
+
+        .signature-label {
+            margin-left: 10px;
+            white-space: nowrap;
+        }
+
+        .line {
+            border-bottom: 2px solid #000;
+            height: 18px;
+        }
+
+        /* Fixed widths */
+        .line-xl {
+            width: 420px;
+        }
+
+        /* Address */
+        .line-lg {
+            width: 360px;
+        }
+
+        /* Signature */
+        .line-name {
+            width: 360px;
+        }
+
+        .line-email {
+            width: 405px;
+        }
+
+        .line-address {
+            width: 385px;
+        }
+
+        .line-telephone {
+            width: 370px;
+        }
+
+        .line-social {
+            width: 270px;
+        }
+
+        /* Name, Email, Phone, ID */
+        .line-sm {
+            width: 180px;
+        }
+
+        .signature-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column !important;
+        }
+
+        .signature-form {
+            color: #000;
+            font-size: 16px;
+            margin-top: 40px;
+        }
+
+        .field-block {
+            margin-bottom: 24px;
+        }
+
+        .label {
+            display: block;
+            /* Forces next line */
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .line {
+            display: block;
+            border-bottom: 2px solid #000;
+            height: 20px;
+            padding-left: 6px;
+        }
+
+        .line-xl {
+            width: 420px;
+        }
+
+        .line-md {
+            width: 260px;
+        }
+
+        .signature-container {
+            width: 360px;
+            border-bottom: 2px solid #000;
+            padding: 8px 6px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 70px;
+        }
+
+        .signature-container img {
+            height: 100px;
+            max-width: 100%;
+            object-fit: contain;
+            margin-bottom: 4px;
+        }
+
+        .ip-text {
+            font-size: 11px;
+            color: #000;
+            line-height: 1;
+        }
+
+
+        .filled {
+            font-weight: 500;
+        }
+
+        .ip-text {
+            font-size: 12px;
+            color: #000;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="company-name">HARTMANN & BENZ, LLC</div>
+        <div class="agreement-title">Subscription Agreement with Referrer Disclaimer</div>
+        <div class="subtitle">For Subscription of EASYGOLD Tokens</div>
+    </div>
+
+    <div class="content">
+        <p class="section-gap"><strong>HARTMANN & BENZ, LLC</strong>1717 N Street, NW, Suite 1Washington, DC 20036</p>
+
+        <div class="section-title section-gap">1. Subscription</div>
+        <div class="sub-section">
+            (a)The undersigned investor (the “Subscriber”) hereby irrevocably subscribes for and agrees to purchase
+            EASYGOLD Tokens (the “Tokens” or “Securities”) of Hartmann & Benz, LLC, a District of Columbia limited
+            liability company (the “Company”), at a purchase price of $1.00 per Token (the “Per Security Price”). The
+            minimum subscription amount is $500 (i.e., 500 Tokens) for Accredited Investors (as defined in Rule 501 of
+            Regulation D under the U.S. Securities Act of 1933, as amended (the “Securities Act”)), or $500 (500 Tokens)
+            in transactions made outside the United States to persons who are not “U.S. Persons” (as defined in
+            Regulation S under the Securities Act), pursuant to Regulation S.
+        </div>
+        <div class="sub-section">
+            (b)The Subscriber understands that the Securities are being offered pursuant to a private placement
+            memorandum dated November 15, 2022 (the “Memorandum”), and that the Securities have not been and will not be
+            registered under the Securities Act. By executing this Subscription Agreement, the Subscriber acknowledges
+            that the Subscriber has received this Subscription Agreement, a copy of the Memorandum (including all
+            exhibits thereto), and any other information that the Subscriber has requested or deemed necessary to make
+            an informed investment decision.
+        </div>
+        <div class="sub-section">
+            (c)The Subscriber’s subscription may be accepted or rejected, in whole or in part, by the Company in its
+            sole discretion at any time. The Company may also decide, in its sole discretion, to allocate to the
+            Subscriber only a portion of the Tokens that the Subscriber has subscribed for. The Company will notify the
+            Subscriber whether the subscription has been accepted (in whole or in part) or rejected. If the Subscriber’s
+            subscription is rejected (in whole or in part), the Subscriber’s payment (or the applicable rejected portion
+            of such payment) will be returned without interest, and all obligations of the Subscriber under this
+            Agreement with respect to that rejected portion shall terminate. The Subscriber acknowledges and agrees
+            that: (i) any returned funds may be returned in U.S. Dollars, regardless of the form of the Subscriber’s
+            initial payment; (ii) if the Subscriber paid with gold bars accepted by the Company, the Company is
+            authorized to convert such gold into U.S. Dollars at the then-applicable conversion rate at any time after
+            receipt; and (iii) if any payment in gold bars is converted into U.S. Dollars, the Company will not be
+            liable for any fluctuation in the price of gold during the period in which the Subscriber’s funds (or the
+            proceeds thereof) were held by the Company or on the Company’s behalf.
+        </div>
+
+        <div class="sub-section">
+            (d)The aggregate number of Tokens offered for sale shall not exceed 600,000,000 Tokens (the “Maximum
+            Offering”). The Company may continue to accept subscriptions for the Tokens until the earliest of: (i) the
+            date on which the Maximum Offering has been fully subscribed; (ii) the date on which a registered offering
+            under Regulation A+ is qualified by the U.S. Securities and Exchange Commission (“SEC”); or (iii) the date
+            on which the Company elects, in its sole discretion and in accordance with applicable SEC regulations, to
+            terminate or extend this offering. This offering of Tokens is being conducted on a “best efforts” basis
+            pursuant to Rule 251(d) (3)(i)(F) of Regulation A, meaning there is no guarantee that any minimum amount of
+            Tokens will be sold.
+        </div>
+
+        <div class="sub-section">
+            (e)If this subscription is rejected in its entirety, or if the sale of the Securities (or any portion
+            thereof) is not consummated for any reason, then this Subscription Agreement shall be void and of no further
+            force or effect, except that Section 5 (Survival of Representations and Indemnity) shall remain in effect.
+        </div>
+
+        <div class="section-title section-gap">2. Purchase Procedure</div>
+        <div class="sub-section">
+            The full purchase price for the subscribed Tokens must be paid by the Subscriber at the time the Subscriber
+            signs and delivers this Subscription Agreement to the Company. Payment shall be made in immediately
+            available funds by wire transfer, ACH, delivery of gold bars (as permitted by the Company), or other method
+            approved by the Company (which may include payment in cryptocurrencies such as Bitcoin or Ether to a wallet
+            address designated by the Company), using the payment instructions provided by the Company.
+        </div>
+        <div class="sub-section">
+            Upon the Company’s acceptance of the Subscriber’s subscription, the Company will promptly provide the
+            Subscriber with a confirmation of acceptance. The Tokens purchased by the Subscriber will then be delivered
+            to the ERC-1400 compatible digital wallet address provided by the Subscriber
+        </div>
+
+        <div class="section-title section-gap">3. Representations and Warranties of the Company</div>
+        <div class="sub-section">
+            The Company hereby represents and warrants to the Subscriber that the following statements are true and
+            complete in all material respects as of the date of the closing of the Subscriber’s purchase of Tokens,
+            except as otherwise disclosed in writing to the Subscriber. For purposes of this Agreement, an individual is
+            deemed to have “knowledge” of a fact or matter if that individual is actually aware of the fact or matter.
+            The Company will be deemed to have “knowledge” of a fact or matter if any of the Company’s current officers
+            has, or at any time had, actual knowledge of such fact or matter.
+        </div>
+        <div class="sub-section">
+            <strong>(a)Organization and Standing.</strong> The Company is a limited liability company duly formed,
+            validly existing, and in good standing under the laws of the District of Columbia. The Company is also duly
+            qualified to do business and is in good standing as a foreign limited liability company in each other
+            jurisdiction in which the nature of its business or properties requires such qualification, except for any
+            jurisdiction where the failure to be so qualified would not have a material adverse effect on the Company or
+            its business.
+        </div>
+        <div class="sub-section">
+            <strong>(b)Issuance of Securities.</strong>The issuance, sale, and delivery of the Tokens under this
+            Subscription Agreement have been duly authorized by all necessary company action on the part of the Company.
+            When the Tokens are issued, sold, and delivered against payment in accordance with the terms of this
+            Agreement, they will be validly issued, fully paid, and non-assessable.
+        </div>
+        <div class="sub-section">
+            <strong>(c)Authority and Enforceability. </strong>The Company has full power and authority to execute and
+            deliver this Subscription Agreement and to consummate the transactions contemplated herein (including the
+            issuance and sale of the Tokens). This Subscription Agreement has been duly executed and delivered by the
+            Company and, upon execution of this Agreement by all parties, constitutes a valid and binding obligation of
+            the Company, enforceable against the Company in accordance with its terms, subject to: (i) applicable
+            bankruptcy, insolvency, reorganization, moratorium, or similar laws affecting creditors’ rights generally;
+            (ii) general principles of equity (including principles limiting the availability of specific performance,
+            injunctive relief, or other equitable remedies), regardless of whether enforcement is sought in a proceeding
+            at law or in equity; and (iii) limitations on indemnification and contribution that may be imposed by
+            applicable law or public policy (including federal or state securities laws).
+        </div>
+        <div class="sub-section">
+            <strong>(d)Use of Proceeds. </strong>The Company shall use the proceeds from the sale of the Tokens as
+            described under the “Use of Proceeds” section of the Memorandum.
+        </div>
+        <div class="sub-section">
+            <strong>(e)Litigation.</strong>There is no action, suit, proceeding, arbitration, mediation, complaint,
+            claim, charge, or investigation pending against the Company, or, to the Company’s knowledge, currently
+            threatened in writing against the Company. Further, to the Company’s knowledge, no such action or proceeding
+            is pending or has been threatened in writing against any consultant, officer, manager, director, or key
+            employee of the Company in connection with that person’s relationship with the Company, which action, if
+            resolved adversely, would reasonably be expected to materially affect the Company.
+        </div>
+
+        <div class="section-title section-gap">4. Representations and Warranties of Subscriber</div>
+        <div class="sub-section">
+            By signing this Subscription Agreement, the Subscriber (and, if the Subscriber is purchasing the Securities
+            in a fiduciary capacity for another person or entity, such other person or entity) represents and warrants
+            to the Company that each of the following statements is true and correct in all material respects as of the
+            date of the closing of the Subscriber’s purchase of Tokens:
+        </div>
+        <div class="sub-section">
+            <strong>(a)Requisite Power and Authority. </strong> The Subscriber has all necessary power and authority to
+            execute and deliver this Subscription Agreement and any other documents required to be executed by the
+            Subscriber in connection with this subscription, and to carry out the Subscriber’s obligations hereunder and
+            thereunder. All action required on the Subscriber’s part for the lawful execution and delivery of this
+            Subscription Agreement and any related agreements has been or will be taken prior to closing. Upon the
+            Subscriber’s execution and delivery of this Subscription Agreement, this Agreement will constitute a valid
+            and binding obligation of the Subscriber, enforceable against the Subscriber in accordance with its terms,
+            except that enforcement may be subject to (i) applicable bankruptcy, insolvency, reorganization, moratorium,
+            or similar laws affecting creditors’ rights generally, and (ii) general principles of equity (regardless of
+            whether enforcement is sought in a proceeding at law or in equity).
+        </div>
+        <div class="sub-section">
+            <strong>(b)Investment Matters. </strong> The Subscriber understands that the Securities have not been
+            registered under the Securities Act or the securities laws of any state or other jurisdiction. The
+            Subscriber further understands that the offering and sale of the Securities is intended to be exempt from
+            registration under the Securities Act and applicable state securities laws. The Subscriber acknowledges that
+            the Securities are subject to restrictions on transfer and resale, and that the Securities may not be
+            transferred or resold except as permitted under applicable securities laws, pursuant to registration or an
+            exemption therefrom.
+        </div>
+        <div class="sub-section">
+            <strong>(c)Illiquidity and Economic Risk. </strong>The Subscriber understands and acknowledges that there is
+            no public market for the Securities and no assurance that a market will develop in the future. The
+            Subscriber understands that the Subscriber may be required to bear the economic risk of this investment
+            indefinitely. The Company has no obligation to register the Securities or to achieve any listing or trading
+            market for the Securities. The Subscriber is able to bear the complete loss of the Subscriber’s investment
+            in the Securities. The Subscriber further acknowledges that an investment in the Company involves
+            significant risks, and the Subscriber has fully considered and understands all of the risk factors related
+            to the purchase of the Securities.
+        </div>
+        <div class="sub-section">
+            <strong>(d)Accredited Investor or Investment Limits. </strong> The Subscriber represents and warrants
+            <strong>either:</strong>
+        </div>
+        <div class="sub-section">
+            (i) The Subscriber is an “accredited investor” as defined in Rule 501 of Regulation D under the Securities
+            Act. The information provided by the Subscriber in response to item (c) on the signature page of this
+            Agreement concerning the Subscriber’s investor status is true and correct; <strong>or</strong>
+        </div>
+        <div class="sub-section">
+            (ii) The total purchase price for the Securities now subscribed for, together with the total amount the
+            Subscriber has previously paid (if any) for any Securities of the Company in this offering, does not exceed
+            ten percent (10%) of the greater of the Subscriber’s annual income or net worth (or, if the Subscriber is
+            not a natural person, 10% of the Subscriber’s revenue or net assets for the Subscriber’s most recently
+            completed fiscal year).
+        </div>
+        <div class="sub-section">
+            The Subscriber further represents that if the Subscriber had any questions regarding the Subscriber’s status
+            as an accredited investor, or the application of the above investment limits, the Subscriber has sought
+            professional advice to address those questions.
+        </div>
+        <div class="sub-section">
+            <strong>(e)Company Information and Offer Documents. </strong>The Subscriber acknowledges that the Company is
+            an early-stage venture and is subject to all of the risks applicable to early-stage companies, whether or
+            not those risks are explicitly described in the Memorandum or other offering materials. The Subscriber
+            represents that it has had the opportunity to read the Company’s white paper and to discuss the Company’s
+            business, management, and financial affairs with the Company’s officers and management. The Subscriber has
+            also had the opportunity to ask questions of, and receive answers from, the Company and its management
+            regarding the terms and conditions of this investment. The Subscriber further acknowledges that, except as
+            expressly set forth in this Agreement, no representations or warranties have been made to the Subscriber by
+            the Company or any other person regarding the Company’s business, prospects, or financial condition.
+        </div>
+        <div class="sub-section">
+            <strong>(f)Valuation. </strong>The Subscriber understands that the Per Security Price of the Tokens was
+            determined by the Company based on its own valuation of the Company’s business and prospects, and the
+            Company has made no representation or warranty that such price reflects a fair or market value of the
+            Tokens. The Subscriber further acknowledges that future issuances of securities by the Company may be made
+            at valuations or prices that are lower than the valuation or price being paid by the Subscriber, and such
+            future issuances could result in a dilution of the value of the Subscriber’s investment.
+        </div>
+        <div class="sub-section">
+            <strong>(e)Company Information and Offer Documents. </strong>The Subscriber acknowledges that the Company is
+            an early-stage venture and is subject to all of the risks applicable to early-stage companies, whether or
+            not those risks are explicitly described in the Memorandum or other offering materials. The Subscriber
+            represents that it has had the opportunity to read the Company’s white paper and to discuss the Company’s
+            business, management, and financial affairs with the Company’s officers and management. The Subscriber has
+            also had the opportunity to ask questions of, and receive answers from, the Company and its management
+            regarding the terms and conditions of this investment. The Subscriber further acknowledges that, except as
+            expressly set forth in this Agreement, no representations or warranties have been made to the Subscriber by
+            the Company or any other person regarding the Company’s business, prospects, or financial condition.
+        </div>
+        <div class="sub-section">
+            <strong>(g)Domicile. </strong>The Subscriber maintains the Subscriber’s domicile (and is not a transient or
+            temporary resident) at the address shown on the Subscriber’s signature page of this Agreement.
+        </div>
+        <div class="sub-section">
+            <strong>(h)No Brokers. </strong>The Subscriber has not engaged, consented to, or authorized any broker,
+            finder, or intermediary to act on the Subscriber’s behalf, nor has the Subscriber incurred any claim or
+            liability for any brokerage fees, commissions, finder’s fees, or similar compensation in connection with the
+            transactions contemplated by this Agreement that would be payable by the Company.
+        </div>
+        <div class="sub-section">
+            <strong>(i)Foreign Investors. </strong>If the Subscriber is not a “United States Person” (as defined in
+            Section 7701(a)(30) of the Internal Revenue Code of 1986, as amended), the Subscriber represents and
+            warrants that the Subscriber has satisfied itself as to the full observance of the laws of the Subscriber’s
+            jurisdiction in connection with the subscription for the Tokens and the Subscriber’s execution of this
+            Agreement, including:
+        </div>
+        <div class="sub-section">
+            (i) the legal requirements within the Subscriber’s jurisdiction for the purchase of the Tokens;
+        </div>
+        <div class="sub-section">
+            (ii) any foreign exchange or currency control restrictions applicable to such purchase;
+        </div>
+        <div class="sub-section">
+            (iii) any governmental or other consents or approvals that may need to be obtained; and
+        </div>
+        <div class="sub-section">
+            (iv) the income tax and other tax consequences, if any, that may be relevant to the purchase, holding,
+            redemption, sale, or transfer of the Tokens.
+        </div>
+        <div class="sub-section">
+            The Subscriber’s subscription and payment for the Tokens, and the Subscriber’s continued beneficial
+            ownership of the Tokens, will not violate any applicable securities or other laws of the Subscriber’s
+            jurisdiction.
+        </div>
+        <div class="sub-section">
+            <strong>(j)Digital Asset Risks. </strong>The Subscriber acknowledges and accepts that there are certain
+            risks inherent in purchasing, holding, and using the Tokens. These risks include, without limitation, the
+            risk of losing access to the Tokens due to loss of passwords, loss of private keys, cyberattacks or other
+            hacking attempts, and other security vulnerabilities, as well as risks associated with the potential lack of
+            liquidity or volatility in any market that may develop for the Tokens or similar security tokens. By
+            subscribing for the Tokens, the Subscriber understands and assumes all such risks.
+        </div>
+        <div class="section-title section-gap">5. Survival of Representations and Indemnity</div>
+        <div class="sub-section">
+            The representations, warranties, and covenants made by the Subscriber in this Agreement shall survive the
+            closing of the Subscriber’s purchase of Tokens and shall continue in full force and effect notwithstanding
+            any termination of this Subscription Agreement.
+        </div>
+        <div class="sub-section">
+            The Subscriber shall indemnify and hold harmless the Company, its officers, directors, and affiliates, and
+            each person who controls the Company within the meaning of Section 15 of the Securities Act, from and
+            against any and all losses, liabilities, claims, damages, and expenses whatsoever (including, without
+            limitation, reasonable attorneys’ fees and disbursements, including such fees and costs incurred on any
+            appeal) arising out of or relating to any false representation or warranty made by the Subscriber in this
+            Agreement, or any breach or failure by the Subscriber to comply with any covenant or agreement made by the
+            Subscriber in this Agreement or in any other document furnished by the Subscriber in connection with this
+            transaction.
+        </div>
+
+        <div class="section-title section-gap">6. Taxes</div>
+        <div class="sub-section">
+            The purchase price paid by the Subscriber for the Tokens does not include any taxes that may be applicable
+            to the purchase. The Subscriber is solely responsible for determining what, if any, taxes apply to the
+            purchase of the Tokens and for paying, withholding, collecting, reporting, and remitting the correct taxes,
+            if any, to the appropriate tax authorities. Such taxes may include, for example, sales, use, value-added, or
+            similar taxes.
+        </div>
+        <div class="sub-section">
+            The Company is not responsible for withholding, collecting, reporting, or remitting any tax on behalf of the
+            Subscriber. The Subscriber acknowledges that the Company has not provided the Subscriber with any tax advice
+            or opinion regarding the tax consequences of an investment in the Tokens, and the Subscriber is relying
+            solely on its own advisors for any such advice.
+        </div>
+
+        <div class="section-title section-gap">7. Governing Law</div>
+        <div class="sub-section">
+            This Subscription Agreement shall be governed by, and construed and enforced in accordance with, the laws of
+            the District of Columbia, without giving effect to any choice of law or conflict of law rules or provisions
+            that would result in the application of the laws of any jurisdiction other than the District of Columbia.
+        </div>
+
+        <div class="section-title section-gap">8. Notices</div>
+        <div class="sub-section">
+            All notices, requests, demands, and other communications provided for or required under this Agreement shall
+            be in writing and shall be deemed to have been duly given or made:
+        </div>
+        <div class="sub-section">
+            (a)on the date of delivery, if delivered personally or by courier service;
+        </div>
+        <div class="sub-section">
+            (b)on the third day after mailing, if mailed by registered or certified mail, postage prepaid, return
+            receipt requested; or
+        </div>
+        <div class="sub-section">
+            (c)on the date of transmission, if sent by email (provided that no error message or bounce-back indication
+            of non-delivery is received),
+        </div>
+        <div class="sub-section">
+            in each case to the appropriate party at its address or email address set forth below (or to such other
+            address or email address as a party may designate by notice to the other in accordance with this Section 8):
+        </div>
+        <div class="sub-section">
+            If to the Company:
+        </div>
+        <div class="sub-section">
+            HARTMANN & BENZ, LLC1717 N Street, NW, Suite 1Washington, DC 20036Email: support@easygold.io
+        </div>
+        <div class="sub-section">
+            If to the Subscriber:
+        </div>
+        <div class="sub-section">
+            To the postal address or email address for the Subscriber that has been provided to the Company in
+            connection with this subscription (or to such other address or email as the Subscriber may designate by
+            written notice to the Company).
+        </div>
+        <div class="sub-section">
+            Either party may change its address or email for notice by giving written notice to the other party in the
+            manner provided above.
+        </div>
+
+        <div class="section-title section-gap">9. Miscellaneous</div>
+        <div class="sub-section">
+            (a)All pronouns and variations thereof used in this Agreement shall be deemed to refer to the masculine,
+            feminine, neuter, singular, or plural as the context may require.
+        </div>
+        <div class="sub-section">
+            (b)This Subscription Agreement is not transferable or assignable by the Subscriber without the prior written
+            consent of the Company.
+        </div>
+        <div class="sub-section">
+            (c)The representations, warranties, acknowledgments, and agreements made by the Subscriber in this Agreement
+            shall be binding upon the Subscriber and the Subscriber’s heirs, executors, administrators, successors, and
+            permitted assigns, and shall inure to the benefit of the Company and its successors and assigns.
+        </div>
+        <div class="sub-section">
+            (d)No provision of this Agreement may be waived, modified, or terminated except by an instrument in writing
+            signed by both the Company and the Subscriber.
+        </div>
+        <div class="sub-section">
+            (e)If any provision of this Agreement is held to be void, invalid, or unenforceable by a court of competent
+            jurisdiction, such provision shall be deemed severable from the remainder of this Agreement and shall not
+            affect the validity or enforceability of the remaining provisions, which shall remain in full force and
+            effect. The parties shall negotiate in good faith to modify any void or unenforceable provision to reflect
+            the original intent of the parties as closely as possible in an enforceable manner.
+        </div>
+        <div class="sub-section">
+            (f)The invalidity, illegality, or unenforceability of any provision of this Agreement in any particular
+            jurisdiction shall not affect the validity, legality, or enforceability of the remaining provisions in that
+            jurisdiction, and shall not affect the validity, legality, or enforceability of this Agreement, including
+            that provision, in any other jurisdiction. It is the intention of the parties that this Agreement be
+            enforceable to the fullest extent permitted under applicable law.
+        </div>
+        <div class="sub-section">
+            (g)This Agreement is intended solely for the benefit of the Company and the Subscriber and their respective
+            successors and permitted assigns. Nothing in this Agreement, express or implied, is intended to confer upon
+            any other person or entity any rights or remedies as a third-party beneficiary or otherwise.
+        </div>
+        <div class="sub-section">
+            (h)The section headings and subsection headings in this Agreement are for convenience of reference only and
+            shall not limit or otherwise affect the meaning or interpretation of any provision of this Agreement.
+        </div>
+        <div class="sub-section">
+            (i)This Agreement may be executed in any number of counterparts (including by electronic signature in PDF or
+            by DocuSign or similar service), each of which shall be deemed an original, and all of which together shall
+            constitute one and the same instrument. Delivery of a signed counterpart of this Agreement by facsimile
+            transmission or by electronic mail in PDF format shall be effective as delivery of a manually signed
+            original.
+        </div>
+        <div class="sub-section">
+            (j)No failure or delay by any party in exercising any right, power, or privilege under this Agreement shall
+            operate as a waiver thereof; nor shall any single or partial exercise of any right, power, or privilege
+            preclude any other or further exercise thereof or the exercise of any other right, power, or privilege. All
+            rights and remedies of the parties under this Agreement are cumulative and not exclusive of any other rights
+            or remedies which the parties may have at law or in equity.
+        </div>
+
+        <div class="section-title section-gap">10. Referrer Disclaimer</div>
+        <div class="sub-section">
+            The Subscriber expressly acknowledges and agrees that:
+        </div>
+        <div class="sub-section">
+            <strong>(i)Independent Introducers Only. </strong> If a third-party referrer, introducer, or partner (each,
+            a “Referrer”) has introduced the Subscriber to the Company or to this offering, such Referrer is acting
+            solely as an independent introducer. No Referrer is or shall be deemed to be an agent, representative, or
+            advisor of the Company, and no Referrer is authorized to provide the Subscriber with any investment advice,
+            financial recommendation, or broker-dealer or other securities-related services on behalf of the Company.
+        </div>
+        <div class="sub-section">
+            <strong>(ii)No Investment Advice by Referrer.</strong> Any information, materials, or statements provided to
+            the Subscriber by a Referrer are for general informational or marketing purposes only. The Subscriber will
+            not treat any such information or communications from a Referrer as investment advice or as a recommendation
+            or solicitation to purchase any securities, and the Subscriber has not relied on any such information in
+            making the decision to invest in the Tokens.
+        </div>
+        <div class="sub-section">
+            <strong>(iii)Subscriber’s Independent Decision:</strong>The Subscriber alone is responsible for evaluating
+            the merits and risks of this investment and for making the final decision to subscribe for the Tokens. The
+            Subscriber confirms that they have not relied on any advice or recommendation from any Referrer in deciding
+            to invest in the Tokens. The Subscriber further acknowledges that they have been strongly encouraged to seek
+            independent financial, tax, and legal advice of their own choosing before entering into this Subscription
+            Agreement and purchasing the Tokens.
+        </div>
+
+        <div class="section-title section-gap">11. Referrer Acknowledgment and Signature</div>
+        <div class="sub-section">
+            The undersigned Referrer (as defined in Section 10) hereby acknowledges and agrees that:
+        </div>
+        <div class="sub-section">
+            (i)The Referrer is acting solely as an independent introducer in connection with the Subscriber's potential
+            investment in the Tokens and is not an agent, representative, or advisor of the Company.
+        </div>
+        <div class="sub-section">
+            (ii)The Referrer has not provided, and is not authorized to provide, any investment advice, financial
+            recommendation, or broker-dealer services on behalf of the Company.
+        </div>
+        <div class="sub-section">
+            (iii)The Referrer shall be solely responsible for compliance with all applicable laws, rules, and
+            regulations governing its activities as an introducer, including any applicable securities laws.
+        </div>
+        <div class="sub-section">
+            The Referrer has read, understands, and agrees to be bound by the terms and conditions of Section 10 of this
+            Subscription Agreement.
+        </div>
+
+        <div class="section-title section-gap">Referrer Signature</div>
+        <div class="signature-form">
+
+            <div class="row">
+                <div class="signature-container signature-xl">
+                    <img src="{{broker_signature}}" alt="Signature" />
+                </div>
+                <span class="signature-label">(Signature)</span>
+            </div>
+
+            <div class="field-block">
+                <span class="label">Name (print):</span>
+                <span class="line line-xl filled">{{broker_name}}</span>
+            </div>
+
+            <div class="field-block">
+                <span class="label">Company (if applicable):</span>
+                <span class="line line-xl filled">{{broker_company_name}}</span>
+            </div>
+
+            <div class="field-block">
+                <span class="label">Email:</span>
+                <span class="line line-xl filled">{{broker_email}}</span>
+            </div>
+
+            <div class="field-block">
+                <span class="label">Address:</span>
+                <span class="line line-xl filled">{{broker_address}}</span>
+            </div>
+
+            <div class="field-block">
+                <span class="label">Date:</span>
+                <span class="line line-md filled">{{date}}</span>
+            </div>
+
+        </div>
+        <div class="section-title section-gap">Subscription Signature Page</div>
+        <div class="sub-section">
+            The undersigned Subscriber, desiring to purchase EASYGOLD Tokens from Hartmann & Benz, LLC (the “Company”),
+            hereby agrees to all of the terms and conditions of the foregoing Subscription Agreement and executes this
+            Subscription Agreement as of the date set forth below.
+        </div>
+        <div class="sub-section">
+            The Subscriber subscribes to purchase [insert number] EASYGOLD Tokens and agrees to pay for these Tokens by
+            delivering gold bars to the Company with a total value of [insert amount], in accordance with the payment
+            instructions provided by the Company.
+        </div>
+        <div class="sub-section">
+            <strong>Payment Instructions: </strong>ETH / BTC / USDT / Bank Tranfer
+        </div>
+        <div class="sub-section">
+            <strong>Accredited Investor Status: </strong>The Subscriber represents and warrants that the Subscriber is
+            an accredited investor (as defined under Regulation D of the Securities Act) and has indicated on this
+            Signature Page the paragraph number(s) of <strong>Appendix A</strong> attached hereto that correspond to the
+            Subscriber’s accredited investor status.
+        </div>
+        <div class="sub-section">
+            <strong>Registration of Tokens: </strong>The Tokens subscribed for will be owned by the Subscriber and
+            should be recorded on the books of the Company as held in the name of: {{[customer_name]}}.
+        </div>
+        <div class="sub-section">
+            If the Tokens are to be purchased and held in joint names, each Subscriber must sign below
+        </div>
+        <div class="subscriber-form">
+
+            <div class="row">
+                <span class="label">Subscriber 1:</span>
+                <div class="signature-container">
+                    <img src="{{customer_signature}}" alt="Signature" />
+                    <div class="ip-text">{{customer_ipaddress}}</div>
+                </div>
+                <span class="signature-label">(Signature)</span>
+            </div>
+
+            <div class="row">
+                <span class="label">Name (print):</span>
+                <span class="line line-name filled">{{customer_name}}</span>
+            </div>
+
+            <div class="row">
+                <span class="label">Email:</span>
+                <span class="line line-email filled">{{customer_email}}</span>
+            </div>
+
+            <div class="row">
+                <span class="label">Address:</span>
+                <span class="line line-address filled">{{customer_address}}</span>
+            </div>
+
+            <div class="row">
+                <span class="label">Telephone:</span>
+                <span class="line line-telephone filled">{{customer_telephone}}</span>
+            </div>
+
+            <div class="row">
+                <span class="label">Social Security or Tax ID:</span>
+                <span class="line line-social filled">{{customer_social_security}}</span>
+            </div>
+
+            <div class="row">
+                <span class="label">Date:</span>
+                <span class="line line-sm filled">{{date}}</span>
+            </div>
+
+        </div>
+
+        <div class="subscriber-form">
+
+            <div class="row">
+                <span class="label">Subscriber 2:</span>
+                <span class="line line-lg"></span>
+                <span class="signature-label">(Signature)</span>
+            </div>
+
+            <div class="row">
+                <span class="label">Name (print):</span>
+                <span class="line line-name"></span>
+            </div>
+
+            <div class="row">
+                <span class="label">Email:</span>
+                <span class="line line-email"></span>
+            </div>
+
+            <div class="row">
+                <span class="label">Address:</span>
+                <span class="line line-address"></span>
+            </div>
+
+            <div class="row">
+                <span class="label">Telephone:</span>
+                <span class="line line-telephone"></span>
+            </div>
+
+            <div class="row">
+                <span class="label">Social Security or Tax ID:</span>
+                <span class="line line-social"></span>
+            </div>
+
+            <div class="row">
+                <span class="label">Date:</span>
+                <span class="line line-sm"></span>
+            </div>
+
+        </div>
+        <div class="section-title section-gap">Company Acceptance:</div>
+        <div class="sub-section">
+            This Subscription Agreement is accepted as of the date set forth below.
+        </div>
+        <div class="sub-section">
+            This Subscription Agreement is accepted as of the date set forth below.
+        </div>
+        <div class="sub-section">
+            Accepted on ({{date}}), by <strong>HARTMANN & BENZ, LLC:</strong>
+        </div>
+        <div style="text-align: center;">
+            <img src="{{signature}}" alt="Commission Levels Table" style="width:150px; height:100px;">
+        </div>
+        <div>
+            Mr, Hasni Chief Executive Officer
+        </div>
+</body>
+
+</html>

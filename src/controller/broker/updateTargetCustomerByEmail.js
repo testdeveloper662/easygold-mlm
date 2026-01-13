@@ -168,7 +168,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     let language = "en";
 
-    if (metaMap.language == "de-DE") {
+    if (brokerLanguage == "de-DE") {
       language = "de";
     } else {
       language = "en";

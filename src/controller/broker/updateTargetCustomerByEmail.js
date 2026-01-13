@@ -159,7 +159,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     }
 
     const templateVariables = {
-      b2b_partner: broker.user?.display_name,
+      b2b_partner: parentBroker.user?.display_name,
       sending_link: sending_link,
       b2b_info: formattedAddress || "",
     };

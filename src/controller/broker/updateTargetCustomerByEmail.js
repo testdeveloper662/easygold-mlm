@@ -5,6 +5,8 @@ const { generateImageUrl } = require("../../utils/Helper");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
 
+const MAIL_SENDER = process.env.MAIL_SENDER;
+
 function getMeta(user, key) {
   return user?.user_meta?.find(m => m.meta_key === key)?.meta_value || "";
 }

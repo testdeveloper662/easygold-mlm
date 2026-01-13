@@ -205,8 +205,8 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       return !blockedDomains.includes(domain);
     };
 
-    const senderName = broker.user?.display_name || "Your broker team";
-    const senderEmail = broker.user?.user_email;
+    const senderName = parentBroker.user?.display_name || "Your broker team";
+    const senderEmail = parentBroker.user?.user_email;
 
     const dynamicFrom = `"${senderName}" <${senderEmail}>`;
 

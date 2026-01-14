@@ -57,6 +57,16 @@ const GetTargetCustomers = async (req, res) => {
       offset: offset,
     });
 
+    const customersWithPdfUrl = targetCustomers.map(c => {
+      const customer = c.toJSON();
+
+      if (customer.pdf_url) {
+        customer.pdf_url = `${process.env.NODE_URL}${customer.pdf_url}`;
+      }
+
+      return customer;
+    });
+
     let brokerLanguage = "en"; // Default to English
     const brokerMeta = await db.UsersMeta.findOne({
       where: {
@@ -83,7 +93,7 @@ const GetTargetCustomers = async (req, res) => {
         primeInvestReferralLink: `${process.env.PRIME_INVEST_FRONTEND_URL}/${brokerLanguage}/sign-up`,
         landingPageReferralLink: `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`,
         goldflexReferralLink: `${process.env.GOLD_FLEX_FRONTEND_URL}/register?ref=${easyGoldReferralCode}`,
-        customers: targetCustomers,
+        customers: customersWithPdfUrl,
         total: totalCount,
         currentPage: page,
         totalPages: Math.ceil(totalCount / limit),

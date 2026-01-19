@@ -43,7 +43,7 @@ const buildBrokerTree = async (brokers, parentId = null, level = 1, commissionMa
         commissionMap
       );
 
-      const commissionAmount = commissionMap[b.id] || 0;
+      const commissionAmount = roundToTwoDecimalPlaces(commissionMap[b.id] || 0);
 
       return {
         broker_id: b.id,

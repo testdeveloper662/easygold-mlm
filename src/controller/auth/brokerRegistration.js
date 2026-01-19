@@ -18,6 +18,28 @@ const MAIL_SENDER = process.env.MAIL_SENDER;
 // Generate random referral code
 const generateReferralCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
+const getMetaValue = (metaArray, key) => {
+  return metaArray?.find(m => m.meta_key === key)?.meta_value || null;
+};
+
+const formatLegalDate = (dateInput) => {
+  const date = new Date(dateInput);
+
+  const day = date.getDate();
+
+  const suffix =
+    day > 3 && day < 21
+      ? "th"
+      : ["th", "st", "nd", "rd"][day % 10] || "th";
+
+  return {
+    day: `${day}${suffix}`,
+    month: date.toLocaleString("en-US", { month: "long" }),
+    year: date.getFullYear(),
+  };
+};
+
+
 const BrokerRegistration = async (req, res) => {
   console.log("===========BrokerRegistration body = ", req.body);
   console.log("===========BrokerRegistration files = ", req.files);
@@ -163,7 +185,7 @@ const BrokerRegistration = async (req, res) => {
                     "u_location",
                     "u_postcode",
                     "signatureData",
-                    "language"]
+                    "language", "u_company"]
                 },
                 required: false
               }
@@ -347,13 +369,26 @@ const BrokerRegistration = async (req, res) => {
     // if (languageForApi == "en-US") {
     let docsData = await generateAgreementPDF(brockerPdfData, parentBroker);
 
+    const parentCompanyName = getMetaValue(
+      parentBroker.user?.user_meta,
+      "u_company"
+    );
+
+    const { day, month, year } = formatLegalDate(new Date());
+
     let partnerPdfData = {
+      day: day,
+      month: month,
+      year: year,
       name: fullName,
       address: formattedAddress,
       date: new Date().toISOString().split("T")[0],
       entity: company,
+      parent_broker_name: parentBroker.user?.display_name,
+      parent_broker_company: parentCompanyName,
       partner_signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
       signature: await generateImageUrl("agreements/sign.png", 'agreements'),
+      secretary_signature: await generateImageUrl("agreements/sign_secretary.png", 'agreements'),
       ipaddress: ip
     };
 
@@ -472,7 +507,8 @@ const BrokerRegistration = async (req, res) => {
       untermaklervertrag_doc: `uploads/agreements/${docsData.untermaklervertrag_doc}`,
       maklervertrag_doc: `uploads/agreements/${docsData.maklervertrag_doc}`,
       inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
-      llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`
+      llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
+      goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`
     });
 
     const invitation = await db.BrokerInvitations.findOne({

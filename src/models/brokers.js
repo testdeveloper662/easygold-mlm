@@ -69,6 +69,10 @@ const Brokers = sequelize.define(
     llc_partnership_doc: {
       type: Sequelize.TEXT("long"),
       allowNull: true
+    },
+    goldflex_partnership_doc: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true
     }
   },
   {

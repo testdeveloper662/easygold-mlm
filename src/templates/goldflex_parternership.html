@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B2C EasyGold Agreement - HARTMANN & BENZ, LLC</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+
+        html,
+        body {
+            width: 210mm;
+            height: 297mm;
+            /* margin: 0 auto; */
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            line-height: 1.6;
+            color: #111;
+        }
+
+        .header {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 40px;
+            line-height: 1.4;
+        }
+
+        .company-name {
+            font-weight: 700;
+            font-size: 20px;
+            text-transform: uppercase;
+        }
+
+        .agreement-title {
+            font-weight: 600;
+            font-size: 18px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        .section-gap {
+            margin-bottom: 15px;
+        }
+
+        .sub-section {
+            margin-bottom: 10px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .section-gap.section-title {
+            margin-top: 40px;
+        }
+
+        .inner-section {
+            margin-left: 20px;
+        }
+
+        .content {
+            text-align: justify;
+        }
+
+        .field-box {
+            border-bottom: 1px solid #000;
+            min-width: 150px;
+            display: inline-block;
+            padding: 0 5px;
+        }
+
+        .signature-table {
+            width: 100%;
+            margin-top: 40px;
+            border-collapse: collapse;
+        }
+
+        .signature-table td {
+            width: 50%;
+            vertical-align: top;
+            padding-top: 50px;
+        }
+
+        .sig-line {
+            border-top: 1px solid #000;
+            width: 80%;
+            margin-top: 5px;
+        }
+
+        .highlight-underline {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            /* space between text and underline */
+            text-decoration-thickness: 2px;
+        }
+
+        .numrow {
+            display: grid;
+            grid-template-columns: 20px 1fr;
+            /* fixed column for numbers, flexible content column */
+            column-gap: 12px;
+            align-items: start;
+            /* top align number with the start of text */
+            width: 100%;
+        }
+
+        /* number column style */
+        .num {
+            /* align number to right so number and punctuation align nicely */
+            text-align: right;
+            padding-right: 8px;
+            font-weight: 500;
+            /* keep vertical alignment with text start */
+        }
+
+        /* content column */
+        .content {
+            text-align: justify;
+        }
+
+        .section-numrow .num {
+            font-size: 1em;
+            font-weight: 700;
+        }
+
+        .section-numrow .bold-content,
+        .content .bold-content {
+            font-weight: 700;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .underline {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            /* space between text and underline */
+            text-decoration-thickness: 2px;
+        }
+
+        .subscriber-form {
+            color: red;
+            font-size: 16px;
+            margin-top: 30px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .label {
+            white-space: nowrap;
+            margin-right: 10px;
+            font-weight: 500;
+        }
+
+        .subscriber-form {
+            color: #000;
+            font-size: 16px;
+            margin-top: 30px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .label {
+            white-space: nowrap;
+            margin-right: 10px;
+            font-weight: 500;
+        }
+
+        .signature-label {
+            margin-left: 10px;
+            white-space: nowrap;
+        }
+
+        .line {
+            border-bottom: 2px solid #000;
+            height: 18px;
+        }
+
+        /* Fixed widths */
+        .line-xl {
+            width: 420px;
+        }
+
+        /* Address */
+        .line-lg {
+            width: 360px;
+        }
+
+        /* Signature */
+        .line-name {
+            width: 360px;
+        }
+
+        .line-email {
+            width: 405px;
+        }
+
+        .line-address {
+            width: 385px;
+        }
+
+        .line-telephone {
+            width: 370px;
+        }
+
+        .line-social {
+            width: 270px;
+        }
+
+        /* Name, Email, Phone, ID */
+        .line-sm {
+            width: 180px;
+        }
+
+        .signature-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column !important;
+        }
+
+        .signature-form {
+            color: #000;
+            font-size: 16px;
+            margin-top: 40px;
+        }
+
+        .field-block {
+            margin-bottom: 24px;
+        }
+
+        .label {
+            display: block;
+            /* Forces next line */
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .line {
+            display: block;
+            border-bottom: 2px solid #000;
+            height: 20px;
+            padding-left: 6px;
+        }
+
+        .line-xl {
+            width: 420px;
+        }
+
+        .line-md {
+            width: 260px;
+        }
+
+        .signature-container {
+            width: 360px;
+            border-bottom: 2px solid #000;
+            padding: 8px 6px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+        }
+
+        .signature-container img {
+            height: 80px;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .sig-line {
+            width: 80%;
+            margin: 6px 0;
+        }
+
+        .ip-text {
+            font-size: 11px;
+            color: #000;
+            line-height: 1.3;
+            text-align: center;
+        }
+
+
+        .filled {
+            font-weight: 500;
+        }
+
+        .ip-text {
+            font-size: 12px;
+            color: #000;
+        }
+
+        .legal-paragraph {
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            text-align: justify;
+
+            /* Indent only the first line */
+            text-indent: 40px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="company-name">INTRODUCER / BROKER AGREEMENT</div>
+        <div class="agreement-title">HARTMANN & BENZ LIMITED</div>
+        <div class="agreement-title">GOLDFLEX</div>
+    </div>
+
+    <div class="content">
+        <p class="section-gap">This Introducer / Broker Agreement (the <strong>“Agreement”</strong>) is made and entered
+            into as of the {{day}} day of {{month}}, {{year}} (the <strong>“Effective
+                Date”</strong>).</p>
+        <p class="section-gap"><strong>BETWEEN</strong></p>
+        <p class="section-gap"><strong>HARTMANN & BENZ LIMITED,</strong> a company
+            duly
+            incorporated under the laws of the Federal Republic of Nigeria, having its registered office at <strong>28B,
+                Onikepo
+                Akande, Lekki Phase 1, Lagos</strong> (hereinafter referred to as the <strong>“Company”</strong>, which
+            expression shall, where the
+            context so admits, include its successors and permitted assigns)</p>
+        <p class="section-gap"><strong>AND</strong></p>
+        <p class="section-gap">{{name}}, a {{entity}} of {{address}} (hereinafter referred to as
+            the <strong>“Broker”</strong> or <strong>“Introducer”,</strong> which expression shall, where the context so
+            admits, include his/her/its heirs, personal representatives, successors, and permitted assigns).</p>
+        <p class="section-gap">The Company and the Broker are hereinafter individually referred to as a “Party” and
+            collectively as the <strong>“Parties.”</strong></p>
+
+        <div class="section-title section-gap">1.0 PURPOSE AND BACKGROUND</div>
+        <div class="section-title sub-title">1.1 Business of the Company</div>
+        <div class="sub-section">
+            1.1.1 The Company is engaged in the business of offering structured investment opportunities to the public,
+            including an investment product known as “GoldFlex” or “Gold Flex,” which is designed around asset-backed
+            investment participation in gold and precious metals in accordance with applicable Nigerian laws and
+            regulatory guidelines.
+        </div>
+        <div class="sub-section">
+            1.1.2 The Company, in the course of expanding its investor base and market reach, desires to engage
+            independent introducers to identify and introduce potential investors who may be interested in subscribing
+            to the GoldFlex product.
+        </div>
+        <div class="section-title">1.2 Role of the Broker</div>
+        <div class="sub-section">
+            1.2.1 The Broker represents that it has relationships, networks, and access to potential investors and is
+            willing to introduce such persons to the Company strictly in the capacity of an independent introducer.
+        </div>
+        <div class="sub-section">
+            1.2.2 The Parties expressly acknowledge that the Broker is not being engaged as a partner, agent, or
+            representative of the Company but solely as an independent contractor whose role is limited to
+            introductions.
+        </div>
+
+        <div class="section-title section-gap">2.0 APPOINTMENT AND SCOPE OF SERVICES</div>
+        <div class="section-title sub-title">2.1 Appointment</div>
+        <div class="sub-section">
+            2.1.1 The Company hereby appoints the Broker, and the Broker hereby accepts the appointment, to act as a
+            <strong>non-exclusive Broker/Introducer</strong> for the purpose of introducing prospective investors to the
+            Company’s
+            GoldFlex product during the term of this Agreement.
+        </div>
+        <div class="sub-section">
+            2.1.2 This appointment does not confer exclusivity, territory rights, or guaranteed minimum compensation on
+            the Broker.
+        </div>
+        <div class="section-title">2.2 Nature of Services</div>
+        <div class="sub-section">
+            2.2.1 The Broker’s services under this Agreement shall be strictly limited to identifying prospective
+            investors and facilitating initial contact between such prospective investors and the Company.
+        </div>
+        <div class="sub-section">
+            2.2.2 An <strong>“Introduction”</strong> shall be deemed effective where the Broker provides the Company
+            with the identity and contact details of a prospective investor not previously known to the Company and
+            where such introduction results in direct communication between the Company and the prospective investor.
+        </div>
+        <div class="sub-section">
+            2.2.3 The Broker shall not participate in negotiations, structure investment terms, alter documentation,
+            collect funds, issue receipts, or make commitments on behalf of the Company.
+        </div>
+        <div class="section-title">2.3 Company’s Discretion</div>
+        <div class="sub-section">
+            2.3.1 The Company shall retain full and absolute discretion to determine whether to engage, accept, or
+            reject any prospective investor introduced by the Broker.
+        </div>
+        <div class="sub-section">
+            2.3.2 The Company shall not be obligated to give reasons for rejecting any prospective investor.
+        </div>
+
+        <div class="section-title section-gap">3.0 NON-EXCLUSIVITY AND CONFLICT MANAGEMENT</div>
+        <div class="section-title sub-title">3.1 Non-Exclusive Relationship</div>
+        <div class="sub-section">
+            3.1.1 The Parties agree that this Agreement is non-exclusive.
+        </div>
+        <div class="sub-section">
+            3.1.2 The Company may appoint other brokers, introducers, or agents, and the Broker may render similar
+            services to other entities, provided there is no conflict of interest or misuse of Confidential Information.
+        </div>
+        <div class="section-title">3.2 Conflict of Interest</div>
+        <div class="sub-section">
+            3.2.1 The Broker shall promptly disclose any actual or potential conflict of interest that may arise in the
+            performance of its obligations under this Agreement.
+        </div>
+        <div class="sub-section">
+            3.2.2 The Company reserves the right to restrict or terminate the Broker’s activities where a conflict poses
+            regulatory, reputational, or legal risk.
+        </div>
+
+        <div class="section-title section-gap">4.0 INDEPENDENT CONTRACTOR STATUS</div>
+        <div class="section-title sub-title">4.1 No Employment or Agency</div>
+        <div class="sub-section">
+            4.1.1 The Broker is engaged as an independent contractor and nothing in this Agreement shall be construed as
+            creating an employment, partnership, joint venture, fiduciary, or agency relationship.
+        </div>
+        <div class="sub-section">
+            4.1.2 The Broker shall not represent itself to any third party as having authority to bind or act for the
+            Company.
+        </div>
+        <div class="section-title">4.2 Taxes and Statutory Obligations</div>
+        <div class="sub-section">
+            4.2.1 The Broker shall be solely responsible for all taxes, levies, and statutory deductions arising from
+            commissions earned under this Agreement.
+        </div>
+        <div class="sub-section">
+            4.2.2 The Company shall bear no responsibility for the Broker’s tax compliance.
+        </div>
+
+        <div class="section-title section-gap">5.0 REGULATORY COMPLIANCE AND LIMITATIONS</div>
+        <div class="section-title sub-title">5.1 No Investment Advisory Role</div>
+        <div class="sub-section">
+            5.1.1 The Broker represents that it is not licensed as an investment adviser, broker-dealer, fund manager,
+            or issuing house and shall not perform any activity requiring such licensing.
+        </div>
+        <div class="sub-section">
+            5.1.2 The Broker shall not provide financial, investment, or legal advice to prospective investors.
+        </div>
+        <div class="section-title">5.2 Compliance with Nigerian Law</div>
+        <div class="sub-section">
+            5.2.1 The Broker shall conduct its activities in compliance with all applicable Nigerian laws, including
+            regulations issued by the Securities and Exchange Commission.
+        </div>
+        <div class="sub-section">
+            5.2.2 The Broker shall immediately notify the Company of any inquiry or investigation by any regulatory
+            authority relating to its activities under this Agreement.
+        </div>
+
+        <div class="section-title section-gap">6.0 COMMISSION AND COMPENSATION</div>
+        <div class="section-title sub-title">6.1 Entitlement to Commission</div>
+        <div class="sub-section">
+            6.1.1 The Broker shall be entitled to a commission equal to <strong>five percent (5%)</strong> of the gross
+            amount actually
+            received by the Company from an investor validly introduced by the Broker.
+        </div>
+        <div class="sub-section">
+            6.1.2 Commission shall only accrue upon actual receipt of cleared funds by the Company.
+        </div>
+        <div class="section-title">6.2 Payment Timeline</div>
+        <div class="sub-section">
+            6.2.1 Commission earned shall be paid within <strong>ten (10) business days</strong> after the Company
+            receives the investment funds.
+        </div>
+        <div class="section-title">6.3 Tail Period</div>
+        <div class="sub-section">
+            6.3.1 The Broker shall remain entitled to commission on investments made by introduced investors within
+            <strong>eighteen (18) months</strong> after termination of this Agreement, provided the introduction
+            occurred during the subsistence of this Agreement.
+        </div>
+
+        <div class="section-title section-gap">7.0 CONFIDENTIALITY AND DATA PROTECTION</div>
+        <div class="section-title sub-title">7.1 Confidential Information</div>
+        <div class="sub-section">
+            7.1.1 All proprietary, financial, commercial, and operational information disclosed under this Agreement
+            shall constitute Confidential Information.
+        </div>
+        <div class="sub-section">
+            7.1.2 Confidential Information shall not be disclosed or used for any purpose outside this Agreement.
+        </div>
+        <div class="section-title">7.2 Survival</div>
+        <div class="sub-section">
+            7.2.1 Confidentiality obligations shall survive termination of this Agreement for three (3) years, or
+            indefinitely where required by law.
+        </div>
+
+        <div class="section-title section-gap">8.0 REPRESENTATIONS, WARRANTIES, AND UNDERTAKINGS</div>
+        <div class="section-title sub-title">8.1 Mutual Representations</div>
+        <div class="sub-section">
+            8.1.1 Each Party represents that it has full legal capacity and authority to enter into this Agreement.
+        </div>
+        <div class="sub-section">
+            8.1.2 Each Party warrants that execution of this Agreement does not violate any existing obligation.
+        </div>
+
+        <div class="section-title section-gap">9.0 INDEMNITY</div>
+        <div class="section-title sub-title">9.1 Mutual Indemnity</div>
+        <div class="sub-section">
+            9.1.1 The Broker shall indemnify, defend, and hold harmless the Company, its directors, officers, employees,
+            affiliates, and agents (collectively, the “Company Parties”) from and against all losses, damages,
+            liabilities, claims, demands, fines, penalties, and expenses (including legal and professional fees) arising
+            from any act or omission of the Broker, including but not limited to:
+        </div>
+        <p class="legal-paragraph">
+            a. breach of this Agreement;
+        </p>
+        <p class="legal-paragraph">
+            b. negligence, misrepresentation, or fraud;
+        </p>
+        <p class="legal-paragraph">
+            c. violation of any applicable law, regulation, or regulatory guideline;
+        </p>
+        <p class="legal-paragraph">
+            d. unauthorized representations made to clients, investors, or third parties; and
+        </p>
+        <p class="legal-paragraph">
+            e. any act that exposes the Company Parties to regulatory, financial, or reputational risk.
+        </p>
+        <div class="sub-section">
+            9.1.2 The Company shall have no obligation to indemnify the Broker except where losses are solely caused by
+            the Company’s gross negligence or willful misconduct, and provided that such losses are not contributed to
+            by the Broker.
+        </div>
+        <div class="sub-section">
+            9.1.3 The indemnity obligations under this Clause shall survive the termination or expiration of this
+            Agreement.
+        </div>
+
+        <div class="section-title section-gap">10.0 LIMITATION OF LIABILITY</div>
+        <div class="section-title sub-title">10.1 Limitation</div>
+        <div class="sub-section">
+            10.1.1 The Broker acknowledges that under no circumstances shall the Company be liable to the Broker for any
+            indirect, special, incidental, or consequential loss, including loss of profit, business opportunity, or
+            reputation.
+        </div>
+        <div class="sub-section">
+            10.1.2 The total liability of the Company to the Broker for any claim arising out of or in connection with
+            this Agreement shall not exceed the total commissions actually paid to the Broker as at the date the claim
+            arises.
+        </div>
+        <div class="sub-section">
+            10.1.3 The Company shall not be liable for any loss arising from the Broker’s failure to comply with laws,
+            regulatory directives, or internal Company policies.
+        </div>
+        <div class="sub-section">
+            10.1.4 Nothing in this Clause shall limit liability for fraud, gross negligence, or wilful misconduct by the
+            Company.
+        </div>
+
+        <div class="section-title section-gap">11.0 TERM AND TERMINATION</div>
+        <div class="section-title sub-title">11.1 Term</div>
+        <div class="sub-section">
+            11.1.1 This Agreement shall commence on the Effective Date and continue for an initial term of one (1) year,
+            unless earlier terminated in accordance with this Clause.
+        </div>
+        <div class="sub-section">
+            11.1.2 Renewal of this Agreement shall only occur by express written agreement of the Company. The Company
+            reserves the right to refuse renewal without any liability to the Broker.
+        </div>
+        <div class="section-title sub-title">11.2 Termination</div>
+        <div class="sub-section">
+            11.2.1 The Company may terminate this Agreement for convenience at any time by giving thirty (30) days’
+            written notice.
+        </div>
+        <div class="sub-section">
+            11.2.2 The Company may terminate this Agreement with immediate effect upon written notice if:
+        </div>
+        <p class="legal-paragraph">
+            a. the Broker commits a material breach of this Agreement or any applicable law, regulation, or policy;
+        </p>
+        <p class="legal-paragraph">
+            b. the Broker acts in a manner that exposes the Company to regulatory, financial, or reputational risk;
+        </p>
+        <p class="legal-paragraph">
+            c. the Broker is insolvent, bankrupt, or subject to any winding-up or similar proceedings.
+        </p>
+        <div class="sub-section">
+            11.2.3 Termination shall be without prejudice to any accrued rights or liabilities of the Company, including
+            claims for indemnity, outstanding commissions, or damages arising prior to termination.
+        </div>
+
+        <div class="section-title section-gap">12.0 DISPUTE RESOLUTION</div>
+        <div class="section-title sub-title">12.1 Scope of Disputes</div>
+        <div class="sub-section">
+            12.1.1 Any dispute, controversy, or claim arising out of or in connection with this Broker Agreement,
+            including disputes relating to client solicitation, representations or disclosures to investors, commission
+            payment, suspension, forfeiture or claw-back of commissions, regulatory or compliance breaches, indemnity
+            claims, termination, or post-termination obligations (a “Dispute”), shall be resolved in accordance with
+            this Clause.
+        </div>
+        <div class="sub-section">
+            12.1.2 Disputes arising from investor complaints, regulatory inquiries, or liabilities attributable to the
+            acts or omissions of the Broker in the performance of this Agreement shall fall within the scope of this
+            Clause.
+        </div>
+        <div class="section-title sub-title">12.2 Negotiation</div>
+        <div class="sub-section">
+            12.2.1 The Parties shall first attempt to resolve any Dispute through good faith negotiations.
+        </div>
+        <div class="sub-section">
+            12.2.2 A Party shall notify the other in writing of the Dispute, and the Parties shall engage in discussions
+            within fourteen (14) days and seek to resolve the Dispute within thirty (30) days, failing which either
+            Party may proceed to arbitration.
+        </div>
+        <div class="section-title sub-title">12.3 Arbitration</div>
+        <div class="sub-section">
+            12.3.1 Any Dispute not resolved under Clause 12.2 shall be finally resolved by arbitration.
+        </div>
+        <div class="sub-section">
+            12.3.2 The arbitration shall be conducted in accordance with the Arbitration and Mediation Act, 2023, which
+            is deemed incorporated into this Agreement.
+        </div>
+        <div class="sub-section">
+            12.3.3 The arbitral tribunal shall consist of a sole arbitrator, jointly appointed by the Parties or,
+            failing agreement within fourteen (14) days, appointed in accordance with the Act.
+        </div>
+        <div class="sub-section">
+            12.3.4 The seat of arbitration shall be Lagos State, Nigeria, the language shall be English, and the
+            arbitral tribunal may grant any relief available to a court of competent jurisdiction in Nigeria.
+        </div>
+        <div class="sub-section">
+            12.3.5 The costs of arbitration shall be borne as determined by the arbitral tribunal.
+        </div>
+        <div class="section-title sub-title">12.4 Confidentiality</div>
+        <div class="sub-section">
+            12.4.1 The arbitration proceedings and award shall be confidential, except where disclosure is required by
+            law, a regulatory authority, or for enforcement purposes.
+        </div>
+        <div class="section-title sub-title">12.5 Finality</div>
+        <div class="sub-section">
+            12.5.1 The arbitral award shall be final and binding on the Parties and enforceable in any court of
+            competent jurisdiction in Nigeria.
+        </div>
+
+        <div class="section-title section-gap">12.0 GOVERNING LAW AND JURISDICTION</div>
+        <div class="sub-section">
+            12.1 This Agreement shall be governed by the laws of the Federal Republic of Nigeria.
+        </div>
+        <div class="sub-section">
+            12.2 The courts of Lagos State shall have exclusive jurisdiction.
+        </div>
+
+        <div class="section-title section-gap">13.0 MISCELLANEOUS</div>
+        <div class="sub-section">
+            13.1 This Agreement constitutes the entire agreement between the Parties.
+        </div>
+        <div class="sub-section">
+            13.2 Amendments must be in writing and signed by both Parties.
+        </div>
+        <div class="sub-section">
+            13.3 This Agreement may be executed electronically and in counterparts.
+        </div>
+
+        <div class="sub-section">
+            THE COMMON SEAL of HARTMANN & BENZ LIMITED is hereby affixed and duly delivered in the presence of:
+        </div>
+
+        <table class="signature-table">
+            <tr>
+                <td>
+                    <img src="{{signature}}" alt="Director Signature" style="height:80px;"><br>
+                    <div class="sig-line"></div>
+                    <strong>DIRECTOR</strong>
+                </td>
+
+                <td>
+                    <img src="{{secretary_signature}}" alt="Secretary Signature" style="height:80px;"><br>
+                    <div class="sig-line"></div>
+                    <strong>DIRECTOR / SECRETARY SIGNED</strong>
+                </td>
+            </tr>
+        </table>
+
+        <p style="margin-top:50px;">
+            <strong>SEALED AND DELIVERED BY THE WITHIN-NAMED BROKER / INTRODUCER</strong>
+        </p>
+
+        <table style="width:100%; margin-top:20px;">
+            <tr>
+                <td style="width:50%;">
+                    <span>Name:</span>
+                    <div class="line line-xl filled">{{parent_broker_name}}</div>
+                </td>
+                <td style="width:50%;">
+                    <span>Designation:</span>
+                    <div class="line line-xl filled">{{parent_broker_company}}</div>
+                </td>
+            </tr>
+
+            <tr style="height:40px;"></tr>
+
+            <tr>
+                <td style="width:50%;">
+                    <span>Signature:</span>
+
+                    <div class="signature-container">
+                        <img src="{{partner_signature}}" alt="Broker Signature">
+
+                        <div class="ip-text">
+                            {{ipaddress}}
+                        </div>
+                    </div>
+                </td>
+                <td style="width:50%;">
+                    <span>Date:</span>
+                    <div class="line line-xl filled">{{date}}</div>
+                </td>
+            </tr>
+        </table>
+</body>
+
+</html>

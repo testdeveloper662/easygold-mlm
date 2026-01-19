@@ -23,25 +23,33 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
+    const search = (req.query.search || "").replace(/[^0-9]/g, "");
+
     // Get total count of unique orders
     const [countResult] = await sequelize.query(`
-      SELECT COUNT(DISTINCT order_id) as total
-      FROM broker_commission_histories
-      WHERE is_deleted = 0
-    `);
+  SELECT COUNT(DISTINCT order_id) as total
+  FROM broker_commission_histories
+  WHERE is_deleted = 0
+  ${search ? "AND order_id LIKE :search" : ""}
+`, {
+      replacements: search ? { search: `%${search}%` } : {},
+    });
     const totalOrders = countResult[0]?.total || 0;
 
     // Get paginated distinct order IDs
     const [orderIds] = await sequelize.query(
       `
-      SELECT DISTINCT order_id
-      FROM broker_commission_histories
-      WHERE is_deleted = 0
-      ORDER BY createdAt DESC
-      LIMIT :limit OFFSET :offset
-    `,
+  SELECT DISTINCT order_id
+  FROM broker_commission_histories
+  WHERE is_deleted = 0
+  ${search ? "AND order_id LIKE :search" : ""}
+  ORDER BY createdAt DESC
+  LIMIT :limit OFFSET :offset
+  `,
       {
-        replacements: { limit, offset },
+        replacements: search
+          ? { limit, offset, search: `%${search}%` }
+          : { limit, offset },
       }
     );
 

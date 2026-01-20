@@ -477,7 +477,7 @@ const CaptureOrder = async (req, res) => {
         user_id: currentBroker.user_id,
         order_id: orderId,
         order_type: orderType,
-        order_amount: isGoldFlex || isEasyGoldToken ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
+        order_amount: isGoldFlex || isEasyGoldToken ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalB2BAmount.toFixed(2)),
         profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
         commission_amount: safeCommissionAmount,

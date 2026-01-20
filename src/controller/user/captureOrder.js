@@ -39,6 +39,26 @@ const CaptureOrder = async (req, res) => {
 
     const { orderId, orderType, b2bCommissionAmount, b2bEmail, selected_payment_method } = req.body;
 
+    const existingCommission = await db.BrokerCommissionHistory.findOne({
+      where: {
+        order_id: orderId,
+        order_type: orderType,
+      },
+    });
+
+    if (existingCommission) {
+      console.warn(` [CAPTURE ORDER] ⚠️ Commission already exists for Order ID: ${orderId}, Type: ${orderType}`);
+
+      return res.status(200).json({
+        success: true,
+        message: "Commission already calculated for this order",
+        data: {
+          orderId,
+          orderType,
+        },
+      });
+    }
+
     const isGoldFlex = orderType == 'goldflex';
     const isEasyGoldToken = orderType == 'easygoldtoken';
     const isGoldPurchase = orderType == 'gold_purchase';

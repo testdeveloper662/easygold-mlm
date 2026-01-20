@@ -152,6 +152,9 @@ const CaptureOrder = async (req, res) => {
       //   totalProfitAmount += productProfit;
       // }
 
+      let netB2B = 0;
+      let netPrice = 0;
+
       for (const pivot of orderPivots) {
         const product = await db.Product.findOne({
           where: { id: pivot.product_id },
@@ -183,11 +186,16 @@ const CaptureOrder = async (req, res) => {
         const grossPrice = pivot.price;
         const grossB2B = pivot.b2b_price;
 
-        const netPrice = getNetAmount(grossPrice, vatPercent);
-        const netB2B = getNetAmount(grossB2B, vatPercent);
+        netPrice = getNetAmount(grossPrice, vatPercent);
+        netB2B = getNetAmount(grossB2B, vatPercent);
 
         const productNetTotal = netPrice * pivot.quantity;
         const productProfit = (netPrice - netB2B) * pivot.quantity;
+
+        console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
+        console.log(`   - Price: €${pivot.price}`);
+        console.log(`   - B2B Price: €${pivot.b2b_price}`);
+        console.log(`   - Quantity: ${pivot.quantity}`);
 
         console.log(`\n[VAT CALCULATION]`);
         console.log(`Product ID: ${pivot.product_id}`);

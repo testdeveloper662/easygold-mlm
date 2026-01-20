@@ -95,37 +95,74 @@ const CaptureOrder = async (req, res) => {
           .json({ success: false, message: "Order not found" });
     }
 
-    let orderPivot = null;
-    let totalProfitAmount;
-    let totalCommissionPercent;
+    let orderPivots = [];
+    let totalProfitAmount = 0;
+    let totalCommissionPercent = 0;
     if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken) {
       // Step 3: Get the pivot info
-      orderPivot = await PivotModel.findOne({
+      orderPivots = await PivotModel.findOne({
         where: { order_id: orderId },
       });
-      if (!orderPivot)
-        return res
-          .status(404)
-          .json({ success: false, message: "Order pivot not found" });
+      // if (!orderPivot)
+      //   return res
+      //     .status(404)
+      //     .json({ success: false, message: "Order pivot not found" });
 
-      // Step 4: Calculate total commission % and total profit (€)
-      console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
-      console.log(`   - Price: €${orderPivot.price}`);
-      console.log(`   - B2B Price: €${orderPivot.b2b_price}`);
-      console.log(`   - Quantity: ${orderPivot.quantity}`);
+      // // Step 4: Calculate total commission % and total profit (€)
+      // console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
+      // console.log(`   - Price: €${orderPivot.price}`);
+      // console.log(`   - B2B Price: €${orderPivot.b2b_price}`);
+      // console.log(`   - Quantity: ${orderPivot.quantity}`);
 
-      totalCommissionPercent =
-        (orderPivot.price / orderPivot.b2b_price - 1) * 100;
-      totalProfitAmount = (orderPivot.price - orderPivot.b2b_price) * orderPivot.quantity;
+      // totalCommissionPercent =
+      //   (orderPivot.price / orderPivot.b2b_price - 1) * 100;
+      // totalProfitAmount = (orderPivot.price - orderPivot.b2b_price) * orderPivot.quantity;
+
+      // console.log(` [CAPTURE ORDER] Profit Calculation:`);
+      // console.log(`   - Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
+      // console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
+      // console.log(`   - Formula: (${orderPivot.price} - ${orderPivot.b2b_price}) * ${orderPivot.quantity} = ${totalProfitAmount}`);
+
+      // if (totalProfitAmount <= 0) {
+      //   console.error(` [CAPTURE ORDER] WARNING: Total Profit Amount is ${totalProfitAmount}. Commission will be 0!`);
+      //   console.error(` [CAPTURE ORDER] Check if price (${orderPivot.price}) > b2b_price (${orderPivot.b2b_price})`);
+      // }
+
+      console.log(orderPivots, "orderPivots");
+
+      for (const pivot of orderPivots) {
+        const productTotal = pivot.price * pivot.quantity;
+        const productProfit = (pivot.price - pivot.b2b_price) * pivot.quantity;
+
+        console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
+        console.log(`   - Price: €${pivot.price}`);
+        console.log(`   - B2B Price: €${pivot.b2b_price}`);
+        console.log(`   - Quantity: ${pivot.quantity}`);
+
+        totalOrderAmount += productTotal;
+        totalProfitAmount += productProfit;
+      }
+
+      // Commission percent based on TOTAL values
+      const totalB2BAmount = orderPivots.reduce(
+        (sum, p) => sum + (p.b2b_price * p.quantity),
+        0
+      );
+
+      const totalCommissionPercent =
+        totalB2BAmount > 0
+          ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
+          : 0;
 
       console.log(` [CAPTURE ORDER] Profit Calculation:`);
-      console.log(`   - Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
-      console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
-      console.log(`   - Formula: (${orderPivot.price} - ${orderPivot.b2b_price}) * ${orderPivot.quantity} = ${totalProfitAmount}`);
+      console.log(`   - TOTAL Order Amount: €${totalOrderAmount.toFixed(2)}`);
+      console.log(`   - TOTAL B2B Amount: €${totalB2BAmount.toFixed(2)}`);
+      console.log(`   - TOTAL Profit Amount: €${totalProfitAmount.toFixed(2)}`);
+      console.log(`   - TOTAL Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
+      console.log(`   - Formula: (Total Order / Total B2B - 1) * 100`);
 
       if (totalProfitAmount <= 0) {
         console.error(` [CAPTURE ORDER] WARNING: Total Profit Amount is ${totalProfitAmount}. Commission will be 0!`);
-        console.error(` [CAPTURE ORDER] Check if price (${orderPivot.price}) > b2b_price (${orderPivot.b2b_price})`);
       }
     }
 
@@ -396,7 +433,7 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Commission Amount (raw): ${commissionAmount} (type: ${typeof commissionAmount})`);
       if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken) {
         console.log(`   - Profit Amount: ${totalProfitAmount} (type: ${typeof totalProfitAmount})`);
-        console.log(`   - Order Amount: ${orderPivot.price * orderPivot.quantity} (type: ${typeof (orderPivot.price * orderPivot.quantity)})`);
+        // console.log(`   - Order Amount: ${orderPivot.price * orderPivot.quantity} (type: ${typeof (orderPivot.price * orderPivot.quantity)})`);
       }
       console.log(`   - Is Seller: ${isSeller} (type: ${typeof isSeller})`);
       console.log(`   - Tree: ${tree} (type: ${typeof tree})`);
@@ -439,7 +476,7 @@ const CaptureOrder = async (req, res) => {
         user_id: currentBroker.user_id,
         order_id: orderId,
         order_type: orderType,
-        order_amount: isGoldFlex || isEasyGoldToken ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat((orderPivot.price * orderPivot.quantity).toFixed(2)),
+        order_amount: isGoldFlex || isEasyGoldToken ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
         profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
         commission_amount: safeCommissionAmount,

@@ -1,5 +1,10 @@
 const db = require("../../models");
 
+const getNetAmount = (gross, vatPercent) => {
+  if (!vatPercent || vatPercent <= 0) return gross;
+  return parseFloat((gross / (1 + vatPercent / 100)).toFixed(2));
+};
+
 const CaptureOrder = async (req, res) => {
   const startTime = new Date();
   console.log(`\n [CAPTURE ORDER] ==========================================`);
@@ -99,6 +104,9 @@ const CaptureOrder = async (req, res) => {
     let totalProfitAmount = 0;
     let totalOrderAmount = 0;
     let totalCommissionPercent = 0;
+
+    let totalB2BAmount = 0;
+
     if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken) {
       // Step 3: Get the pivot info
       orderPivots = await PivotModel.findAll({
@@ -131,24 +139,76 @@ const CaptureOrder = async (req, res) => {
 
       console.log(orderPivots, "orderPivots");
 
+      // for (const pivot of orderPivots) {
+      //   const productTotal = pivot.price * pivot.quantity;
+      //   const productProfit = (pivot.price - pivot.b2b_price) * pivot.quantity;
+
+      //   console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
+      //   console.log(`   - Price: €${pivot.price}`);
+      //   console.log(`   - B2B Price: €${pivot.b2b_price}`);
+      //   console.log(`   - Quantity: ${pivot.quantity}`);
+
+      //   totalOrderAmount += productTotal;
+      //   totalProfitAmount += productProfit;
+      // }
+
       for (const pivot of orderPivots) {
-        const productTotal = pivot.price * pivot.quantity;
-        const productProfit = (pivot.price - pivot.b2b_price) * pivot.quantity;
+        const product = await db.Product.findOne({
+          where: { id: pivot.product_id },
+          attributes: ["VAT"]
+        });
 
-        console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
-        console.log(`   - Price: €${pivot.price}`);
-        console.log(`   - B2B Price: €${pivot.b2b_price}`);
-        console.log(`   - Quantity: ${pivot.quantity}`);
+        let vatPercent = 0;
 
-        totalOrderAmount += productTotal;
+        if (product?.VAT) {
+          vatPercent = parseFloat(product.VAT.replace("%", ""));
+        } else {
+          // Differenzbesteuert → use shipping country
+          const shipping = await db.LpOrderShippingOptions.findOne({
+            where: {
+              lp_order_id: orderId,
+              meta_key: "s_country"
+            }
+          });
+
+          if (shipping) {
+            const countryTax = await db.TaxCountry.findOne({
+              where: { Code: shipping.meta_value }
+            });
+
+            vatPercent = countryTax?.Tax || 0;
+          }
+        }
+
+        const grossPrice = pivot.price;
+        const grossB2B = pivot.b2b_price;
+
+        const netPrice = getNetAmount(grossPrice, vatPercent);
+        const netB2B = getNetAmount(grossB2B, vatPercent);
+
+        const productNetTotal = netPrice * pivot.quantity;
+        const productProfit = (netPrice - netB2B) * pivot.quantity;
+
+        console.log(`\n[VAT CALCULATION]`);
+        console.log(`Product ID: ${pivot.product_id}`);
+        console.log(`VAT: ${vatPercent}%`);
+        console.log(`Gross Price: ${grossPrice} → Net: ${netPrice}`);
+        console.log(`Gross B2B: ${grossB2B} → Net: ${netB2B}`);
+        console.log(`Net Total: ${productNetTotal}`);
+        console.log(`Profit: ${productProfit}`);
+
+        totalOrderAmount += productNetTotal;
         totalProfitAmount += productProfit;
       }
 
       // Commission percent based on TOTAL values
-      const totalB2BAmount = orderPivots.reduce(
-        (sum, p) => sum + (p.b2b_price * p.quantity),
-        0
-      );
+      // const totalB2BAmount = orderPivots.reduce(
+      //   (sum, p) => sum + (p.b2b_price * p.quantity),
+      //   0
+      // );
+
+      // Already calculated in loop using netB2B
+      totalB2BAmount += netB2B * pivot.quantity;
 
       const totalCommissionPercent =
         totalB2BAmount > 0
@@ -477,7 +537,7 @@ const CaptureOrder = async (req, res) => {
         user_id: currentBroker.user_id,
         order_id: orderId,
         order_type: orderType,
-        order_amount: isGoldFlex || isEasyGoldToken ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalB2BAmount.toFixed(2)),
+        order_amount: isGoldFlex || isEasyGoldToken ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
         profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
         commission_amount: safeCommissionAmount,

@@ -207,6 +207,8 @@ const CaptureOrder = async (req, res) => {
 
         totalOrderAmount += productNetTotal;
         totalProfitAmount += productProfit;
+
+        totalB2BAmount += netB2B * pivot.quantity;
       }
 
       // Commission percent based on TOTAL values
@@ -216,7 +218,6 @@ const CaptureOrder = async (req, res) => {
       // );
 
       // Already calculated in loop using netB2B
-      totalB2BAmount += netB2B * pivot.quantity;
 
       const totalCommissionPercent =
         totalB2BAmount > 0

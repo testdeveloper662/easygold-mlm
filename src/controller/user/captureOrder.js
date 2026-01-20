@@ -100,7 +100,7 @@ const CaptureOrder = async (req, res) => {
     let totalCommissionPercent = 0;
     if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken) {
       // Step 3: Get the pivot info
-      orderPivots = await PivotModel.findOne({
+      orderPivots = await PivotModel.findAll({
         where: { order_id: orderId },
       });
       // if (!orderPivot)

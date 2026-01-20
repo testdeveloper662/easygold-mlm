@@ -47,7 +47,7 @@ const CaptureOrder = async (req, res) => {
     });
 
     if (existingCommission) {
-      console.warn(` [CAPTURE ORDER] ⚠️ Commission already exists for Order ID: ${orderId}, Type: ${orderType}`);
+      console.log(` [CAPTURE ORDER] ⚠️ Commission already exists for Order ID: ${orderId}, Type: ${orderType}`);
 
       return res.status(200).json({
         success: true,

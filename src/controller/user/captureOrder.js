@@ -237,7 +237,7 @@ const CaptureOrder = async (req, res) => {
         let brokerVatFromCountry = 0;
 
         const brokerShipping = await db.UsersMeta.findOne({
-          where: { ID: order?.user_id, meta_key: "u_country" }
+          where: { user_id: order?.user_id, meta_key: "u_country" }
         });
 
         if (brokerShipping) {

@@ -181,27 +181,32 @@ const CaptureOrder = async (req, res) => {
           attributes: ["VAT"]
         });
 
-        let vatPercent = 0;
+        let vatFromProduct = 0;
+        let vatFromCountry = 0;
 
-        if (product?.VAT) {
-          vatPercent = parseFloat(product.VAT.replace("%", ""));
-        } else {
-          // Differenzbesteuert → use shipping country
-          const shipping = await db.LpOrderShippingOptions.findOne({
-            where: {
-              lp_order_id: orderId,
-              meta_key: "s_country"
-            }
+        // 1️⃣ Get product VAT
+        if (product?.VAT !== "Differenzbesteuert") {
+          vatFromProduct = parseFloat(product.VAT.replace("%", "")) || 0;
+        }
+
+        // 2️⃣ Get shipping country VAT
+        const shipping = await db.LpOrderShippingOptions.findOne({
+          where: {
+            lp_order_id: orderId,
+            meta_key: "s_country"
+          }
+        });
+
+        if (shipping) {
+          const countryTax = await db.TaxCountry.findOne({
+            where: { Code: shipping.meta_value }
           });
 
-          if (shipping) {
-            const countryTax = await db.TaxCountry.findOne({
-              where: { Code: shipping.meta_value }
-            });
-
-            vatPercent = countryTax?.Tax || 0;
-          }
+          vatFromCountry = countryTax?.Tax || 0;
         }
+
+        // 3️⃣ Final VAT selection → use higher value
+        const vatPercent = Math.max(vatFromProduct, vatFromCountry);
 
         const grossPrice = pivot.price;
         const grossB2B = pivot.b2b_price;

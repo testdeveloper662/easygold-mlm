@@ -282,6 +282,14 @@ const CaptureOrder = async (req, res) => {
         // const productNetTotal = netPrice * pivot.quantity;
         // const productProfit = (netPrice - netB2B) * pivot.quantity;
 
+        const isHomeDeliveryMode = order?.type === 1;
+
+        if (isHomeDeliveryMode) {
+          console.log(` [CAPTURE ORDER] Home Delivery Mode detected for Order ID: ${orderId}. Adjusting VAT calculations if necessary.`);
+          brokerVatPercent = vatPercent;
+        }
+
+
         const b2bNetBase = getNetBaseFromGross(grossB2B, brokerVatPercent);
         const sellNetBase = getNetBaseFromGross(grossPrice, vatPercent);
 
@@ -344,11 +352,6 @@ const CaptureOrder = async (req, res) => {
         totalB2BAmount > 0
           ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
           : 0;
-
-      // const totalCommissionPercent =
-      //   totalB2BAmount > 0
-      //     ? (totalProfitAmount / totalB2BAmount) * 100
-      //     : 0;
 
       console.log(` [CAPTURE ORDER] Profit Calculation:`);
       console.log(`   - TOTAL Order Amount: €${totalOrderAmount.toFixed(2)}`);

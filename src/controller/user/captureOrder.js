@@ -197,7 +197,7 @@ const CaptureOrder = async (req, res) => {
 
         if (shipping) {
           const countryTax = await db.TaxCountry.findOne({
-            where: { Code: shipping.meta_value }
+            where: { Country_name: shipping.meta_value }
           });
           vatFromCountry = countryTax?.Tax || 0;
         }

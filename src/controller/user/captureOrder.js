@@ -234,6 +234,36 @@ const CaptureOrder = async (req, res) => {
         console.log(`VAT from Country: ${vatFromCountry}%`);
         console.log(`Applied VAT Percent: ${vatPercent}%`);
 
+        let brokerVatFromCountry = 0;
+
+        const brokerShipping = await db.UsersMeta.findOne({
+          where: { ID: order?.user_id, meta_key: "u_country" }
+        });
+
+        if (brokerShipping) {
+          const countryTax = await db.TaxCountry.findOne({
+            where: { Country_name: brokerShipping.meta_value }
+          });
+          brokerVatFromCountry = countryTax?.Tax || 0;
+        }
+
+        // 4️⃣ Final VAT selection
+        let brokerVatPercent;
+
+        if (isGoldProduct) {
+          // 🟡 GOLD → Use product VAT ONLY
+          brokerVatPercent = vatFromProduct;
+        } else {
+          // 🔵 Others → Use higher VAT
+          brokerVatPercent = Math.max(vatFromProduct, brokerVatFromCountry);
+        }
+
+        console.log(`\n [CAPTURE ORDER] Broker VAT Determination:`);
+        console.log(`Product ID: ${pivot.product_id}`);
+        console.log(`VAT from Product: ${vatFromProduct}%`);
+        console.log(`VAT from Broker Country: ${brokerVatFromCountry}%`);
+        console.log(`Applied Broker VAT Percent: ${brokerVatPercent}%`);
+
         const grossPrice = pivot.price;
         const grossB2B = pivot.b2b_price;
 
@@ -243,7 +273,7 @@ const CaptureOrder = async (req, res) => {
         // const productNetTotal = netPrice * pivot.quantity;
         // const productProfit = (netPrice - netB2B) * pivot.quantity;
 
-        const b2bNetBase = getNetBaseFromGross(grossB2B, vatPercent);
+        const b2bNetBase = getNetBaseFromGross(grossB2B, brokerVatPercent);
         const sellNetBase = getNetBaseFromGross(grossPrice, vatPercent);
 
         console.log(`\n [CAPTURE ORDER] Net Base Calculation:`);

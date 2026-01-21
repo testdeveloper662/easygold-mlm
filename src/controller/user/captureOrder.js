@@ -178,7 +178,7 @@ const CaptureOrder = async (req, res) => {
       for (const pivot of orderPivots) {
         const product = await db.Product.findOne({
           where: { id: pivot.product_id },
-          attributes: ["VAT"]
+          attributes: ["VAT", "material"],
         });
 
         // 1️⃣ Get product VAT

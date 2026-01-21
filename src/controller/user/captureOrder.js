@@ -202,10 +202,19 @@ const CaptureOrder = async (req, res) => {
           vatFromProduct = parseFloat(product.VAT.replace("%", "")) || 0;
         }
 
-        // Country VAT
-        const shipping = await db.LpOrderShippingOptions.findOne({
-          where: { lp_order_id: orderId, meta_key: "s_country" }
-        });
+        let shipping;
+
+        if (orderType === "landing_page") {
+          // Country VAT
+          shipping = await db.LpOrderShippingOptions.findOne({
+            where: { lp_order_id: orderId, meta_key: "s_country" }
+          });
+        } else {
+          // Country VAT
+          shipping = await db.MyStoreOrderShippingOptions.findOne({
+            where: { my_store_order_id: orderId, meta_key: "s_country" }
+          });
+        }
 
         if (shipping) {
           const countryTax = await db.TaxCountry.findOne({
@@ -331,15 +340,15 @@ const CaptureOrder = async (req, res) => {
 
       // Already calculated in loop using netB2B
 
-      // const totalCommissionPercent =
-      //   totalB2BAmount > 0
-      //     ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
-      //     : 0;
-
       const totalCommissionPercent =
         totalB2BAmount > 0
-          ? (totalProfitAmount / totalB2BAmount) * 100
+          ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
           : 0;
+
+      // const totalCommissionPercent =
+      //   totalB2BAmount > 0
+      //     ? (totalProfitAmount / totalB2BAmount) * 100
+      //     : 0;
 
       console.log(` [CAPTURE ORDER] Profit Calculation:`);
       console.log(`   - TOTAL Order Amount: €${totalOrderAmount.toFixed(2)}`);

@@ -206,7 +206,7 @@ const CaptureOrder = async (req, res) => {
         }
 
         // 3️⃣ Final VAT selection → use higher value
-        const vatPercent = Math.max(vatFromProduct, vatFromCountry);
+        let vatPercent = Math.max(vatFromProduct, vatFromCountry);
 
         const grossPrice = pivot.price;
         const grossB2B = pivot.b2b_price;

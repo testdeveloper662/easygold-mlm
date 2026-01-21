@@ -203,7 +203,18 @@ const CaptureOrder = async (req, res) => {
         }
 
         // ✅ Always use the higher VAT
-        const vatPercent = Math.max(vatFromProduct, vatFromCountry);
+        const isGoldProduct = product?.material?.toLowerCase() === "gold";
+
+        // 4️⃣ Final VAT selection
+        let vatPercent;
+
+        if (isGoldProduct) {
+          // 🟡 GOLD → Use product VAT ONLY
+          vatPercent = vatFromProduct;
+        } else {
+          // 🔵 Others → Use higher VAT
+          vatPercent = Math.max(vatFromProduct, vatFromCountry);
+        }
 
         console.log(`\n [CAPTURE ORDER] VAT Determination:`);
         console.log(`Product ID: ${pivot.product_id}`);

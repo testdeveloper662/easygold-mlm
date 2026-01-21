@@ -5,6 +5,18 @@ const getNetAmount = (gross, vatPercent) => {
   return parseFloat((gross / (1 + vatPercent / 100)).toFixed(2));
 };
 
+const getNetBaseFromGross = (gross, vatPercent) => {
+  return parseFloat((gross / (1 + vatPercent / 100)).toFixed(2));
+};
+
+const getCommissionFromPrices = (sellGross, b2bGross, vatPercent) => {
+  const sellNetBase = getNetBaseFromGross(sellGross, vatPercent);
+  const b2bNetBase = getNetBaseFromGross(b2bGross, vatPercent);
+
+  return parseFloat((sellNetBase - b2bNetBase).toFixed(2));
+};
+
+
 const CaptureOrder = async (req, res) => {
   const startTime = new Date();
   console.log(`\n [CAPTURE ORDER] ==========================================`);
@@ -225,11 +237,42 @@ const CaptureOrder = async (req, res) => {
         const grossPrice = pivot.price;
         const grossB2B = pivot.b2b_price;
 
-        netPrice = getNetAmount(grossPrice, vatPercent);
-        netB2B = getNetAmount(grossB2B, vatPercent);
+        // netPrice = getNetAmount(grossPrice, vatPercent);
+        // netB2B = getNetAmount(grossB2B, vatPercent);
 
-        const productNetTotal = netPrice * pivot.quantity;
-        const productProfit = (netPrice - netB2B) * pivot.quantity;
+        // const productNetTotal = netPrice * pivot.quantity;
+        // const productProfit = (netPrice - netB2B) * pivot.quantity;
+
+        const b2bNetBase = getNetBaseFromGross(grossB2B, vatPercent);
+        const sellNetBase = getNetBaseFromGross(grossPrice, vatPercent);
+
+        console.log(`\n [CAPTURE ORDER] Net Base Calculation:`);
+        console.log(`   - Gross Price: €${grossPrice}`);
+        console.log(`   - Gross B2B: €${grossB2B}`);
+        console.log(`   - VAT Percent: ${vatPercent}%`);
+        console.log(`   - Sell Net Base: €${sellNetBase}`);
+        console.log(`   - B2B Net Base: €${b2bNetBase}`);
+
+        const commissionNet = sellNetBase - b2bNetBase;   // VAT-FREE commission
+        const productProfit = commissionNet * pivot.quantity;
+
+        console.log(`\n [CAPTURE ORDER] Commission Calculation:`);
+        console.log(`   - Commission Net (per unit): €${commissionNet}`);
+        console.log(`   - Product Profit: €${productProfit}`);
+
+        const productNetTotal = sellNetBase * pivot.quantity;
+
+        console.log(`\n [CAPTURE ORDER] Product Total Calculation:`);
+        console.log(`   - Product Net Total: €${productNetTotal}`);
+
+        totalOrderAmount += productNetTotal;
+        totalProfitAmount += productProfit;
+        totalB2BAmount += b2bNetBase * pivot.quantity;
+
+        console.log(`\n [CAPTURE ORDER] Cumulative Totals So Far:`);
+        console.log(`   - Total Order Amount: €${totalOrderAmount.toFixed(2)}`);
+        console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
+
 
         console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
         console.log(`   - Price: €${pivot.price}`);
@@ -244,10 +287,10 @@ const CaptureOrder = async (req, res) => {
         console.log(`Net Total: ${productNetTotal}`);
         console.log(`Profit: ${productProfit}`);
 
-        totalOrderAmount += productNetTotal;
-        totalProfitAmount += productProfit;
+        // totalOrderAmount += productNetTotal;
+        // totalProfitAmount += productProfit;
 
-        totalB2BAmount += netB2B * pivot.quantity;
+        // totalB2BAmount += netB2B * pivot.quantity;
       }
 
       // Commission percent based on TOTAL values

@@ -205,6 +205,12 @@ const CaptureOrder = async (req, res) => {
         // ✅ Always use the higher VAT
         const vatPercent = Math.max(vatFromProduct, vatFromCountry);
 
+        console.log(`\n [CAPTURE ORDER] VAT Determination:`);
+        console.log(`Product ID: ${pivot.product_id}`);
+        console.log(`VAT from Product: ${vatFromProduct}%`);
+        console.log(`VAT from Country: ${vatFromCountry}%`);
+        console.log(`Applied VAT Percent: ${vatPercent}%`);
+
         const grossPrice = pivot.price;
         const grossB2B = pivot.b2b_price;
 
@@ -241,14 +247,9 @@ const CaptureOrder = async (req, res) => {
 
       // Already calculated in loop using netB2B
 
-      // const totalCommissionPercent =
-      //   totalB2BAmount > 0
-      //     ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
-      //     : 0;
-
       const totalCommissionPercent =
-        totalOrderAmount > 0
-          ? (totalProfitAmount / totalOrderAmount) * 100
+        totalB2BAmount > 0
+          ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
           : 0;
 
       console.log(` [CAPTURE ORDER] Profit Calculation:`);

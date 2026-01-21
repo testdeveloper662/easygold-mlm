@@ -257,9 +257,14 @@ const CaptureOrder = async (req, res) => {
 
       // Already calculated in loop using netB2B
 
+      // const totalCommissionPercent =
+      //   totalB2BAmount > 0
+      //     ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
+      //     : 0;
+
       const totalCommissionPercent =
-        totalB2BAmount > 0
-          ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
+        totalOrderAmount > 0
+          ? (totalProfitAmount / totalOrderAmount) * 100
           : 0;
 
       console.log(` [CAPTURE ORDER] Profit Calculation:`);

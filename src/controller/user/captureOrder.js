@@ -182,23 +182,15 @@ const CaptureOrder = async (req, res) => {
         });
 
         // 1️⃣ Get product VAT
-        let vatFromProduct = null;
+        let vatFromProduct = 0;
         let vatFromCountry = 0;
-        let vatPercent = 0;
 
-        // 1️⃣ Product VAT
-        if (product?.VAT) {
-          if (
-            typeof product.VAT === "string" &&
-            product.VAT.toLowerCase().includes("differenz")
-          ) {
-            vatFromProduct = "DIFFERENZ";
-          } else {
-            vatFromProduct = parseFloat(product.VAT.replace("%", "")) || 0;
-          }
+        // Product VAT (ignore Differenzbesteuert)
+        if (product?.VAT && product.VAT !== "Differenzbesteuert") {
+          vatFromProduct = parseFloat(product.VAT.replace("%", "")) || 0;
         }
 
-        // 2️⃣ Country VAT
+        // Country VAT
         const shipping = await db.LpOrderShippingOptions.findOne({
           where: { lp_order_id: orderId, meta_key: "s_country" }
         });
@@ -210,16 +202,8 @@ const CaptureOrder = async (req, res) => {
           vatFromCountry = countryTax?.Tax || 0;
         }
 
-        // 3️⃣ Final VAT Selection
-        if (vatFromProduct === "DIFFERENZ") {
-          vatPercent = vatFromCountry;                       // Differenzbesteuert
-        } else if (vatFromProduct === 0) {
-          vatPercent = 0;                                   // Gold / VAT-free
-        } else if (vatFromProduct !== null) {
-          vatPercent = Math.max(vatFromProduct, vatFromCountry); // 19 vs 17 → 19
-        } else {
-          vatPercent = vatFromCountry;                      // Fallback
-        }
+        // ✅ Always use the higher VAT
+        const vatPercent = Math.max(vatFromProduct, vatFromCountry);
 
         const grossPrice = pivot.price;
         const grossB2B = pivot.b2b_price;

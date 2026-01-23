@@ -73,6 +73,7 @@ const CaptureOrder = async (req, res) => {
 
     const isGoldFlex = orderType == 'goldflex';
     const isEasyGoldToken = orderType == 'easygoldtoken';
+    const isPrimeInvest = orderType == 'primeinvest';
     const isGoldPurchase = orderType == 'gold_purchase';
     const isGoldPurchaseSell = orderType == 'gold_purchase_sell_orders';
 
@@ -84,7 +85,7 @@ const CaptureOrder = async (req, res) => {
         success: false,
         message: "Missing required fields: orderId and orderType",
       });
-    } else if ((isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken) && !b2bCommissionAmount) {
+    } else if ((isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest) && !b2bCommissionAmount) {
       console.error(` [CAPTURE ORDER] Missing required fields - b2bCommissionAmount: ${b2bCommissionAmount}`);
       return res.status(400).json({
         success: false,
@@ -114,6 +115,8 @@ const CaptureOrder = async (req, res) => {
       console.log(` [CAPTURE ORDER] Gold Flex order type detected.`);
     } else if (isEasyGoldToken) {
       console.log(` [CAPTURE ORDER] Easy Gold Token order type detected.`);
+    } else if (isPrimeInvest) {
+      console.log(` [CAPTURE ORDER] Prime Invest order type detected.`);
     } else {
       return res.status(400).json({
         success: false,
@@ -123,7 +126,7 @@ const CaptureOrder = async (req, res) => {
 
     let order = null;
 
-    if (!isGoldFlex && !isEasyGoldToken) {
+    if (!isGoldFlex && !isEasyGoldToken && !isPrimeInvest) {
       // Step 2: Get the order
       order = await OrderModel.findOne({ where: { id: orderId } });
       if (!order)
@@ -139,7 +142,7 @@ const CaptureOrder = async (req, res) => {
 
     let totalB2BAmount = 0;
 
-    if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken) {
+    if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest) {
       // Step 3: Get the pivot info
       orderPivots = await PivotModel.findAll({
         where: { order_id: orderId },
@@ -368,7 +371,7 @@ const CaptureOrder = async (req, res) => {
     let broker = null;
     let targetCustomerBroker = false;
 
-    if (isGoldFlex || isEasyGoldToken) {
+    if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
       // For Gold Flex, get broker using b2bEmail
       broker = await db.Brokers.findOne({
         include: [
@@ -432,7 +435,7 @@ const CaptureOrder = async (req, res) => {
 
     let brokerlevel;
 
-    if (isEasyGoldToken || isGoldFlex) {
+    if (isEasyGoldToken || isGoldFlex || isPrimeInvest) {
       brokerlevel = targetCustomerBroker ? 4 : 5;
     } else {
       brokerlevel = 4;
@@ -472,7 +475,7 @@ const CaptureOrder = async (req, res) => {
 
     let commissionRecords;
 
-    if (isGoldFlex || isEasyGoldToken) {
+    if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
       // For Gold Flex, use fixed commission percentages
       await db.AdminFixedBrokerCommission.sync();
       commissionRecords = await db.AdminFixedBrokerCommission.findAll({
@@ -512,7 +515,7 @@ const CaptureOrder = async (req, res) => {
     }
 
     // brokerlevel = isEasyGoldToken || isGoldFlex ? 6 : 5;
-    if (isEasyGoldToken || isGoldFlex) {
+    if (isEasyGoldToken || isGoldFlex || isPrimeInvest) {
       brokerlevel = targetCustomerBroker ? 5 : 6;
     } else {
       brokerlevel = 5;
@@ -525,7 +528,7 @@ const CaptureOrder = async (req, res) => {
 
     let activeLevels = [];
 
-    if (isGoldFlex || isEasyGoldToken) {
+    if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
       activeLevels = targetCustomerBroker
         ? [broker, ...parentBrokers]   // self included
         : [...parentBrokers];          // self skipped
@@ -541,7 +544,7 @@ const CaptureOrder = async (req, res) => {
     const totalBase = activeBase.reduce((a, b) => a + b, 0);
     const remaining = 100 - totalBase;
 
-    if (!isGoldFlex && !isEasyGoldToken) {
+    if (!isGoldFlex && !isEasyGoldToken && !isPrimeInvest) {
       activeBase[0] += remaining;
     }
 
@@ -583,10 +586,10 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Commission Percent (type): ${typeof commissionPercent}`);
 
       // Calculate commission amount with detailed logging
-      const rawCalculation = (isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
+      const rawCalculation = (isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
       console.log(` [CAPTURE ORDER] Calculation Steps:`);
       console.log(`   - Step 1: (${commissionPercent} / 100) = ${commissionPercent / 100}`);
-      console.log(`   - Step 2: ${commissionPercent / 100} * ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);
+      console.log(`   - Step 2: ${commissionPercent / 100} * ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);
       console.log(`   - Step 3: ${rawCalculation}.toFixed(2) = ${rawCalculation.toFixed(2)}`);
 
       const commissionAmount = parseFloat(rawCalculation.toFixed(2));
@@ -605,7 +608,7 @@ const CaptureOrder = async (req, res) => {
 
       if (commissionAmount <= 0 || isNaN(commissionAmount)) {
         console.error(` [CAPTURE ORDER] ⚠️ WARNING: Commission Amount is ${commissionAmount} for Level ${i + 1}!`);
-        console.error(` [CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken ? b2bCommissionAmount : totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount}`);
         console.error(` [CAPTURE ORDER] ⚠️ Raw calculation result: ${rawCalculation}`);
       }
 
@@ -630,7 +633,7 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Order Type: ${orderType} (type: ${typeof orderType})`);
       console.log(`   - Commission Percent: ${commissionPercent} (type: ${typeof commissionPercent})`);
       console.log(`   - Commission Amount (raw): ${commissionAmount} (type: ${typeof commissionAmount})`);
-      if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken) {
+      if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest) {
         console.log(`   - Profit Amount: ${totalProfitAmount} (type: ${typeof totalProfitAmount})`);
         // console.log(`   - Order Amount: ${orderPivot.price * orderPivot.quantity} (type: ${typeof (orderPivot.price * orderPivot.quantity)})`);
       }
@@ -647,9 +650,9 @@ const CaptureOrder = async (req, res) => {
 
       if (isNaN(commissionAmount) || commissionAmount < 0) {
         console.error(` [CAPTURE ORDER] ❌ ERROR: Invalid commission_amount: ${commissionAmount}`);
-        console.error(` [CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken ? b2bCommissionAmount : totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount}`);
         console.error(` [CAPTURE ORDER] ❌ commissionPercent type: ${typeof commissionPercent}`);
-        console.error(` [CAPTURE ORDER] ❌ totalProfitAmount type: ${typeof isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken ? b2bCommissionAmount : totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ totalProfitAmount type: ${typeof isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount}`);
       }
 
       // Calculate safe commission amount
@@ -675,8 +678,8 @@ const CaptureOrder = async (req, res) => {
         user_id: currentBroker.user_id,
         order_id: orderId,
         order_type: orderType,
-        order_amount: isGoldFlex || isEasyGoldToken ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
-        profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        order_amount: isGoldFlex || isEasyGoldToken || isPrimeInvest ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
+        profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
         commission_amount: safeCommissionAmount,
         tree,
@@ -748,7 +751,7 @@ const CaptureOrder = async (req, res) => {
       }
       console.log(`   - This commission_percent and commission_amount will be shown in frontend via getAllBrokerCommissionHistory API\n`);
 
-      if (!isEasyGoldToken && !isGoldFlex && i === 0) {
+      if (!isEasyGoldToken && !isGoldFlex && !isPrimeInvest && i === 0) {
         // ✅ Increment total commission in Brokers table
         await db.Brokers.increment(
           { total_commission_amount: commissionAmount },
@@ -768,7 +771,7 @@ const CaptureOrder = async (req, res) => {
     console.log(`✅ [CAPTURE ORDER] Service Type: ${serviceType}`);
     console.log(`✅ [CAPTURE ORDER] Total Brokers: ${activeLevels.length}`);
     console.log(`✅ [CAPTURE ORDER] Tree Structure: ${tree}`);
-    if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken) {
+    if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest) {
       console.log(`✅ [CAPTURE ORDER] Total Profit Amount: €${totalProfitAmount}`);
       console.log(`✅ [CAPTURE ORDER] Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
     }
@@ -784,8 +787,8 @@ const CaptureOrder = async (req, res) => {
       success: true,
       message: "Commission distribution stored successfully",
       data: {
-        totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
-        totalProfitAmount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
+        totalProfitAmount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         distribution,
         tree,
         timestamp: endTime.toISOString(),

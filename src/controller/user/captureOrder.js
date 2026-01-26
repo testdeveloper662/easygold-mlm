@@ -392,6 +392,8 @@ const CaptureOrder = async (req, res) => {
           interest_in = "goldflex";
         } else if (orderType == "easygoldtoken") {
           interest_in = "easygold Token";
+        } else if (orderType == "primeinvest") {
+          interest_in = "Primeinvest";
         }
         let customer = await db.TargetCustomers.findOne({
           where: { customer_email: b2bEmail, interest_in, status: "REGISTERED" },

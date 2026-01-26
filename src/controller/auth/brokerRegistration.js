@@ -148,6 +148,18 @@ const BrokerRegistration = async (req, res) => {
         message: "This username is already taken. Please choose a different username.",
       });
     }
+
+    // Check if mystorekey already exists
+    const existingUserByMyStore = await db.Users.findOne({
+      where: { mystorekey: company },
+    });
+
+    if (existingUserByMyStore) {
+      return res.status(400).json({
+        success: false,
+        message: "This company name is already taken. Please choose a different company name.",
+      });
+    }
     console.log("222222222222222222222222222");
 
     // ================== VAT VALIDATION ==================

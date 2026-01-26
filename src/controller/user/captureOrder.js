@@ -461,7 +461,8 @@ const CaptureOrder = async (req, res) => {
       gold_purchase: "Gold Purchase",
       gold_purchase_sell_orders: "Gold Purchase",
       goldflex: "GoldFlex",
-      easygoldtoken: "Easygold Token"
+      easygoldtoken: "Easygold Token",
+      primeinvest: "Primeinvest"
     };
 
     const serviceType = orderTypeToServiceType[orderType];

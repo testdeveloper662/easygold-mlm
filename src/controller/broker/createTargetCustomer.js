@@ -199,7 +199,7 @@ const CreateTargetCustomer = async (req, res) => {
       const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/primeinvest`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "goldflex") {
-      const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}}/goldflex`;
+      const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/goldflex`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     }
 

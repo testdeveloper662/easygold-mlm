@@ -13,6 +13,9 @@ const generateTargetCustomerPDF = async (data) => {
         } else if (data.product_type == "primeinvest") {
             pdf_doc = `b2c_primeinvest${Date.now()}.pdf`;
             await generatePDF(pdfData, "b2c_primeinvest.html", "agreements", pdf_doc);
+        } else if (data.product_type == "goldflex") {
+            pdf_doc = `b2c_goldflex${Date.now()}.pdf`;
+            await generatePDF(pdfData, "b2c_goldflex.html", "agreements", pdf_doc);
         }
 
         return { pdf_doc };

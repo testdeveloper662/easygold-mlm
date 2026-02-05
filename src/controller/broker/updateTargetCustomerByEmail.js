@@ -27,6 +27,8 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       interest_in = "easygold Token";
     } else if (product_type == "primeinvest") {
       interest_in = "Primeinvest";
+    } else if (product_type == "goldflex") {
+      interest_in = "goldflex";
     }
 
     const targetCustomer = await db.TargetCustomers.findOne({
@@ -65,7 +67,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
                   "u_location",
                   "u_postcode",
                   "signatureData",
-                  "language", "u_company"]
+                  "language", "u_company", "u_phone"]
               },
               required: false
             }
@@ -82,6 +84,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     const postcode = getMeta(parentBroker.user, "u_postcode");
     const parent_company = getMeta(parentBroker.user, "u_company");
     const parent_language = getMeta(parentBroker.user, "language");
+    const parent_telephone = getMeta(parentBroker.user, "u_phone")
     const parent_city = location;
     const parent_signaturedata = getMeta(parentBroker.user, "signatureData");
 
@@ -120,6 +123,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       broker_company_name: parent_company,
       broker_email: parent_email,
       broker_address: parent_address,
+      broker_telephone: parent_telephone,
       date: formatted,
       customer_name: customer_name,
       customer_email: customer_email,
@@ -129,6 +133,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       customer_signature: signature_data,
       customer_state: state,
       signature: await generateImageUrl("agreements/sign.png", 'agreements'),
+      secretary_signature: await generateImageUrl("agreements/sign_secretary.png", 'agreements'),
       customer_ipaddress: ip,
       product_type: product_type
     };

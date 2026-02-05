@@ -22,6 +22,8 @@ const GetTargetCustomersDetails = async (req, res) => {
       interest_in = "easygold Token";
     } else if (product_type == "primeinvest") {
       interest_in = "Primeinvest";
+    } else if (product_type == "goldflex") {
+      interest_in = "goldflex";
     }
 
     // Get target customer
@@ -40,8 +42,6 @@ const GetTargetCustomersDetails = async (req, res) => {
         message: "Target customer not found",
       });
     }
-
-    console.log(targetCustomer, "targetCustomer");
 
     if (targetCustomer.status?.trim().toUpperCase() === "REGISTERED") {
       return res.status(200).json({

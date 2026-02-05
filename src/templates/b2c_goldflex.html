@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B2C EasyGold Agreement - HARTMANN & BENZ, LLC</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+
+        html,
+        body {
+            width: 210mm;
+            height: 297mm;
+            /* margin: 0 auto; */
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            line-height: 1.6;
+            color: #111;
+        }
+
+        .header {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 40px;
+            line-height: 1.4;
+        }
+
+        .company-name {
+            font-weight: 700;
+            font-size: 20px;
+            text-transform: uppercase;
+        }
+
+        .agreement-title {
+            font-weight: 600;
+            font-size: 18px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        .section-gap {
+            margin-bottom: 5px;
+            margin-top: 5px;
+        }
+
+        .paragraph-gap {
+            margin-bottom: 15px;
+            margin-top: 5px;
+        }
+
+        .sub-section {
+            margin-bottom: 10px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .section-gap.section-title {
+            margin-top: 40px;
+        }
+
+        .inner-section {
+            margin-left: 20px;
+        }
+
+        .content {
+            text-align: justify;
+        }
+
+        .field-box {
+            border-bottom: 1px solid #000;
+            min-width: 150px;
+            display: inline-block;
+            padding: 0 5px;
+        }
+
+        .signature-table {
+            width: 100%;
+            margin-top: 40px;
+            border-collapse: collapse;
+        }
+
+        .signature-table td {
+            width: 50%;
+            vertical-align: top;
+            padding-top: 50px;
+        }
+
+        .sig-line {
+            border-top: 1px solid #000;
+            width: 80%;
+            margin-top: 5px;
+        }
+
+        .highlight-underline {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            /* space between text and underline */
+            text-decoration-thickness: 2px;
+        }
+
+        .numrow {
+            display: grid;
+            grid-template-columns: 20px 1fr;
+            /* fixed column for numbers, flexible content column */
+            column-gap: 12px;
+            align-items: start;
+            /* top align number with the start of text */
+            margin-left: 20px;
+        }
+
+        .numrow.numrow-inside {
+            display: grid;
+            grid-template-columns: 20px 1fr;
+            /* fixed column for numbers, flexible content column */
+            column-gap: 12px;
+            align-items: start;
+            /* top align number with the start of text */
+            margin-top: 10px;
+            margin-left: 60px !important;
+        }
+
+        /* number column style */
+        .num {
+            /* align number to right so number and punctuation align nicely */
+            text-align: right;
+            padding-right: 8px;
+            font-weight: 500;
+            /* keep vertical alignment with text start */
+        }
+
+        /* content column */
+        .content {
+            text-align: justify;
+        }
+
+        .section-numrow .num {
+            font-size: 1em;
+            font-weight: 700;
+        }
+
+        .section-numrow .bold-content,
+        .content .bold-content {
+            font-weight: 700;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .underline {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            /* space between text and underline */
+            text-decoration-thickness: 2px;
+        }
+
+        .subscriber-form {
+            color: red;
+            font-size: 16px;
+            margin-top: 30px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .label {
+            white-space: nowrap;
+            margin-right: 10px;
+            font-weight: 500;
+        }
+
+        .subscriber-form {
+            color: #000;
+            font-size: 16px;
+            margin-top: 30px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .label {
+            white-space: nowrap;
+            margin-right: 10px;
+            font-weight: 500;
+        }
+
+        .signature-label {
+            margin-left: 10px;
+            white-space: nowrap;
+        }
+
+        .line {
+            border-bottom: 2px solid #000;
+            height: 18px;
+        }
+
+        /* Fixed widths */
+        .line-xl {
+            width: 420px;
+        }
+
+        /* Address */
+        .line-lg {
+            width: 360px;
+        }
+
+        /* Signature */
+        .line-name {
+            width: 360px;
+        }
+
+        .line-email {
+            width: 405px;
+        }
+
+        .line-address {
+            width: 385px;
+        }
+
+        .line-telephone {
+            width: 370px;
+        }
+
+        .line-social {
+            width: 270px;
+        }
+
+        /* Name, Email, Phone, ID */
+        .line-sm {
+            width: 180px;
+        }
+
+        .signature-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column !important;
+        }
+
+        .signature-form {
+            color: #000;
+            font-size: 16px;
+            margin-top: 40px;
+        }
+
+        .field-block {
+            margin-bottom: 24px;
+        }
+
+        .label {
+            display: block;
+            /* Forces next line */
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .line {
+            display: block;
+            border-bottom: 2px solid #000;
+            height: 20px;
+            padding-left: 6px;
+        }
+
+        .line-xl {
+            width: 420px;
+        }
+
+        .line-md {
+            width: 260px;
+        }
+
+        .signature-container {
+            width: 360px;
+            border-bottom: 2px solid #000;
+            padding: 8px 6px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+        }
+
+        .signature-container img {
+            height: 80px;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .sig-line {
+            width: 80%;
+            margin: 6px 0;
+        }
+
+        .ip-text {
+            font-size: 11px;
+            color: #000;
+            line-height: 1.3;
+            text-align: center;
+        }
+
+
+        .filled {
+            font-weight: 500;
+        }
+
+        .ip-text {
+            font-size: 12px;
+            color: #000;
+        }
+
+        .legal-paragraph {
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            text-align: justify;
+
+            /* Indent only the first line */
+            text-indent: 20px;
+        }
+
+        .set-gap {
+            margin-top: 50px !important;
+        }
+
+        .return-table {
+            width: 100%;
+            max-width: 700px;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+
+        .return-table th,
+        .return-table td {
+            border: 1px solid #000;
+            padding: 12px 15px;
+            text-align: left;
+        }
+
+        .return-table th {
+            font-weight: bold;
+            background-color: #f9f9f9;
+        }
+
+        .return-table tr {
+            height: 55px;
+        }
+
+        .red-form {
+            color: #000;
+            font-size: 16px;
+            margin-top: 50px;
+        }
+
+        .red-form .form-title {
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .red-form .form-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .red-form .form-label {
+            min-width: 160px;
+            font-weight: 500;
+        }
+
+        .red-form .form-line {
+            flex: 1;
+            border-bottom: 1.5px solid #000;
+            height: 18px;
+        }
+
+        .form-signature-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .red-signature-img {
+            max-height: 40px;
+            max-width: 100%;
+            object-fit: contain;
+            margin-bottom: 4px;
+        }
+
+        /* fallback red line */
+        .red-signature-line {
+            width: 100%;
+            border-bottom: 1.5px solid #000;
+            height: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="agreement-title">GOLDFLEX SUBSCRIPTION AGREEMENT</div>
+    </div>
+
+    <div class="content">
+        <p class="section-gap"><strong>Hartmann & Benz Limited</strong></p>
+        <p class="section-gap">28B Onikepo Akande, Lekki Phase 1, Lagos, Nigeria</p>
+        <p class="section-gap">Email: <span class="underline">support@goldflex.io</span></p>
+
+        <p class="section-gap set-gap"><strong>Payment Instructions:</strong></p>
+        <p class="section-gap">EUR [€] Inflows:</p>
+        <p class="section-gap">Correspondent Bank: Citibank London</p>
+        <p class="section-gap">SWIFT CODE: CITIGB2L</p>
+        <p class="section-gap">Sort Code: 18 50 08</p>
+        <p class="section-gap">For Credit To: United Bank for Africa Plc</p>
+        <p class="section-gap">IBAN: GB29CITI18500813664082</p>
+        <p class="section-gap">Account No: 13664082</p>
+        <p class="section-gap">SWIFT CODE: UNAFNGLA</p>
+
+        <p class="section-gap set-gap">For Final Credit To: </p>
+        <p class="section-gap">HARTMANN & BENZ LIMITED</p>
+        <p class="section-gap">Beneficiary Account No: 3004885248 (EURO)</p>
+        <p class="section-gap">UBA</p>
+
+        <p class="paragraph-gap set-gap"><strong>THIS SUBSCRIPTION AGREEMENT</strong> (“Agreement”) is made on this
+            {{day}} day of {{month}}, {{year}} between:</p>
+        <p class="paragraph-gap"><strong>HARTMANN & BENZ LIMITED,</strong> a company duly incorporated under the
+            laws of the Federal Republic of Nigeria, having its registered office at <strong>28B, Onikepo Akande, Lekki
+                Phase 1, Lagos</strong> (hereinafter referred to as the <strong>“Company”,</strong> which expression
+            shall, where the context so admits, include its successors and permitted assigns)</p>
+        <p class="paragraph-gap"><strong>AND</strong></p>
+        <p class="paragraph-gap"><strong>{{customer_name}}</strong>, residing or carrying on business at {{customer_address}}
+            (hereinafter referred to as the “Investor”).</p>
+        <p class="paragraph-gap">The Company and the Investor shall be collectively referred to as the “Parties” and
+            individually as a “Party.”</p>
+        <p class="paragraph-gap"><strong>WHEREAS:</strong></p>
+        <p class="paragraph-gap">A.The Company is engaged in the business of offering structured investment plans,
+            including the GoldFlex Investment Plans, which involve investments in gold and other real, physically-backed
+            assets;</p>
+        <p class="paragraph-gap">B.The Company has developed the GoldFlex Investment Plans to enable eligible investors
+            to commit capital to such physically-backed assets in consideration for agreed returns on investment,
+            subject to the terms and conditions set out in this Agreement;</p>
+        <p class="paragraph-gap">C.The Investor desires to subscribe to one of the Company’s GoldFlex Investment Plans
+            and to commit capital to the Company in accordance with the terms of this Agreement;</p>
+        <p class="paragraph-gap">D.The Investor has been provided with sufficient information regarding the nature,
+            structure, risks, and returns of the GoldFlex Investment Plans and has independently determined that the
+            investment is suitable for the Investor;</p>
+        <p class="paragraph-gap">E.The Parties wish to set out their respective rights, obligations, representations,
+            warranties, and covenants in connection with the Investor’s subscription to the GoldFlex Investment Plan;
+        </p>
+
+        <p class="paragraph-gap"><strong>NOW THEREFORE,</strong> in consideration of the mutual covenants and agreements
+            contained herein, the Parties hereby agree as follows:</p>
+
+        <div class="section-title paragraph-gap">1.0 Subscription for GoldFlex Investment Plan</div>
+        <div class="section-title sub-title">1.1 Subscription</div>
+        <div class="sub-section">
+            1.1.1 The Investor hereby subscribes to the GoldFlex investment plan as set out in this Agreement and agrees
+            to commit capital to the Company (the “Capital Commitment”) according to the plan selected under Section 7.
+        </div>
+        <div class="sub-section">
+            1.1.2 The Investor shall pay the full Capital Commitment on the date of execution of this Agreement via
+            certified cheque, bank transfer, or other mutually agreed payment method.
+        </div>
+        <div class="section-title">1.2 Option of Shares Security for Investment</div>
+        <div class="sub-section">
+            1.2.1 The Investor acknowledges that the GoldFlex investment is primarily backed by real gold and other
+            precious metals assets.
+        </div>
+        <div class="sub-section">
+            1.2.2 In the unlikely event that the Company is unable to pay the Investor their due ROI under the GoldFlex
+            Plan, the Investor’s investment shall be secured by the Company’s shares, which shall crystallize only to
+            satisfy the outstanding ROI and investment obligation.
+        </div>
+        <div class="sub-section">
+            1.2.3 For the purposes of this Agreement, “Crystallization” means the conditional activation and application
+            of the Company’s shares as a secondary security mechanism solely upon the occurrence of the Company’s
+            failure to pay the Investor the due Return on Investment and/or the invested capital when due under the
+            applicable GoldFlex Plan. Upon such Crystallization:
+        </div>
+        <div class="numrow">
+            <div class="num">a.</div>
+            <div class="content">the shares shall become enforceable only to the extent necessary to satisfy the
+                outstanding unpaid ROI and/or invested capital;
+            </div>
+        </div>
+        <div class="numrow">
+            <div class="num">b.</div>
+            <div class="content">the Investor shall not be deemed a shareholder of the Company unless and until such
+                enforcement is completed;
+            </div>
+        </div>
+        <div class="numrow">
+            <div class="num">c.</div>
+            <div class="content">the Crystallization shall not confer any voting rights, management rights, or dividend
+                entitlements on the Investor beyond what is strictly required to satisfy the outstanding obligation; and
+            </div>
+        </div>
+        <div class="numrow">
+            <div class="num">d.</div>
+            <div class="content">once the outstanding obligation is fully satisfied, the Crystallization shall
+                automatically lapse and the Investor shall have no further claim to the Company’s shares.
+            </div>
+        </div>
+
+        <div class="sub-section">
+            1.2.4 For the purposes of any Crystallization under this Agreement, the Parties acknowledge and agree that
+            the Company’s shares shall be valued at Five United States Dollars (US$5.00) or its Nigerian Naira
+            equivalent per share.
+        </div>
+
+        <div class="sub-section">
+            1.2.4.1 Any application, allocation, realization, or enforcement of such shares pursuant to Crystallization
+            shall be calculated strictly on the basis of this agreed valuation and shall be limited to the number of
+            shares required to satisfy the outstanding unpaid Return on Investment and/or invested capital owed to the
+            Investor at the time of Crystallization.
+        </div>
+
+        <div class="sub-section">
+            1.2.5 <strong>Initiation of Crystallization by Notice</strong>
+        </div>
+        <div class="sub-section">
+            Crystallization of the Company’s shares as a security remedy under this Agreement shall occur <strong>only
+                upon written</strong> notice issued by the Investor to the Company (a <strong>“Crystallization
+                Notice”</strong>) following the Company’s failure to pay any due Return on Investment and/or invested
+            capital when due under the applicable GoldFlex Plan. Such Crystallization Notice shall:
+        </div>
+
+        <div class="numrow">
+            <div class="num">a.</div>
+            <div class="content">specify the nature and amount of the outstanding obligation;</div>
+        </div>
+        <div class="numrow">
+            <div class="num">b.</div>
+            <div class="content">state the Investor’s intention to invoke the Crystallization remedy under this
+                Agreement; and</div>
+        </div>
+        <div class="numrow">
+            <div class="num">c.</div>
+            <div class="content">allow the Company a reasonable cure period of <strong>fourteen (14) calendar
+                    days</strong> from receipt
+                of the Crystallization Notice to remedy the default
+            </div>
+        </div>
+        <div class="numrow numrow-inside">
+            <div class="num">1.</div>
+            <div class="content">Where the Company fails to remedy the default within the cure period, the
+                Crystallization shall become effective automatically upon the expiration of such period, and same shall
+                become enforceable on the Company by the Investor.
+            </div>
+        </div>
+
+        <div class="sub-section">
+            1.2.6 <strong>Share Transfer and Statutory Filings Upon Crystallization</strong>
+        </div>
+        <div class="sub-section">
+            Upon the effective Crystallization of the Company’s shares pursuant to this Agreement, the Company shall,
+            <strong>within thirty (30) calendar days</strong> from the expiration of the applicable cure period:
+        </div>
+
+        <div class="numrow">
+            <div class="num">a.</div>
+            <div class="content">take all necessary corporate actions to effect the transfer, issuance, or realization
+                (as applicable) of the required number of shares to the Investor or its nominee, strictly to the extent
+                required to satisfy the outstanding unpaid Return on Investment and/or invested capital;</div>
+        </div>
+        <div class="numrow">
+            <div class="num">b.</div>
+            <div class="content">execute and deliver all share transfer instruments, resolutions, registers, and
+                ancillary documents required to give full legal effect to such transfer or realization; and</div>
+        </div>
+        <div class="numrow">
+            <div class="num">c.</div>
+            <div class="content">complete all requisite regulatory and statutory filings, including filings with the
+                Corporate Affairs Commission or any other relevant authority, in accordance with applicable law.
+            </div>
+        </div>
+        <div class="numrow">
+            <div class="num">d.</div>
+            <div class="content">The Investor shall bear all costs, fees, and expenses associated with the share
+                transfer and statutory filings under this Clause.
+            </div>
+        </div>
+
+        <div class="section-title section-gap">2.0 Investor Representations, Warranties, and Covenants</div>
+        <div class="sub-section">
+            2.1 The Investor represents, warrants, and covenants as follows:
+        </div>
+        <div class="sub-section">
+            2.1.1 The Investor has full legal capacity and authority to enter into this Agreement and make the Capital
+            Commitment.
+        </div>
+        <div class="sub-section">
+            2.1.2 The Investor is subscribing for the GoldFlex Plan for personal investment purposes only, and not for
+            resale, distribution, or speculation.
+        </div>
+        <div class="section-title">2.2 Nature of Services</div>
+        <div class="sub-section">
+            2.1.3 The Investor has sufficient knowledge and experience in financial matters to evaluate the merits and
+            risks of the GoldFlex investment.
+        </div>
+        <div class="sub-section">
+            2.1.4 The Investor can bear the economic risk of this investment, including the potential loss of the
+            Capital Commitment.
+        </div>
+        <div class="sub-section">
+            2.1.5 The Investor understands that the Company’s GoldFlex investment plans are <strong>not registered under
+                Nigerian securities laws</strong> and may only be transferred in accordance with the terms of this
+            Agreement and the Company’s policies.
+        </div>
+        <div class="section-title">2.3 Company’s Discretion</div>
+        <div class="sub-section">
+            2.1.6 The Investor shall provide any additional information reasonably requested by the Company to ensure
+            compliance with applicable Nigerian laws and regulations.
+        </div>
+        <div class="sub-section">
+            2.1.7 The Investor has received, read, and understood all relevant documentation concerning the GoldFlex
+            Plan, including the risks, investment strategy, and terms of return.
+        </div>
+        <div class="sub-section">
+            2.1.8 The Investor agrees <strong>not to pledge, assign, hypothecate, or otherwise encumber</strong> any
+            rights under this Agreement without the prior written consent of the Company.
+        </div>
+
+        <div class="section-title section-gap">3.0 <strong>Investor Awareness</strong></div>
+        <div class="sub-section">
+            3.1 The Investor represents, warrants, and covenants as follows:
+        </div>
+        <div class="sub-section">
+            3.1.1 No regulatory authority has reviewed or approved the GoldFlex investment plans.
+        </div>
+        <div class="sub-section">
+            3.1.2 Investments in GoldFlex carry inherent risks, including illiquidity and potential loss of capital.
+        </div>
+        <div class="sub-section">
+            3.1.3 The GoldFlex investment plans have limited transferability as set out in this Agreement and under the
+            Company’s policies.
+        </div>
+
+        <div class="sub-section">
+            3.1.4 The Investor may have to hold the investment for the full term of the selected plan, and there may be
+            no market for early liquidation.
+        </div>
+
+        <div class="sub-section">
+            3.1.5 <strong>Early Liquidation Charges:</strong> The Investor acknowledges and agrees that any request for
+            early liquidation, redemption, or termination of the GoldFlex investment prior to the expiration of the
+            selected investment term shall, where approved by the Company, attract an <strong>early liquidation charge
+                equal to five percent (5%) of the Investor’s total invested capital.</strong>
+        </div>
+
+        <div class="sub-section">
+            3.1.6 The Investor further acknowledges that early liquidation is <strong>not guaranteed,</strong> remains
+            subject to the Company’s discretion and asset liquidity considerations, and that the amount returned upon
+            early liquidation may be <strong>less than the original capital committed</strong> after deduction of the
+            applicable early liquidation charge and any other permitted costs. No Return on Investment shall accrue
+            beyond the effective date of early liquidation.
+        </div>
+
+        <div class="section-title section-gap">4.0 <strong>Company Representations, Warranties, and Covenants</strong>
+        </div>
+        <div class="section-title section-gap"><strong>The Company represents and warrants that:</strong></div>
+        <div class="sub-section">
+            4.1 It is duly incorporated, validly existing, and in good standing under Nigerian law and has full
+            authority to enter into this Agreement and perform its obligations.
+        </div>
+        <div class="sub-section">
+            4.2 It has implemented policies to ensure the security of Investor funds and shall deploy invested capital
+            into real, physically-backed assets to generate the agreed ROI.
+        </div>
+        <div class="sub-section">
+            4.3 The Company shall pay the ROI to the Investor according to the terms of the selected GoldFlex Plan,
+            subject to any crystallization of shares only in the event of failure to pay the ROI.
+        </div>
+
+        <div class="section-title section-gap">5.0 <strong>Closing</strong></div>
+        <div class="sub-section">
+            5.1 The Investor shall pay the full Capital Commitment upon execution of this Agreement. Such payment
+            constitutes the “Initial Closing,” and the date of payment shall be the “Initial Closing Date.”
+        </div>
+        <div class="sub-section">
+            5.2 The Company shall confirm receipt of payment and issue acknowledgment to the Investor.
+        </div>
+
+        <div class="section-title section-gap">6.0 <strong>Indemnification</strong></div>
+        <div class="sub-section">
+            6.1 The Investor agrees to indemnify and hold harmless the Company, its officers, directors, and agents from
+            any loss, liability, or claim arising from:
+        </div>
+        <div class="numrow">
+            <div class="num">a.</div>
+            <div class="content">Any breach of representations, warranties, or covenants in this Agreement; or</div>
+        </div>
+        <div class="numrow">
+            <div class="num">b.</div>
+            <div class="content">Any misstatement or omission made by the Investor in connection with this Agreement or
+                its subscription.</div>
+        </div>
+
+        <div class="section-title section-gap">7.0 <strong>How Your Capital Works for You</strong></div>
+        <div class="sub-section">7.1 <strong>Investment Eligibility and Minimum Commitment</strong></div>
+        <div class="sub-section">
+            7.1.1 Participation in the GoldFlex Investment Plans is subject to a <strong>minimum capital commitment of
+                Five Thousand Euros (€5,000)</strong> or its equivalent in any other approved currency, calculated at
+            the Company’s prevailing exchange rate on the date of subscription.
+        </div>
+        <div class="sub-section">
+            7.1.2 The Company reserves the right to revise the minimum investment threshold from time to time, provided
+            that such revision shall not affect investments already accepted and confirmed under this Agreement.
+        </div>
+        <div class="sub-section">7.2 <strong>Investment Terms – GoldFlex Plans</strong></div>
+        <div class="sub-section">
+            <table class="return-table">
+                <tr>
+                    <th>Term</th>
+                    <th>Fixed Return p.a. (per annum)</th>
+                </tr>
+
+                <tr>
+                    <td>1 Year</td>
+                    <td>2.9%</td>
+                </tr>
+
+                <tr>
+                    <td>3 Years</td>
+                    <td>4.8%</td>
+                </tr>
+
+                <tr>
+                    <td>5 Years</td>
+                    <td>6.8%</td>
+                </tr>
+
+                <tr>
+                    <td>7 Years</td>
+                    <td>8.78%</td>
+                </tr>
+
+                <tr>
+                    <td>10 Years</td>
+                    <td>10.87%</td>
+                </tr>
+            </table>
+        </div>
+        <div class="sub-section">
+            7.2.1 The Investor’s capital shall be deployed by the Company into real, physically-backed assets, including
+            gold and other precious metals, in accordance with the selected GoldFlex Plan.
+        </div>
+        <div class="sub-section">
+            7.2.2 The returns stated above represent targeted fixed returns per annum, calculated on the Investor’s
+            committed capital, and are subject to the terms, risk disclosures, and conditions set out in this Agreement.
+        </div>
+
+        <div class="section-title section-gap">7.3 Return on Investment (ROI) Payments</div>
+        <div class="sub-section">
+            7.3.1 ROI shall accrue in accordance with the selected GoldFlex Plan and shall be payable to the Investor
+            based on the payment schedule communicated by the Company at the time of subscription or thereafter.
+        </div>
+        <div class="sub-section">
+            7.4.2 ROI payments shall be made net of any applicable taxes, statutory deductions, or agreed charges, where
+            applicable under law.
+        </div>
+        <div class="section-title section-gap">7.5 Maturity and Capital Repayment</div>
+        <div class="sub-section">
+            7.5.1 Upon maturity of the selected GoldFlex Plan, and subject to the terms of this Agreement, the Company
+            shall repay the Investor’s invested capital together with any outstanding ROI.
+        </div>
+        <div class="sub-section">
+            7.5.2 Capital repayment at maturity shall be made using the same payment method originally utilised by the
+            Investor, unless otherwise agreed in writing by the Parties.
+        </div>
+
+        <div class="section-title section-gap">8.0 Acceptance or Rejection</div>
+        <div class="sub-section">
+            8.1 The Company may accept or reject any subscription for any reason at its sole discretion.
+        </div>
+        <div class="sub-section">
+            8.2 If the subscription is accepted, the Company shall notify the Investor in writing and provide
+            acknowledgment.
+        </div>
+        <div class="sub-section">
+            8.3 If rejected, any funds paid shall be returned within 30 calendar days, and this Agreement shall be null
+            and void.
+        </div>
+
+        <div class="section-title section-gap">9.0 Notices</div>
+        <div class="sub-section">
+            All notices between parties shall be in writing and shall be exchanged via email correspondences. The
+            company’s official email shall be <a href="mailto:support@goldflex.io">support@goldflex.io</a> and any
+            notice purported to have been communicated with the company to any other email address or any other address
+            whatsoever shall be null and void. Notices shall be deemed delivered after communication by email by email.
+        </div>
+
+        <!-- ===================== ADDITIONAL CLAUSES ===================== -->
+
+        <div class="section-title section-gap">10.0 Referrer / Introducer / Broker Disclaimer</div>
+
+        <div class="sub-section">
+            10.1 Any Referrer is acting solely as an independent introducer and not as an agent, partner, or
+            advisor of the Company.
+        </div>
+
+        <div class="sub-section">
+            10.2 The Investor acknowledges that no investment advice has been provided by a Referrer.
+        </div>
+
+
+        <div class="section-title section-gap">11.0 Assignability</div>
+
+        <div class="sub-section">
+            11.1 This Agreement is not transferable or assignable by the Investor without the prior written
+            consent of the Company.
+        </div>
+
+        <div class="sub-section">
+            11.2 The Company may assign its rights under this Agreement as collateral security for a loan.
+        </div>
+
+
+        <div class="section-title section-gap">12.0 Entire Agreement</div>
+
+        <div class="sub-section">
+            This Agreement constitutes the entire understanding between the Parties regarding the
+            subscription and supersedes all prior agreements or understandings.
+        </div>
+
+
+        <div class="section-title section-gap">13.0 Governing Law</div>
+
+        <div class="sub-section">
+            This Agreement shall be governed by and construed in accordance with the laws of the Federal
+            Republic of Nigeria.
+        </div>
+
+
+        <div class="section-title section-gap">14.0 Jurisdiction</div>
+
+        <div class="sub-section">
+            14.1 The Parties submit to the exclusive jurisdiction of the courts of Lagos State, Nigeria, for any
+            dispute arising from this Agreement.
+        </div>
+
+
+        <div class="section-title section-gap">15.0 Survival</div>
+
+        <div class="sub-section">
+            The representations, warranties, covenants, and indemnities in this Agreement shall survive the
+            execution of this Agreement and the issuance of any benefits under the GoldFlex Plan.
+        </div>
+
+
+        <div class="section-title section-gap">16.0 Dispute Resolution</div>
+
+        <div class="sub-section"><strong>16.1 Amicable Settlement</strong></div>
+
+        <div class="sub-section">
+            16.1.1 The Parties shall first attempt to resolve any dispute, controversy, or claim arising out of or
+            relating to this Agreement through good faith negotiations.
+        </div>
+
+        <div class="sub-section">
+            16.1.2 Such negotiations shall commence upon written notice by one Party to the other and shall be
+            resolved within thirty (30) calendar days.
+        </div>
+
+
+        <div class="sub-section"><strong>16.2 Arbitration</strong></div>
+
+        <div class="sub-section">
+            16.2.1 Any Dispute not resolved under Clause 16.1 shall be finally resolved by arbitration.
+        </div>
+
+        <div class="sub-section">
+            16.2.2 The arbitration shall be conducted in accordance with the Arbitration and Mediation Act, 2023.
+        </div>
+
+        <div class="sub-section">
+            16.2.3 The arbitral tribunal shall consist of a sole arbitrator appointed jointly by the Parties.
+        </div>
+
+        <div class="sub-section">
+            16.2.4 The seat of arbitration shall be Lagos State, Nigeria, and the language shall be English.
+        </div>
+
+        <div class="sub-section">
+            16.2.5 The costs of arbitration shall be borne equally by the Parties.
+        </div>
+
+        <!-- ===================== END CLAUSES ===================== -->
+
+        <div class="sub-section">
+            <strong>IN WITNESS WHEREOF, the Parties have executed this Agreement as of the date first above
+                written.</strong>
+        </div>
+
+        <div class="sub-section">
+            THE COMMON SEAL of <strong>HARTMANN & BENZ LIMITED</strong> is hereby affixed and duly delivered in the
+            presence of:
+        </div>
+
+        <table class="signature-table">
+            <tr>
+                <td>
+                    <img src="{{signature}}" alt="Director Signature" style="height:80px;"><br>
+                    <div class="sig-line"></div>
+                    <strong>DIRECTOR</strong>
+                </td>
+
+                <td>
+                    <img src="{{secretary_signature}}" alt="Secretary Signature" style="height:80px;"><br>
+                    <div class="sig-line"></div>
+                    <strong>DIRECTOR / SECRETARY</strong>
+                </td>
+            </tr>
+        </table>
+
+        <!-- ===================== RED SIGNATURE SECTION ===================== -->
+
+        <div class="red-form">
+
+            <div class="form-title">
+                Signed, Sealed And Delivered By The Within-Named Investor:
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Name:</div>
+                <div class="form-line">{{customer_name}}</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Occupation:</div>
+                <div class="form-line">-</div>
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-label">Signature:</div>
+
+                <div class="form-signature-box">
+
+                    <!-- Signature Image -->
+                    <img src="{{customer_signature}}" alt="Signature" class="red-signature-img"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+
+                    <!-- Fallback Line -->
+                    <div class="red-signature-line" style="display:none;"></div>
+
+                    <!-- IP Address -->
+                    <div class="ip-text">
+                        {{customer_ipaddress}}
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Date:</div>
+                <div class="form-line">{{date}}</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Email address:</div>
+                <div class="form-line">{{customer_email}}</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Phone Number:</div>
+                <div class="form-line">{{customer_telephone}}</div>
+            </div>
+
+
+            <div class="form-title" style="margin-top:40px;">
+                In The Presence of - Referrer / Broker / Introducer:
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Name:</div>
+                <div class="form-line">{{broker_name}}</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Email address:</div>
+                <div class="form-line">{{broker_email}}</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Phone Number:</div>
+                <div class="form-line">{{broker_telephone}}</div>
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-label">Signature:</div>
+
+                <div class="form-signature-box">
+
+                    <!-- Signature Image -->
+                    <img src="{{broker_signature}}" alt="Signature" class="red-signature-img"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+
+                    <!-- Fallback Line -->
+                    <div class="red-signature-line" style="display:none;"></div>
+
+                    <!-- IP Address -->
+                    <div class="ip-text">
+                        {{customer_ipaddress}}
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Date:</div>
+                <div class="form-line">{{date}}</div>
+            </div>
+
+        </div>
+</body>
+
+</html>

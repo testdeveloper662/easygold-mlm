@@ -30,23 +30,37 @@ async function getBrokerCommissionTotals(broker) {
 
     if (!commissionRows.length) return totals;
 
-    // Allowed order types for B2B dashboard commissions
-    const B2B_TYPES = ["my_store", "api", "landing_page", "gold_purchase", "gold_purchase_sell_orders"];
+    const B2B_TYPES = [
+        "my_store",
+        "api",
+        "landing_page",
+        "gold_purchase",
+        "gold_purchase_sell_orders"
+    ];
+
+    // 🔹 Map lowercase DB types → wallet keys
+    const TYPE_MAPPING = {
+        easygoldtoken: "EASYGOLD_TOKEN",
+        primeinvest: "PRIMEINVEST",
+        goldflex: "GOLDFLEX",
+    };
 
     commissionRows.forEach((row) => {
         const amount = Number(row.commission_amount || 0);
+        const orderType = (row.order_type || "").toLowerCase();
 
-        // ❌ Rule: Do NOT count B2B commissions where is_seller = true
-        if (B2B_TYPES.includes(row.order_type)) {
-            if (row.is_seller) return;  // ← important filter
-
+        // ✅ Handle B2B commissions
+        if (B2B_TYPES.includes(orderType)) {
+            if (row.is_seller) return; // skip seller B2B
             totals.B2B_DASHBOARD += roundToTwoDecimalPlaces(amount);
             return;
         }
 
-        // Normal commissions (non-B2B)
-        if (totals[row.order_type] !== undefined) {
-            totals[row.order_type] += roundToTwoDecimalPlaces(amount);
+        // ✅ Handle EASYGOLD / PRIMEINVEST / GOLDFLEX
+        const mappedKey = TYPE_MAPPING[orderType];
+
+        if (mappedKey && totals[mappedKey] !== undefined) {
+            totals[mappedKey] += roundToTwoDecimalPlaces(amount);
         }
     });
 

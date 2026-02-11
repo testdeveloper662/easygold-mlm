@@ -90,7 +90,7 @@ const GetTargetCustomers = async (req, res) => {
       message: "Target customers retrieved successfully",
       data: {
         easyGoldReferralLink: `${process.env.EASY_GOLD_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`,
-        primeInvestReferralLink: `${process.env.PRIME_INVEST_FRONTEND_URL}/${brokerLanguage}/sign-up`,
+        primeInvestReferralLink: `${process.env.PRIME_INVEST_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`,
         landingPageReferralLink: `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`,
         goldflexReferralLink: `${process.env.GOLD_FLEX_FRONTEND_URL}/register?ref=${easyGoldReferralCode}`,
         customers: customersWithPdfUrl,

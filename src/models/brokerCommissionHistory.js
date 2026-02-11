@@ -8,6 +8,10 @@ const BrokerCommissionHistory = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
+    customer_id: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+    },
     broker_id: {
       type: Sequelize.INTEGER,
       allowNull: false,

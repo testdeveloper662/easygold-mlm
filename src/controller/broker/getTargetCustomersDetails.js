@@ -50,11 +50,52 @@ const GetTargetCustomersDetails = async (req, res) => {
       });
     }
 
+    const broker = await db.Brokers.findOne({
+      where: { id: targetCustomer.broker_id },
+      raw: true,
+    });
+
+    /** 🔹 Get WordPress User */
+    const user = await db.Users.findOne({
+      where: { ID: broker.user_id },
+      raw: true,
+    });
+
+    /** 🔹 Get WordPress User Meta */
+    const userMetaRows = await db.UsersMeta.findAll({
+      where: { user_id: broker.user_id },
+      raw: true,
+    });
+
+    // Convert meta rows into key/value object
+    const userMeta = {};
+    userMetaRows.forEach((meta) => {
+      userMeta[meta.meta_key] = meta.meta_value;
+    });
+
+    const fullAddress = [
+      userMeta.u_street_no,
+      userMeta.u_street,
+      userMeta.u_location,
+      userMeta.u_country,
+      userMeta.u_postcode
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    const brokerInfoLine = [
+      fullAddress,
+      `${user.display_name || ""}, ${userMeta.u_phone || ""}`
+    ]
+      .filter(Boolean)
+      .join(" / ");
+
     return res.status(200).json({
       success: true,
       message: "Target customer retrieved successfully",
       country,
-      language
+      language,
+      brokerInfoLine
     });
   } catch (error) {
     console.error("Error fetching target customer:", error);

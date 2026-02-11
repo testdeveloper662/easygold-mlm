@@ -39,6 +39,7 @@ const customerSignupEasyGoldToken = require("../controller/broker/customerSignup
 const CheckVatnumberValid = require("../controller/broker/checkVatnumberValid");
 const GetTargetCustomersDetails = require("../controller/broker/getTargetCustomersDetails");
 const UpdateTargetCustomerByEmail = require("../controller/broker/updateTargetCustomerByEmail");
+const GetCustomerDetails = require("../controller/broker/getCustomerDetails");
 
 brokerRouter.post(
   "/register",
@@ -57,6 +58,7 @@ brokerRouter.get("/checkvalidvat", CheckVatnumberValid);
 brokerRouter.get("/network/:broker_id", authenticateToken, GetBrokerNetworkById);
 brokerRouter.get("/commissions/:id", authenticateToken, GetBrokerCommissionHistory);
 brokerRouter.post("/order/detail", authenticateToken, GetOrderDetails);
+brokerRouter.post("/customer/detail", authenticateToken, GetCustomerDetails);
 brokerRouter.post("/logo-image", authenticateToken, upload.single("logo"), UploadLogoImage);
 brokerRouter.post("/profile-image", authenticateToken, upload.single("profile"), UploadProfileImage);
 

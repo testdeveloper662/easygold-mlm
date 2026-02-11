@@ -85,7 +85,6 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     const parent_company = getMeta(parentBroker.user, "u_company");
     const parent_language = getMeta(parentBroker.user, "language");
     const parent_telephone = getMeta(parentBroker.user, "u_phone")
-    const parent_city = location;
     const parent_signaturedata = getMeta(parentBroker.user, "signatureData");
 
     const addressParts = [u_street_no, u_street, city, state, country, postalCode]
@@ -158,7 +157,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       const registrationUrl = `${process.env.EASY_GOLD_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "Primeinvest") {
-      const registrationUrl = `${process.env.PRIME_INVEST_FRONTEND_URL}/${brokerLanguage}/sign-up`;
+      const registrationUrl = `${process.env.PRIME_INVEST_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     } else if (interest_in === "goldflex") {
       const registrationUrl = `${process.env.GOLD_FLEX_FRONTEND_URL}/register?ref=${easyGoldReferralCode}`;
@@ -168,7 +167,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     const templateVariables = {
       b2b_partner: parentBroker.user?.display_name,
       sending_link: sending_link,
-      b2b_info: formattedAddress || "",
+      b2b_info: parent_address || "",
     };
 
     // "de-DE" "en-US"

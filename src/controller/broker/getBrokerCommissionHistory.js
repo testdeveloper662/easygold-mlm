@@ -21,19 +21,9 @@ const GetBrokerCommissionHistory = async (req, res) => {
       ? req.query.is_seller === "true"
       : null;
 
-    // const whereClause = {
-    //   user_id: id,
-    //   [Op.or]: [
-    //     { is_seller: true },
-    //     {
-    //       [Op.and]: [{ is_seller: false }, { is_payment_done: true }],
-    //     },
-    //   ],
-    // };
-
     let whereClause;
 
-    const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken"];
+    const GOLD_ORDER_TYPES = [];
 
     if (isSellerFilter === true) {
       whereClause = {
@@ -151,7 +141,7 @@ const GetBrokerCommissionHistory = async (req, res) => {
       .map((h) => h.order_id);
 
     const goldPuracheIds = history
-      .filter((h) => h.order_type === "gold_purchase")
+      .filter((h) => (h.order_type || "").toLowerCase() === "gold_purchase")
       .map((h) => h.order_id);
 
     const goldPuracheSellOrdersIds = history

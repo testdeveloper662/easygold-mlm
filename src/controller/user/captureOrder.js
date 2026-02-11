@@ -370,6 +370,7 @@ const CaptureOrder = async (req, res) => {
 
     let broker = null;
     let targetCustomerBroker = false;
+    let customer = null;
 
     if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
       // For Gold Flex, get broker using b2bEmail
@@ -395,7 +396,7 @@ const CaptureOrder = async (req, res) => {
         } else if (orderType == "primeinvest") {
           interest_in = "Primeinvest";
         }
-        let customer = await db.TargetCustomers.findOne({
+        customer = await db.TargetCustomers.findOne({
           where: { customer_email: b2bEmail, interest_in, status: "REGISTERED" },
         });
 
@@ -677,6 +678,7 @@ const CaptureOrder = async (req, res) => {
 
       // Prepare data object for database
       const commissionData = {
+        customer_id: customer?.id || null,
         broker_id: currentBroker.id,
         user_id: currentBroker.user_id,
         order_id: orderId,

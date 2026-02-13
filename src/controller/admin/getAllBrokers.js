@@ -81,6 +81,9 @@ const GetAllBrokers = async (req, res) => {
 
       const untermaklervertrag_doc = broker.untermaklervertrag_doc !== null ? `${process.env.NODE_URL}${broker.untermaklervertrag_doc}` : null;
       const maklervertrag_doc = broker.maklervertrag_doc !== null ? `${process.env.NODE_URL}${broker.maklervertrag_doc}` : null;
+      const inc_partnership_doc = broker.inc_partnership_doc !== null ? `${process.env.NODE_URL}${broker.inc_partnership_doc}` : null;
+      const llc_partnership_doc = broker.llc_partnership_doc !== null ? `${process.env.NODE_URL}${broker.llc_partnership_doc}` : null;
+      const goldflex_partnership_doc = broker.goldflex_partnership_doc !== null ? `${process.env.NODE_URL}${broker.goldflex_partnership_doc}` : null;
 
       // Construct public URLs if exist
       const tradeRegisterUrl = m.u_trade_register
@@ -124,6 +127,10 @@ const GetAllBrokers = async (req, res) => {
         trade_register: tradeRegisterUrl,
         maklervertrag_doc: maklervertrag_doc,
         untermaklervertrag_doc: untermaklervertrag_doc,
+        inc_partnership_doc: inc_partnership_doc,
+        llc_partnership_doc: llc_partnership_doc,
+        goldflex_partnership_doc: goldflex_partnership_doc,
+        
         travel_id: travelIdUrl,
         signature: signatureUrl,
 

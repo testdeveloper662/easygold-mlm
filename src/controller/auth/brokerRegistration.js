@@ -539,6 +539,14 @@ const BrokerRegistration = async (req, res) => {
         console.log("error = ", error);
         console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
       }
+    } else {
+      await db.BrokerInvitations.create({
+        email,
+        invitation_status: "REGISTERED",
+        invited_by: parentBroker?.id,
+        last_invitation_sent: new Date(),
+      });
+      console.log("===================NEW EMAIL WITH INVITATION=====================");
     }
 
 

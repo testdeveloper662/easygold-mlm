@@ -40,12 +40,14 @@ const CheckVatnumberValid = require("../controller/broker/checkVatnumberValid");
 const GetTargetCustomersDetails = require("../controller/broker/getTargetCustomersDetails");
 const UpdateTargetCustomerByEmail = require("../controller/broker/updateTargetCustomerByEmail");
 const GetCustomerDetails = require("../controller/broker/getCustomerDetails");
+const CreateReferralTargetCustomer = require("../controller/broker/createReferralTargetCustomer");
 
 brokerRouter.post(
   "/register",
   upload.fields([
     { name: "u_trade_register", maxCount: 1 },
     { name: "u_travel_id", maxCount: 1 },
+    { name: "bill_upload", maxCount: 1 },
     { name: "signatureData", maxCount: 1 },
   ]),
   BrokerRegistration
@@ -75,6 +77,7 @@ brokerRouter.post("/payout/request", authenticateToken, CreateBrokerPayoutReques
 
 // Target Customers Routes
 brokerRouter.post("/target-customers", authenticateToken, CreateTargetCustomer);
+brokerRouter.post("/target-customers/referralCustomer", CreateReferralTargetCustomer);
 brokerRouter.get("/target-customers", authenticateToken, GetTargetCustomers);
 brokerRouter.get("/target-customers/getdetails", GetTargetCustomersDetails);
 brokerRouter.get("/target-customers/stats", authenticateToken, GetTargetCustomerStats);

@@ -136,6 +136,16 @@ const CreateTargetCustomer = async (req, res) => {
         });
         break;
 
+      case "Primeinvest":
+        existingCustomer = await db.TargetCustomers.findOne({
+          where: {
+            customer_email,
+            interest_in: "Primeinvest",
+          },
+          attributes: ["id", "broker_id"],
+        });
+        break;
+
       default:
         // 🧑‍💼 Broker-level uniqueness
         existingCustomer = await db.TargetCustomers.findOne({

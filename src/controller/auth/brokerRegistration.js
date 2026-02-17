@@ -318,6 +318,11 @@ const BrokerRegistration = async (req, res) => {
       form.append("u_travel_id", file.buffer, { filename: file.originalname });
     }
 
+    if (req.files?.bill_upload?.[0]) {
+      const file = req.files.bill_upload[0];
+      form.append("bill_upload", file.buffer, { filename: file.originalname });
+    }
+
     if (req.files?.u_trade_register?.[0]) {
       const file = req.files.u_trade_register[0];
       form.append("u_trade_register", file.buffer, { filename: file.originalname });

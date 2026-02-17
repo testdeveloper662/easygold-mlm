@@ -244,8 +244,6 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     await SendEmailHelper(brokermailOptions.subject, brokermailOptions.html, brokermailOptions.to, attachmentPath, null, null);
 
-    console.log(partnerDocsData, "partnerDocsData");
-
     await targetCustomer.update({
       status: "REGISTERED",
       customer_name: customer_name !== undefined ? customer_name : targetCustomer.customer_name,

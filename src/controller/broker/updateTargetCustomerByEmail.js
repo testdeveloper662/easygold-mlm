@@ -234,8 +234,8 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     brokermailOptions = {
       from: MAIL_SENDER,
       to: parent_email,
-      subject: emailData.subject,
-      html: emailData.htmlContent,
+      subject: brokeremailData.subject,
+      html: brokeremailData.htmlContent,
     };
 
     let attachmentPath = `${process.env.NODE_URL}/public/uploads/agreements/${partnerDocsData.pdf_doc}`;

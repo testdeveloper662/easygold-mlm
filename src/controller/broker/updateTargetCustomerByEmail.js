@@ -6,6 +6,7 @@ const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
 
 const MAIL_SENDER = process.env.MAIL_SENDER;
+const EASY_GOLD_CUSTOMER_SUPPORT_EMAIL = process.env.EASY_GOLD_CUSTOMER_SUPPORT_EMAIL;
 
 function getMeta(user, key) {
   return user?.user_meta?.find(m => m.meta_key === key)?.meta_value || "";
@@ -164,10 +165,36 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
     }
 
+    const brokerCompany = parent_company || "";
+    const brokerName = parent_name || "";
+
+    const brokerStreet = [street, streetNo]
+      .filter(v => v && v !== "undefined" && v !== "null")
+      .join(" ");
+
+    const brokerPostalCity = [postcode, location]
+      .filter(v => v && v !== "undefined" && v !== "null")
+      .join("/");
+
+    const brokerPhone = parent_telephone || "";
+    const brokerEmail = parent_email || "";
+
+    const b2bInfoFormatted = [
+      brokerCompany,
+      brokerName,
+      brokerStreet,
+      brokerPostalCity,
+      brokerPhone,
+      brokerEmail,
+    ]
+      .filter(Boolean)
+      .map(v => `${v},`)
+      .join("<br>");
+
     const templateVariables = {
       b2b_partner: parentBroker.user?.display_name,
       sending_link: sending_link,
-      b2b_info: parent_address || "",
+      b2b_info: b2bInfoFormatted || "",
     };
 
     // "de-DE" "en-US"
@@ -211,18 +238,18 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       return !blockedDomains.includes(domain);
     };
 
-    const senderName = parentBroker.user?.display_name || "Your broker team";
-    const senderEmail = parentBroker.user?.user_email;
+    const senderName = "EasyGold24 Team";
+    const senderEmail = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL;
 
     const dynamicFrom = `"${senderName}" <${senderEmail}>`;
 
     let finalFrom;
 
-    if (isAllowedEmail(senderEmail)) {
-      finalFrom = dynamicFrom; // allow Gmail, Yahoo, Outlook, company domain
-    } else {
-      finalFrom = MAIL_SENDER; // fallback to verified sender domain
-    }
+    // if (isAllowedEmail(senderEmail)) {
+    // finalFrom = dynamicFrom; // allow Gmail, Yahoo, Outlook, company domain
+    // } else {
+    finalFrom = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL; // fallback to verified sender domain
+    // }
 
     mailOptions = {
       from: finalFrom,

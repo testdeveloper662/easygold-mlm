@@ -250,7 +250,8 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_username", username);
     form.append("u_password", password);
     form.append("u_web_site", website);
-    form.append("u_account_owner", accountHolderName);
+    form.append("u_account_owner", fullName);
+    form.append("u_account_holder", accountHolderName);
     form.append("u_bank", bankName);
     form.append("u_iban", iban);
     form.append("u_bic", bic);

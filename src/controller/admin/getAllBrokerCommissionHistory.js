@@ -27,7 +27,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
 
     // Get total count of unique orders
     const [countResult] = await sequelize.query(`
-  SELECT COUNT(DISTINCT order_id) as total
+  SELECT COUNT(DISTINCT CONCAT(order_id, '_', order_type)) as total
   FROM broker_commission_histories
   WHERE is_deleted = 0
   ${search ? "AND order_id LIKE :search" : ""}
@@ -39,7 +39,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     // Get paginated distinct order IDs
     const [orderIds] = await sequelize.query(
       `
-  SELECT DISTINCT order_id
+  SELECT DISTINCT order_id, order_type
   FROM broker_commission_histories
   WHERE is_deleted = 0
   ${search ? "AND order_id LIKE :search" : ""}
@@ -69,66 +69,90 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     }
 
     // Extract order IDs
-    const orderIdsList = orderIds.map((row) => row.order_id);
+    const orderPairs = orderIds.map(row => ({
+      order_id: row.order_id,
+      order_type: row.order_type
+    }));
+
+    const whereConditions = orderPairs
+      .map(
+        (_, index) =>
+          `(bch.order_id = :order_id_${index} AND bch.order_type = :order_type_${index})`
+      )
+      .join(" OR ");
+
+    const replacements = {};
+
+    orderPairs.forEach((pair, index) => {
+      replacements[`order_id_${index}`] = pair.order_id;
+      replacements[`order_type_${index}`] = pair.order_type;
+    });
 
     // Fetch commission entries for these specific order IDs (with order_type)
     const [results] = await sequelize.query(
       `
-      SELECT
-        bch.id,
-        bch.order_id,
-        bch.order_type,
-        bch.order_amount,
-        bch.profit_amount,
-        bch.broker_id,
-        bch.user_id,
-        bch.commission_percent,
-        bch.commission_amount,
-        bch.is_seller,
-        bch.is_payment_done,
-        bch.is_payment_declined,
-        bch.selected_payment_method,
-        bch.tree,
-        bch.createdAt,
-        bch.updatedAt,
-        u.user_email
-      FROM broker_commission_histories AS bch
-      LEFT JOIN 6LWUP_users AS u ON u.ID = bch.user_id
-      WHERE bch.is_deleted = 0 AND bch.order_id IN (:orderIds)
-      ORDER BY bch.createdAt DESC
-    `,
+  SELECT
+    bch.id,
+    bch.order_id,
+    bch.order_type,
+    bch.order_amount,
+    bch.profit_amount,
+    bch.broker_id,
+    bch.user_id,
+    bch.commission_percent,
+    bch.commission_amount,
+    bch.is_seller,
+    bch.is_payment_done,
+    bch.is_payment_declined,
+    bch.selected_payment_method,
+    bch.tree,
+    bch.createdAt,
+    bch.updatedAt,
+    u.user_email
+  FROM broker_commission_histories AS bch
+  LEFT JOIN 6LWUP_users AS u ON u.ID = bch.user_id
+  WHERE bch.is_deleted = 0
+  AND (${whereConditions})
+  ORDER BY bch.createdAt DESC
+`,
       {
-        replacements: { orderIds: orderIdsList },
+        replacements,
       }
     );
 
     // Group results by order_id
     const groupedMap = results.reduce((acc, record) => {
-      const orderId = record.order_id;
+      const orderKey = `${record.order_id}_${record.order_type}`;
 
-      if (!acc[orderId]) {
-        acc[orderId] = {
-          order_id: orderId,
-          order_type: record.order_type, // ✅ include order_type
+      if (!acc[orderKey]) {
+        acc[orderKey] = {
+          order_id: record.order_id,
+          order_type: record.order_type,
           order_amount: record.order_amount,
           profit_amount: record.profit_amount,
           createdAt: record.createdAt,
           updatedAt: record.updatedAt,
           broker_commissions: [],
           tree: record.tree,
-          payment_type: record.selected_payment_method === 1 ? "Bank Transfer" : record.selected_payment_method === 2 ? "Crypto Payment" : record.selected_payment_method === 3 ? "Cash" : record.selected_payment_method === 4 ? "Card" : null, // Default to 1 (bank) if null
+          payment_type:
+            record.selected_payment_method === 1
+              ? "Bank Transfer"
+              : record.selected_payment_method === 2
+                ? "Crypto Payment"
+                : record.selected_payment_method === 3
+                  ? "Cash"
+                  : record.selected_payment_method === 4
+                    ? "Card"
+                    : null,
         };
       }
 
-      const commissionAmount = parseFloat(record.commission_amount || 0);
-      const commissionPercent = parseFloat(record.commission_percent || 0);
-
-      acc[orderId].broker_commissions.push({
+      acc[orderKey].broker_commissions.push({
         broker_id: record.broker_id,
         user_id: record.user_id,
         user_email: record.user_email,
-        commission_percent: commissionPercent,
-        commission_amount: commissionAmount,
+        commission_percent: parseFloat(record.commission_percent || 0),
+        commission_amount: parseFloat(record.commission_amount || 0),
         is_seller: record.is_seller,
         is_payment_done: record.is_payment_done,
         is_payment_declined: record.is_payment_declined,
@@ -137,6 +161,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
 
       return acc;
     }, {});
+
 
     // Convert grouped map to array and sort based on tree structure
     // const grouped = Object.values(groupedMap)

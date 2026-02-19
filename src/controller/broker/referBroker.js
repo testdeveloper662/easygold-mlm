@@ -29,12 +29,24 @@ const ReferBroker = async (req, res) => {
     const userExist = await db.Users.findOne({
       where: { user_email: email },
     });
-    console.log(email, "email");
-    console.log(userExist, "userExist");
     if (userExist) {
       return res.status(400).json({
         success: false,
-        message: "A user with this email already exists. They cannot be referred again.",
+        message: "This broker is already registered.",
+      });
+    }
+
+    const existingInvitation = await db.BrokerInvitations.findOne({
+      where: {
+        email: email,
+        invitation_status: "REGISTERED",
+      },
+    });
+
+    if (existingInvitation) {
+      return res.status(400).json({
+        success: false,
+        message: "This broker is already registered.",
       });
     }
 

@@ -83,7 +83,7 @@ const GetTargetCustomers = async (req, res) => {
       }
     }
 
-    let easyGoldReferralCode = Buffer.from(String(broker.referral_code), "utf-8").toString("base64")
+    let easyGoldReferralCode = Buffer.from(String(broker.referral_code), "utf-8").toString("base64");
 
     return res.status(200).json({
       success: true,

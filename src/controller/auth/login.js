@@ -160,10 +160,13 @@ const Login = async (req, res) => {
       landing_page = true;
     }
 
+    let easyGoldReferralCode = Buffer.from(String(broker?.referral_code), "utf-8").toString("base64")
+
     userData.landing_pageurl = landing_pageurl;
     userData.landing_page = landing_page;
-    userData.easygoldurl = `https://easygold.io/en/sign-up`;
-    userData.primeinvesturl = `https://dashboard.hb-primeinvest.com/en/sign-up`;
+    userData.goldflexurl = `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/goldflex`;
+    userData.easygoldurl = `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/easygold`;
+    userData.primeinvesturl = `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/primeinvest`;
 
     const token = jwt.sign(
       {

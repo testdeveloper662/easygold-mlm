@@ -17,9 +17,25 @@ const GetUserUrls = async (req, res) => {
             });
         }
 
+        const brokerDetails = await db.Brokers.findOne({
+            where: {
+                user_id: user.ID,
+            },
+        });
+
+        if (!brokerDetails) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        let easyGoldReferralCode = Buffer.from(String(brokerDetails?.referral_code), "utf-8").toString("base64")
+
         let data = {
-            primeinvesturl: `https://dashboard.hb-primeinvest.com/en/sign-up`,
-            easygoldurl: `https://easygold.io/en/sign-up`,
+            goldflexurl: `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/goldflex`,
+            primeinvesturl: `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/primeinvest`,
+            easygoldurl: `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/easygold`,
             landing_page: user?.landing_page,
             landing_pageurl: `${process.env.EASY_GOLD_URL}/landingpage/${user?.mystorekey}`
         };

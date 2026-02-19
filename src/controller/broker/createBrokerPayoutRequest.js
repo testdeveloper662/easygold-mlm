@@ -31,7 +31,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
                             as: "user_meta",
                             attributes: ["meta_key", "meta_value"],
                             where: {
-                                meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street", "u_postcode", "u_location", "u_account_owner", "u_bank", "u_iban", "u_bic"]
+                                meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street", "u_postcode", "u_location", "u_account_owner", "u_account_holder", "u_bank", "u_iban", "u_bic"]
                             },
                             required: false
                         },
@@ -84,6 +84,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         const phone = metas.find(m => m.meta_key === "u_phone")?.meta_value;
         const web_site = metas.find(m => m.meta_key === "u_web_site")?.meta_value;
         const account_owner = metas.find(m => m.meta_key === "u_account_owner")?.meta_value;
+        const account_holder = metas.find(m => m.meta_key === "u_account_holder")?.meta_value;
         const bank = metas.find(m => m.meta_key === "u_bank")?.meta_value;
         const language = metas.find(m => m.meta_key === "language")?.meta_value;
         const iban = metas.find(m => m.meta_key === "u_iban")?.meta_value;
@@ -107,6 +108,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             payout_for: payoutForType(payout_for),
             amount: amount,
             street,
+            holder_name: account_holder || account_owner,
             bank,
             iban,
             bic,

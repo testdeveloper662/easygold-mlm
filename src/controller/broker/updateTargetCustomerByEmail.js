@@ -46,6 +46,13 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       });
     }
 
+    if (targetCustomer.status === "REGISTERED") {
+      return res.status(400).json({
+        success: false,
+        message: "This target customer is already registered.",
+      });
+    }
+
     let parentBroker = await db.Brokers.findOne({
       where: { id: targetCustomer.broker_id },
       include: [

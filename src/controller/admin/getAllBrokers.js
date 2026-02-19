@@ -42,6 +42,7 @@ const GetAllBrokers = async (req, res) => {
         meta_key: {
           [Op.in]: [
             "u_trade_register",
+            "bill_upload",
             "u_travel_id",
             "signatureData",
             "u_company",
@@ -89,6 +90,9 @@ const GetAllBrokers = async (req, res) => {
       const tradeRegisterUrl = m.u_trade_register
         ? `${process.env.PUBLIC_URL}${m.u_trade_register}`
         : null;
+      const billUploadUrl = m.bill_upload
+        ? `${process.env.PUBLIC_URL}${m.bill_upload}`
+        : null;
       const travelIdUrl = m.u_travel_id
         ? `${process.env.PUBLIC_URL}${m.u_travel_id}`
         : null;
@@ -125,12 +129,13 @@ const GetAllBrokers = async (req, res) => {
 
         // Document URLs
         trade_register: tradeRegisterUrl,
+        bill_upload: billUploadUrl,
         maklervertrag_doc: maklervertrag_doc,
         untermaklervertrag_doc: untermaklervertrag_doc,
         inc_partnership_doc: inc_partnership_doc,
         llc_partnership_doc: llc_partnership_doc,
         goldflex_partnership_doc: goldflex_partnership_doc,
-        
+
         travel_id: travelIdUrl,
         signature: signatureUrl,
 

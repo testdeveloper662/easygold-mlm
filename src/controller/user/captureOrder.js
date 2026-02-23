@@ -675,12 +675,25 @@ const CaptureOrder = async (req, res) => {
 
       let selected_payment = order?.selected_payment_method || selected_payment_method;
 
+      let commissionHistoryOrderType = orderType;
+
+      if (orderType === "my_store") {
+        if (OrderModel?.is_self_service_order == 1) {
+          commissionHistoryOrderType = "my_store_self_service";
+        }
+      } else if (orderType === "api") {
+        if (OrderModel?.is_self_service_order == 1) {
+          commissionHistoryOrderType = "my_store_self_service_api";
+        }
+      }
+
+
       // Prepare data object for database
       const commissionData = {
         broker_id: currentBroker.id,
         user_id: currentBroker.user_id,
         order_id: orderId,
-        order_type: orderType,
+        order_type: commissionHistoryOrderType,
         order_amount: isGoldFlex || isEasyGoldToken || isPrimeInvest ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
         profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),

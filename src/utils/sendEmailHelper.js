@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
 });
 
 
-const SendEmailHelper = (subject, htmlContent, to, attachmentPath = null, cc = null, from = null) => {
+const SendEmailHelper = (subject, htmlContent, to, attachments = null, cc = null, from = null) => {
     try {
         return new Promise((resolve, reject) => {
             const mailOptions = {
@@ -34,14 +34,20 @@ const SendEmailHelper = (subject, htmlContent, to, attachmentPath = null, cc = n
 
 
             // Attach file only if path exists
-            if (attachmentPath) {
-                mailOptions.attachments = [
-                    {
-                        filename: attachmentPath.split("/").pop(), // extract file name
-                        path: attachmentPath,
-                    }
-                ];
+            // normalize attachments to array
+            if (attachments) {
+
+                // if single string → convert to array
+                const attachmentArray = Array.isArray(attachments)
+                    ? attachments
+                    : [attachments];
+
+                mailOptions.attachments = attachmentArray.map(filePath => ({
+                    filename: filePath.split("/").pop(),
+                    path: filePath,
+                }));
             }
+            
             if (cc) {
                 mailOptions.cc = cc;
             }

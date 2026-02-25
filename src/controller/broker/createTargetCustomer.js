@@ -202,16 +202,16 @@ const CreateTargetCustomer = async (req, res) => {
 
     if (interest_in === "Landingpage") {
       const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
     } else if (interest_in === "easygold Token") {
       const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/easygold`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
     } else if (interest_in === "Primeinvest") {
       const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/primeinvest`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
     } else if (interest_in === "goldflex") {
       const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/goldflex`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
     }
 
     const brokerCompany = sanitizeValue(metaMap.u_company);
@@ -243,7 +243,7 @@ const CreateTargetCustomer = async (req, res) => {
       .join("<br>");
 
     const templateVariables = {
-      b2b_partner: broker.user?.display_name,
+      b2b_partner: brokerCompany,
       sending_link: sending_link,
       b2b_info: b2bInfoFormatted || "",
     };
@@ -307,7 +307,15 @@ const CreateTargetCustomer = async (req, res) => {
       html: emailData.htmlContent,
     };
 
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, null, null, finalFrom);
+    let attachmentPath = null;
+
+    if (interest_in === "Landingpage" && language === "en") {
+      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/landing_page_en.pdf`;
+    } else if (interest_in === "Landingpage" && language === "de") {
+      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/landing_page_de.pdf`;
+    }
+
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom);
 
     return res.status(201).json({
       success: true,

@@ -160,16 +160,16 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     if (interest_in === "Landingpage") {
       const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
     } else if (interest_in === "easygold Token") {
       const registrationUrl = `${process.env.EASY_GOLD_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
     } else if (interest_in === "Primeinvest") {
       const registrationUrl = `${process.env.PRIME_INVEST_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
     } else if (interest_in === "goldflex") {
       const registrationUrl = `${process.env.GOLD_FLEX_FRONTEND_URL}/register?ref=${easyGoldReferralCode}`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${registrationUrl}</a>`;
+      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
     }
 
     const brokerCompany = parent_company || "";
@@ -199,7 +199,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       .join("<br>");
 
     const templateVariables = {
-      b2b_partner: parentBroker.user?.display_name,
+      b2b_partner: brokerCompany,
       sending_link: sending_link,
       b2b_info: b2bInfoFormatted || "",
     };
@@ -272,7 +272,15 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       html: brokeremailData.htmlContent,
     };
 
-    let attachmentPath = `${process.env.NODE_URL}/public/uploads/agreements/${partnerDocsData.pdf_doc}`;
+    let attachmentPath = null;
+
+    if (interest_in === "easygold Token") {
+      attachmentPath = [`${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`, `${process.env.NODE_URL}/public/uploads/agreements/whitepaper_easygold_token.pdf`];
+    } else if (interest_in === "Primeinvest") {
+      attachmentPath = [`${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`, `${process.env.NODE_URL}/public/uploads/agreements/hartmann_benz_inc_share.pdf`];
+    } else if (interest_in === "goldflex") {
+      attachmentPath = [`${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`];
+    }
 
     await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom);
 

@@ -282,9 +282,11 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       attachmentPath = [`${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`];
     }
 
+    let brokerAttachmentPath = `${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`;
+
     await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom);
 
-    await SendEmailHelper(brokermailOptions.subject, brokermailOptions.html, brokermailOptions.to, attachmentPath, null, null);
+    await SendEmailHelper(brokermailOptions.subject, brokermailOptions.html, brokermailOptions.to, brokerAttachmentPath, null, null);
 
     await targetCustomer.update({
       status: "REGISTERED",

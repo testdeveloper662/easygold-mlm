@@ -269,6 +269,20 @@ const CreateTargetCustomer = async (req, res) => {
       );
     }
 
+    let emailLandingPageData;
+
+    if (interest_in === "Landingpage") {
+      try {
+        // Template ID 92 used (adjust as required)
+        emailLandingPageData = await getRenderedEmail(102, language, templateVariables);
+      } catch (templateError) {
+        console.error(templateError);
+        throw new Error(
+          "Email template (ID: 92) not found. Please ensure it exists in 6lwup_email_view table."
+        );
+      }
+    }
+
     const blockedDomains = [
       "yopmail.com",
       "mailinator.com",
@@ -300,12 +314,21 @@ const CreateTargetCustomer = async (req, res) => {
     finalFrom = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL; // fallback to verified sender domain
     // }
 
-    mailOptions = {
-      from: finalFrom,
-      to: customer_email,
-      subject: emailData.subject,
-      html: emailData.htmlContent,
-    };
+    if (interest_in == "Landingpage") {
+      mailOptions = {
+        from: finalFrom,
+        to: customer_email,
+        subject: emailLandingPageData.subject,
+        html: emailLandingPageData.htmlContent,
+      };
+    } else {
+      mailOptions = {
+        from: finalFrom,
+        to: customer_email,
+        subject: emailData.subject,
+        html: emailData.htmlContent,
+      };
+    }
 
     let attachmentPath = null;
 
@@ -315,7 +338,12 @@ const CreateTargetCustomer = async (req, res) => {
       attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/landing_page_de.pdf`;
     }
 
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom);
+    if (interest_in == "Landingpage") {
+      // Send email to customer
+      await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom);
+    } else {
+      await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom);
+    }
 
     return res.status(201).json({
       success: true,

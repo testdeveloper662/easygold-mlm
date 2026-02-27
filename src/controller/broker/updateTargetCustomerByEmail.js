@@ -277,7 +277,16 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     if (interest_in === "easygold Token") {
       attachmentPath = [`${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`, `${process.env.NODE_URL}/public/uploads/agreements/whitepaper_easygold_token.pdf`];
     } else if (interest_in === "Primeinvest") {
-      attachmentPath = [`${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`, `${process.env.NODE_URL}/public/uploads/agreements/hartmann_benz_inc_share.pdf`];
+      let sharePdfName = "hartmann_benz_inc_share.pdf"; // default English
+
+      if (brokerLanguage === "de") {
+        sharePdfName = "hartmann_benz_inc_share_de.pdf";
+      }
+
+      attachmentPath = [
+        `${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`,
+        `${process.env.NODE_URL}public/uploads/agreements/${sharePdfName}`
+      ];
     } else if (interest_in === "goldflex") {
       attachmentPath = [`${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`];
     }

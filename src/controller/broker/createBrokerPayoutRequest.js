@@ -1,7 +1,7 @@
 require("dotenv").config();
 const db = require("../../models");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
-const { companyAddressMap, generateImageUrl, payoutForType } = require("../../utils/Helper");
+const { companyAddressMap, generateImageUrl, payoutForType, textForType } = require("../../utils/Helper");
 const { generatePDF } = require("../../utils/pdfGenerator");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
 
@@ -95,6 +95,20 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         // Format payout_request_id to 5 digits (zero-padded)
         const formattedPayoutRequestId = String(newRequest?.id || '').padStart(5, '0');
 
+        const now = new Date();
+
+        // format date DD/MM/YYYY
+        const date =
+            String(now.getDate()).padStart(2, "0") + "/" +
+            String(now.getMonth() + 1).padStart(2, "0") + "/" +
+            now.getFullYear();
+
+        // format time HH:MM:SS
+        const time =
+            String(now.getHours()).padStart(2, "0") + ":" +
+            String(now.getMinutes()).padStart(2, "0") + ":" +
+            String(now.getSeconds()).padStart(2, "0");
+
         const paylodForMailPDF = {
             logo: await generateImageUrl(brokerDetails?.logo, 'profile'),
             company,
@@ -105,7 +119,8 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             user_email,
             web_site,
             payout_request_id: formattedPayoutRequestId,
-            payout_for: payoutForType(payout_for),
+            payout_for: payoutForType(payout_for, language),
+            extra_text: textForType(payout_for, language),
             amount: amount,
             street,
             holder_name: account_holder || account_owner,
@@ -113,8 +128,8 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             iban,
             bic,
             to_company_address,
-            date: "20/05/2025",
-            time: "20:05:12",
+            date,
+            time,
         }
 
         const outputFileName = `payout_${paylodForMailPDF.payout_request_id}.pdf`;

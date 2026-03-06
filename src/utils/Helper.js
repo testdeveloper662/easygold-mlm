@@ -158,21 +158,80 @@ Deutschland
 });
 
 
-exports.payoutForType = (value) => {
-    switch (value) {
-        case "EASYGOLD_TOKEN":
-            return "Easygold Tokens";
+exports.payoutForType = (value, language) => {
+    let de = language.includes("de");
+    if (de) {
+        switch (value) {
+            case "EASYGOLD_TOKEN":
+                return "Provision für Vermittlung eines Investors – Teilnahme am Security Token Projekt der Hartmann & Benz LLC.";
 
-        case "PRIMEINVEST":
-            return "Primeinvest";
+            case "PRIMEINVEST":
+                return "Vermittlungsprovision für die Vermittlung von Investoren – Hartmann & Benz Inc Kapitalbeteiligung.";
 
-        case "GOLDFLEX":
-            return "Goldflex";
+            case "GOLDFLEX":
+                return "Provision für Vermittlung eines Investors – GoldFlex Investment Plan";
 
-        case "B2B_DASHBOARD":
-            return "B2B Dashboard";
+            case "B2B_DASHBOARD":
+                return "Provision für Vermittlung eines Kunden – Goldankauf / Goldverkauf.";
 
-        default:
-            return value; // fallback (no crash)
+            default:
+                return value; // fallback (no crash)
+        }
+    } else {
+        switch (value) {
+            case "EASYGOLD_TOKEN":
+                return "Referral commission for investor introduction – participation in the Hartmann & Benz Security Token program.";
+
+            case "PRIMEINVEST":
+                return "Referral commission for investor introduction – Hartmann & Benz Inc equity participation.";
+
+            case "GOLDFLEX":
+                return "Referral commission for investor introduction – GoldFlex investment account.";
+
+            case "B2B_DASHBOARD":
+                return "Referral commission for client introduction – precious metals trading (buying and selling).";
+
+            default:
+                return value; // fallback (no crash)
+        }
+    }
+}
+
+exports.textForType = (value, language) => {
+    let de = language.includes("de");
+    if (de) {
+        switch (value) {
+            case "EASYGOLD_TOKEN":
+                return "Reverse Charge – Dienstleistung für ein Unternehmen außerhalb der EU.";
+
+            case "PRIMEINVEST":
+                return "Reverse Charge – Dienstleistung für ein Unternehmen außerhalb der EU.";
+
+            case "GOLDFLEX":
+                return "Reverse Charge – Dienstleistung für ein Unternehmen außerhalb der EU.";
+
+            case "B2B_DASHBOARD":
+                return "Steuerfreie Vermittlung von Anlagegold gemäß §25c UStG.";
+
+            default:
+                return value; // fallback (no crash)
+        }
+    } else {
+        switch (value) {
+            case "EASYGOLD_TOKEN":
+                return "Reverse charge – service supplied to a non-EU business.";
+
+            case "PRIMEINVEST":
+                return "Reverse charge – service supplied to a non-EU business.";
+
+            case "GOLDFLEX":
+                return "Reverse charge – service supplied to a non-EU business.";
+
+            case "B2B_DASHBOARD":
+                return "Tax-free brokerage of investment gold in accordance with Section 25c of the German Value Added Tax Act (UStG).";
+
+            default:
+                return value; // fallback (no crash)
+        }
     }
 }

@@ -41,6 +41,7 @@ const GetTargetCustomersDetails = require("../controller/broker/getTargetCustome
 const UpdateTargetCustomerByEmail = require("../controller/broker/updateTargetCustomerByEmail");
 const GetCustomerDetails = require("../controller/broker/getCustomerDetails");
 const CreateReferralTargetCustomer = require("../controller/broker/createReferralTargetCustomer");
+const referNudgeBroker = require("../controller/broker/referNudgeBroker");
 
 brokerRouter.post(
   "/register",
@@ -54,6 +55,7 @@ brokerRouter.post(
 );
 
 brokerRouter.post("/referral", authenticateToken, ReferBroker);
+brokerRouter.post("/nudgereferral", authenticateToken, referNudgeBroker);
 brokerRouter.get("/network", authenticateToken, GetBrokerNetwork);
 brokerRouter.get("/referralname", GetReferralDetails);
 brokerRouter.get("/checkvalidvat", CheckVatnumberValid);

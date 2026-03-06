@@ -30,7 +30,8 @@
         }
 
         .logo_block img {
-            width: 70%;
+            width: 150px;
+            height: 150px;
             margin-bottom: 10px;
         }
 
@@ -214,7 +215,7 @@
 
         <!-- TITLE -->
         <div class="pdf_title">
-            <h1>Credit commission - {{payout_request_id}}</h1>
+            <h1>Commission Invoice - {{payout_request_id}}</h1>
         </div>
 
         <!-- COMPANY ADDRESS (TO COMPANY) -->
@@ -247,7 +248,11 @@
                 </tbody>
             </table>
             <div class="sub_total_section">
-                <div class="empty_block"></div>
+                <div class="empty_block">
+                    <p>
+                        {{extra_text}}
+                    </p>
+                </div>
                 <div class="sub_total_block">
                     <p>
                         <b>Subtotal :</b> {{amount}}€ </br>
@@ -265,30 +270,16 @@
         <!-- FOOTER NOTES -->
         <div class="footer_notes">
             <p>
-                Pursuant to Section 312g (2) No. 8 BGB, the right of withdrawal does not apply to distance contracts for
-                the
-                delivery of goods whose price is subject to fluctuations on the financial market over which the
-                entrepreneur
-                has no influence and which may occur within the withdrawal period, such as the delivery of precious
-                metals
-                (coins and bars). The order of precious metal bars and coins can therefore not be revoked
+                The referrer acts solely as an independent introducer. No investment advice, financial advice, or
+                recommendation has been provided. The service is limited to the introduction of a potential client.
             </p>
-            <p>
-                VAT code 00 = tax-free according to §25c Ustg or tax-free according to §13b para. 2 Ustg. VAT code 03,
-                05 or
-                17 = differential taxation according to §25a Ustg (consumer goods/collective goods/special
-                regulation).</br />
-                VAT code 01 = regularly taxed with 19% VAT.
-            </p>
-
             <div class="font_bold">
                 <span>Our tax number is: DE325244140.</br></br>
                     <span>Our identification number is: 9049032148.</span>
             </div></br>
             <div class="font_bold" style="font-size: 11px;">
-                Thank you for your order! If there is anything unclear or you have any other questions, please
-                contact us <br />
-                Feel free to contact us directly by email or telephone.
+                We would like to thank you for the excellent and trusting cooperation and look forward to continuing our
+                successful partnership.
             </div>
         </div>
 

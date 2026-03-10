@@ -914,6 +914,12 @@ const runBrokerRegisterBackground = async ({
 
     const parentInfo = parentInfoParts.join(", ");
 
+    const partnerInfoParts = [username, vatId, taxNumber, formattedAddress, phone]
+      .map(v => v?.toString().trim())                                          // remove spaces
+      .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
+
+    const partnerInfo = partnerInfoParts.join(", ");
+
     const brokerInfoParts = [username, formattedAddress, phone, vatId, taxNumber, website]
       .map(v => v?.toString().trim())                                          // remove spaces
       .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
@@ -933,6 +939,7 @@ const runBrokerRegisterBackground = async ({
       parent_broker_name: parentBroker.user?.display_name,
       parent_broker_company: parentCompanyName,
       parent_broker_email: parentBroker.user?.user_email,
+      partner_info: partnerInfo,
       parent_broker_info: parentInfo,
       partner_info_full: brokerInfo,
       parent_broker_signature: `${process.env.PUBLIC_URL}${parentSignature}`,

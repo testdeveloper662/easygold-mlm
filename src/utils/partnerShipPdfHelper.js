@@ -5,16 +5,18 @@ require("dotenv").config();
 const generatePartnerShipPDF = async (data) => {
     try {
         let pdfData = data;
-        
+
         let inc_partnership_doc = `inc_parternership_doc_${Date.now()}.pdf`;
         let llc_partnership_doc = `llc_parternership_doc_${Date.now()}.pdf`;
         let goldflex_partnership_doc = `goldflex_parternership_doc_${Date.now()}.pdf`;
+        let white_label_partner_doc = `hartmann_benz_gmbh_white-label_service_doc_${Date.now()}.pdf`
 
         await generatePDF(pdfData, "inc_parternership.html", "agreements", inc_partnership_doc);
         await generatePDF(pdfData, "llc_parternership.html", "agreements", llc_partnership_doc);
         await generatePDF(pdfData, "goldflex_parternership.html", "agreements", goldflex_partnership_doc);
+        await generatePDF(pdfData, "hartmann_benz_gmbh_white-label_service_de.html", "agreements", white_label_partner_doc);
 
-        return { inc_partnership_doc, llc_partnership_doc, goldflex_partnership_doc };
+        return { inc_partnership_doc, llc_partnership_doc, goldflex_partnership_doc, white_label_partner_doc };
     } catch (error) {
         console.error(`[EmailTemplateHelper] Error fetching template:`, error.message);
         throw error;

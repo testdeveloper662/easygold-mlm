@@ -1,3 +1,756 @@
+// require("dotenv").config();
+// const db = require("../../models");
+// const bcrypt = require("bcrypt");
+// const jwt = require("jsonwebtoken");
+// const axios = require("axios");
+// const FormData = require("form-data");
+// const fs = require("fs");
+// const path = require("path");
+// const { generateAgreementPDF } = require("../../utils/agreementPdfHelper");
+// const { generateImageUrl } = require("../../utils/Helper");
+// const { generatePartnerShipPDF } = require("../../utils/partnerShipPdfHelper");
+// const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
+// const SendEmailHelper = require("../../utils/sendEmailHelper");
+
+// const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
+// const MAIL_SENDER = process.env.MAIL_SENDER;
+
+// // Generate random referral code
+// const generateReferralCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+
+// const getMetaValue = (metaArray, key) => {
+//   return metaArray?.find(m => m.meta_key === key)?.meta_value || null;
+// };
+
+// const formatLegalDate = (dateInput) => {
+//   const date = new Date(dateInput);
+
+//   const day = date.getDate();
+
+//   const suffix =
+//     day > 3 && day < 21
+//       ? "th"
+//       : ["th", "st", "nd", "rd"][day % 10] || "th";
+
+//   return {
+//     day: `${day}${suffix}`,
+//     month: date.toLocaleString("en-US", { month: "long" }),
+//     year: date.getFullYear(),
+//   };
+// };
+
+
+// const BrokerRegistration = async (req, res) => {
+//   console.log("===========BrokerRegistration body = ", req.body);
+//   console.log("===========BrokerRegistration files = ", req.files);
+
+//   let ip =
+//     req.headers["cf-connecting-ip"] ||
+//     req.headers["x-forwarded-for"]?.split(",")[0] ||
+//     req.socket.remoteAddress;
+
+//   try {
+//     const {
+//       veriffId,
+//       referralCode,
+//       fullName,
+//       company,
+//       contactPerson,
+//       address,
+//       postalCode,
+//       city,
+//       country,
+//       vatId,
+//       taxNumber,
+//       email,
+//       phone,
+//       mobile,
+//       website,
+//       username,
+//       password,
+//       u_street_no,
+//       street,
+//       u_location,
+//       u_describe_business,
+//       u_business_purpose,
+//       u_export_import,
+//       u_country_origin,
+//       u_recipient_country,
+//       accountHolderName,
+//       iban,
+//       bic,
+//       bankName,
+//       bankAddress,
+//       idExpiryDate,
+//       veriff_session_id,
+//       lang,
+//       language: languageParam, // Accept both 'lang' and 'language' from frontend (rename to avoid conflict)
+//       business_activity_check,
+//       business_activity_other,
+//       businessDescription,
+//       purpose_of_business_relationship_check,
+//       businesspurposeother,
+//       thirdPartyTransactions,
+//       beneficialOwners,
+//       beneficialOwnersDetails,
+//       monthlyVolume,
+//       investigationProceedings
+//     } = req.body;
+
+//     if (
+//       !referralCode ||
+//       !fullName ||
+//       !company ||
+//       !contactPerson ||
+//       !postalCode ||
+//       !city ||
+//       !country ||
+//       !email ||
+//       !phone ||
+//       !mobile ||
+//       !username ||
+//       !password ||
+//       !accountHolderName ||
+//       !iban ||
+//       !bic ||
+//       !bankName ||
+//       !bankAddress ||
+//       !idExpiryDate
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message:
+//           "Missing required fields: referralCode, fullName, company, contactPerson, postalCode, city, country, email, phone, mobile, username, password, accountHolderName, iban, bic, bankName, bankAddress, idExpiryDate",
+//       });
+//     }
+//     console.log("111111111111111111111111");
+
+//     // Check if user already exists by email
+//     const existingUserByEmail = await db.Users.findOne({
+//       where: { user_email: email },
+//     });
+
+//     if (existingUserByEmail) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "A user with this email already exists. Please use a different email address.",
+//       });
+//     }
+
+//     // Check if username already exists
+//     const existingUserByUsername = await db.Users.findOne({
+//       where: { user_login: username },
+//     });
+
+//     if (existingUserByUsername) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "This username is already taken. Please choose a different username.",
+//       });
+//     }
+
+//     // Check if mystorekey already exists
+//     const existingUserByMyStore = await db.Users.findOne({
+//       where: { mystorekey: company },
+//     });
+
+//     if (existingUserByMyStore) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "This company name is already taken. Please choose a different company name.",
+//       });
+//     }
+//     console.log("222222222222222222222222222");
+
+//     // ================== VAT VALIDATION ==================
+//     // if (vatId) {
+//     //   const vatCheck = await validateVatNumber(vatId);
+//     //   if (!vatCheck.valid) {
+//     //     return res.status(400).json({ success: false, message: vatCheck.message });
+//     //   }
+//     // }
+
+//     // Determine parent (admin or broker)
+//     const isAdminParent = referralCode === process.env.ADMIN_REFERRAL_CODE;
+//     let parentBroker = null;
+
+//     if (!isAdminParent) {
+//       parentBroker = await db.Brokers.findOne({
+//         where: { referral_code: referralCode },
+//         include: [
+//           {
+//             model: db.Users,
+//             as: "user",
+//             attributes: [
+//               "ID",
+//               "display_name",
+//               "user_email"
+//             ],
+//             include: [
+//               {
+//                 model: db.UsersMeta,
+//                 as: "user_meta",
+//                 attributes: ["meta_key", "meta_value"],
+//                 where: {
+//                   meta_key: ["u_street_no",
+//                     "u_street",
+//                     "u_location",
+//                     "u_postcode",
+//                     "signatureData",
+//                     "language", "u_company", "u_vat_no", "u_tax_no", "u_phone", "u_country", "u_postcode", "u_web_site"]
+//                 },
+//                 required: false
+//               }
+//             ]
+//           }
+//         ]
+//       });
+//       if (!parentBroker) {
+//         return res.status(400).json({
+//           success: false,
+//           message: "Invalid referral code",
+//         });
+//       }
+//     }
+//     console.log("3333333333333333333333333");
+//     // File uploads (if any)
+//     // const u_trade_register = req.files?.u_trade_register?.[0]?.filename || null;
+//     // const u_travel_id = req.files?.u_travel_id?.[0]?.filename || null;
+//     // const signatureData = req.files?.signatureData?.[0]?.filename || null;
+
+//     // if (!u_trade_register || !u_travel_id || !signatureData) {
+//     //   return res.status(400).json({
+//     //     success: false,
+//     //     message: "Trade register, Travel ID and Signature Data required",
+//     //   });
+//     // }
+
+//     // Hash password and replace $2b with $2y
+//     // let hashedPassword = await bcrypt.hash(password, 10);
+//     // hashedPassword = hashedPassword.replace(/^\$2b/, "$2y");
+
+//     const newReferralCode = generateReferralCode();
+//     console.log("444444444444444444444444444");
+//     // ✅ Prepare form-data for external API
+//     const form = new FormData();
+//     form.append("veriff_session_id", veriffId);
+//     form.append("u_display_name", username);
+//     form.append("u_company", company);
+//     form.append("u_contact_person", contactPerson);
+//     form.append("u_street_no", u_street_no);
+//     form.append("u_street", address);
+//     form.append("u_location", city);
+//     form.append("u_postcode", postalCode);
+//     form.append("u_country", country);
+//     form.append("u_vat_no", vatId || "");
+//     form.append("u_tax_no", taxNumber || "");
+//     form.append("u_email", email);
+//     form.append("u_phone", phone);
+//     form.append("u_landline_number", mobile);
+//     form.append("u_username", username);
+//     form.append("u_password", password);
+//     form.append("u_web_site", website);
+//     form.append("u_account_owner", fullName);
+//     form.append("u_account_holder", accountHolderName);
+//     form.append("u_bank", bankName);
+//     form.append("u_iban", iban);
+//     form.append("u_bic", bic);
+//     form.append("u_bank_address", bankAddress || "");
+//     form.append("u_i_or_we", "I");
+//     form.append("u_describe_business", u_describe_business || "");
+//     form.append("u_business_purpose", u_business_purpose || "");
+//     form.append("u_export_import", u_export_import);
+//     form.append("u_country_origin", u_country_origin);
+//     form.append("u_recipient_country", u_recipient_country);
+//     form.append("selectedDate", new Date().toISOString().split("T")[0]);
+
+//     form.append("business_activity_check", business_activity_check);
+//     form.append("business_activity_other", business_activity_other || "");
+//     form.append("businessDescription", businessDescription || "");
+//     form.append("purpose_of_business_relationship_check", purpose_of_business_relationship_check);
+//     form.append("businesspurposeother", businesspurposeother || "");
+//     form.append("thirdPartyTransactions", thirdPartyTransactions);
+//     form.append("beneficialOwners", beneficialOwners);
+//     form.append("beneficialOwnersDetails", beneficialOwnersDetails || "");
+//     form.append("monthlyVolume", monthlyVolume);
+//     form.append("investigationProceedings", investigationProceedings);
+//     form.append("internationalTrade", u_export_import);
+
+//     // Determine language from request body (accept both 'lang' and 'language')
+//     // Map frontend language codes to database format
+//     const langForApi = lang || languageParam; // Use 'lang' if provided, otherwise use 'language'
+//     let languageForApi = "en-US"; // Default to English
+//     if (langForApi) {
+//       const langStr = String(langForApi).toLowerCase().trim();
+//       if (langStr === "de-DE" || langStr === "de" || langStr === "german" || langStr === "deutsch") {
+//         languageForApi = "de-DE"; // German format
+//       } else if (langStr === "en" || langStr === "english") {
+//         languageForApi = "en-US"; // English format
+//       }
+//     }
+//     console.log("[BrokerRegistration] Language for external API - lang:", lang, "language:", languageParam, "using:", langForApi, "-> Mapped to:", languageForApi);
+//     form.append("language", languageForApi);
+//     form.append("u_date", idExpiryDate || new Date().toISOString().split("T")[0]);
+
+//     // if (req.files?.u_trade_register) {
+//     //   form.append(
+//     //     "u_trade_register",
+//     //     fs.createReadStream(req.files.u_trade_register.tempFilePath),
+//     //     req.files.u_trade_register.name
+//     //   );
+//     // }
+
+//     // if (req.files?.u_travel_id) {
+//     //   form.append(
+//     //     "u_travel_id",
+//     //     fs.createReadStream(req.files.u_travel_id.tempFilePath),
+//     //     req.files.u_travel_id.name
+//     //   );
+//     // }
+
+//     // if (req.files?.signatureData) {
+//     //   const sigBuffer = fs.readFileSync(req.files.signatureData.tempFilePath);
+//     //   const sigBase64 = sigBuffer.toString("base64");
+
+//     //   form.append("signatureData", sigBase64);
+//     // }
+//     if (req.files?.u_travel_id?.[0]) {
+//       const file = req.files.u_travel_id[0];
+//       form.append("u_travel_id", file.buffer, { filename: file.originalname });
+//     }
+
+//     if (req.files?.bill_upload?.[0]) {
+//       const file = req.files.bill_upload[0];
+//       form.append("bill_upload", file.buffer, { filename: file.originalname });
+//     }
+
+//     if (req.files?.u_trade_register?.[0]) {
+//       const file = req.files.u_trade_register[0];
+//       form.append("u_trade_register", file.buffer, { filename: file.originalname });
+//     }
+
+//     if (req.files?.signatureData?.[0]) {
+//       const file = req.files.signatureData[0];
+//       const sigBase64 = file.buffer.toString("base64");
+//       form.append("signatureData", sigBase64);
+//     }
+//     console.log("==================START CALLING API==============");
+
+
+//     // ✅ Send to external API
+//     const apiResponse = await axios.post(`${process.env.EASY_GOLD_URL}/api/Register`, form, {
+//       headers: form.getHeaders(),
+//     });
+
+//     console.log("External API response:", apiResponse.data);
+//     console.log("External API response 2:", apiResponse.data?.data);
+
+//     // Check if external API returned an error
+//     if (!apiResponse.data?.success) {
+//       return res.status(400).json({
+//         success: false,
+//         message: apiResponse.data?.message || "Registration failed at external API",
+//       });
+//     }
+
+//     const userSign = await db.UsersMeta.findOne({
+//       where: {
+//         user_id: apiResponse.data?.data?.user_id,
+//         meta_key: "signatureData"
+//       },
+//       attributes: ["meta_value"],
+//       raw: true
+//     });
+
+//     const addressParts = [u_street_no, address, city, postalCode]
+//       .map(v => v?.toString().trim())                                          // remove spaces
+//       .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
+
+//     const formattedAddress = addressParts.join(", ");
+
+//     let brockerPdfData = {
+//       name: fullName,
+//       username: username,
+//       address: formattedAddress,
+//       u_street_no: u_street_no,
+//       u_street: address,
+//       u_location: city,
+//       u_postcode: postalCode,
+//       date: new Date().toISOString().split("T")[0],
+//       signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
+//       language: languageForApi,
+//       stamp_logo: await generateImageUrl("agreements/stamp.png", 'agreements'),
+//       mlm_structure_image: await generateImageUrl("agreements/mlm_structure.png", 'agreements'),
+//       ipaddress: ip
+//     };
+
+//     // if (languageForApi == "en-US") {
+//     let docsData = await generateAgreementPDF(brockerPdfData, parentBroker);
+
+//     const parentCompanyName = getMetaValue(
+//       parentBroker.user?.user_meta,
+//       "u_company"
+//     );
+
+//     const parentSignature = getMetaValue(
+//       parentBroker.user?.user_meta,
+//       "signatureData"
+//     );
+
+//     const parentstreetno = getMetaValue(
+//       parentBroker.user?.user_meta,
+//       "u_street_no"
+//     );
+
+//     const parentaddress = getMetaValue(
+//       parentBroker.user?.user_meta,
+//       "u_street"
+//     );
+
+//     const parentcity = getMetaValue(
+//       parentBroker.user?.user_meta,
+//       "u_location"
+//     );
+
+//     const parentpostalcode = getMetaValue(
+//       parentBroker.user?.user_meta,
+//       "u_postcode"
+//     );
+
+//     const parentCountry = getMetaValue(
+//       parentBroker.user?.user_meta,
+//       "u_country"
+//     )
+
+//     const parentaddressParts = [parentstreetno, parentaddress, parentcity, parentpostalcode, parentCountry]
+//       .map(v => v?.toString().trim())                                          // remove spaces
+//       .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
+
+//     const parentformattedAddress = parentaddressParts.join(", ");
+
+//     const parentVatId = getMetaValue(
+//       parentBroker.user?.user_meta,
+//       "u_vat_no"
+//     )
+
+//     const parentTaxId = getMetaValue(
+//       parentBroker.user?.user_meta,
+//       "u_tax_no"
+//     )
+
+//     const parentPhone = getMetaValue(
+//       parentBroker.user?.user_meta,
+//       "u_phone"
+//     )
+
+//     const parentInfoParts = [parentBroker.user?.display_name, parentVatId, parentTaxId, parentformattedAddress, parentPhone]
+//       .map(v => v?.toString().trim())                                          // remove spaces
+//       .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
+
+//     const parentInfo = parentInfoParts.join(", ");
+
+//     const brokerInfoParts = [username, formattedAddress, phone, vatId, taxNumber, website]
+//       .map(v => v?.toString().trim())                                          // remove spaces
+//       .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
+
+//     const brokerInfo = brokerInfoParts.join(", ");
+
+//     const { day, month, year } = formatLegalDate(new Date());
+
+//     let partnerPdfData = {
+//       day: day,
+//       month: month,
+//       year: year,
+//       name: fullName,
+//       address: formattedAddress,
+//       date: new Date().toISOString().split("T")[0],
+//       entity: company,
+//       parent_broker_name: parentBroker.user?.display_name,
+//       parent_broker_company: parentCompanyName,
+//       parent_broker_email: parentBroker.user?.user_email,
+//       parent_broker_info: parentInfo,
+//       partner_info_full: brokerInfo,
+//       parent_broker_signature: `${process.env.PUBLIC_URL}${parentSignature}`,
+//       partner_signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
+//       parent_broker_address: parentformattedAddress,
+//       signature_stamp: await generateImageUrl("agreements/sign_with_stamp.png", 'agreements'),
+//       signature: await generateImageUrl("agreements/sign.png", 'agreements'),
+//       secretary_signature: await generateImageUrl("agreements/sign_secretary.png", 'agreements'),
+//       ipaddress: ip,
+//       partner_id: apiResponse.data?.data?.user_id
+//     };
+
+//     console.log(partnerPdfData, "partnerPdfData");
+
+//     let partnerDocsData = await generatePartnerShipPDF(partnerPdfData);
+
+//     // } else if (languageForApi == "de-DE") {
+//     // }
+
+//     const user_id = apiResponse.data?.data?.user_id;
+//     console.log("user_id:", user_id);
+//     // Create new user (6LWUP_users)
+//     // const createdAt = new Date();
+//     // const newUser = await db.Users.create({
+//     //   user_login: username,
+//     //   user_nicename: username,
+//     //   user_email: email,
+//     //   user_pass: hashedPassword,
+//     //   user_registered: createdAt,
+//     //   display_name: fullName,
+//     //   user_type: 0,
+//     //   mystorekey: email,
+//     // });
+
+//     // Prepare usermeta key-value pairs
+//     // const userMetaData = {
+//     //   u_trade_register,
+//     //   u_travel_id,
+//     //   signatureData,
+//     //   u_company: company,
+//     //   u_contact_person: contactPerson,
+//     //   u_street_no: u_street_no || "21",
+//     //   u_street: u_street || "street",
+//     //   u_location: u_location || city,
+//     //   u_postcode: postalCode,
+//     //   u_country: country,
+//     //   u_vat_no: vatId || "",
+//     //   u_tax_no: taxNumber || "",
+//     //   u_phone: phone,
+//     //   u_landline_number: mobile,
+//     //   u_web_site: website || "",
+//     //   u_i_or_we: "I",
+//     //   u_other_i_or_we: "I",
+//     //   u_date: new Date(),
+//     //   language: "English",
+//     //   date: new Date(),
+//     //   vat_exempt: "0",
+//     //   IdCardIsExpiredUrl: "test",
+//     //   u_describe_business: u_describe_business || "",
+//     //   u_other_describe_business: "test",
+//     //   u_business_purpose: u_business_purpose || "",
+//     //   u_other_business_purpose: "t",
+//     //   u_export_import: u_export_import || "",
+//     //   u_country_origin: u_country_origin || "",
+//     //   u_recipient_country: u_recipient_country || "",
+//     //   u_account_owner: fullName,
+//     //   u_bank: bankName,
+//     //   u_iban: iban,
+//     //   u_bic: bic,
+//     //   u_bank_address: bankAddress,
+//     // };
+
+//     // const metaEntries = Object.entries(userMetaData).map(([key, value]) => ({
+//     //   user_id: user_id,
+//     //   meta_key: key,
+//     //   meta_value: value,
+//     // }));
+
+//     // await db.UsersMeta.bulkCreate(metaEntries);
+//     // const newUser = {
+//     //   ID: "2345"
+//     // }
+//     if (!user_id) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "External API did not return a valid user_id",
+//       });
+//     }
+
+//     // Verify user exists in database before creating broker
+//     const userExists = await db.Users.findOne({
+//       where: { ID: user_id },
+//     });
+
+//     if (!userExists) {
+//       return res.status(500).json({
+//         success: false,
+//         message: "User was created in external system but not found in database. Please try again in a few moments.",
+//       });
+//     }
+
+//     console.log(partnerDocsData, "partnerDocsData");
+
+//     // Map frontend language codes to database format (we'll save this at the end)
+//     // Accept both 'lang' and 'language' from request body (frontend sends 'language')
+//     const langParam = lang || languageParam; // Use 'lang' if provided, otherwise use 'language'
+//     let languageValue = "en-US"; // Default to English
+
+//     if (langParam) {
+//       const langStr = String(langParam).toLowerCase().trim();
+//       if (langStr === "de-DE" || langStr === "de" || langStr === "german" || langStr === "deutsch") {
+//         languageValue = "de-DE"; // German format
+//       } else if (langStr === "en" || langStr === "english") {
+//         languageValue = "en-US"; // English format
+//       }
+//     }
+//     console.log(`[BrokerRegistration] Language mapping - lang: "${lang}", language: "${languageParam}", using: "${langParam}", mapped to: "${languageValue}"`);
+
+//     // Create broker entry
+//     const broker = await db.Brokers.create({
+//       user_id: user_id,
+//       parent_id: isAdminParent ? null : parentBroker?.id || null,
+//       referral_code: newReferralCode,
+//       referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+//       children_count: 0,
+//       total_commission_amount: 0,
+//       veriff_session_id: veriff_session_id || null,
+//       untermaklervertrag_doc: `uploads/agreements/${docsData.untermaklervertrag_doc}`,
+//       maklervertrag_doc: `uploads/agreements/${docsData.maklervertrag_doc}`,
+//       inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
+//       llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
+//       goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
+//       hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData.white_label_partner_doc}`
+//     });
+
+//     const invitation = await db.BrokerInvitations.findOne({
+//       where: {
+//         email
+//       },
+//     });
+
+//     if (invitation) {
+//       try {
+//         await db.BrokerInvitations.update({
+//           invitation_status: "REGISTERED",
+//         });
+//       } catch (error) {
+//         console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
+//         console.log("error = ", error);
+//         console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
+//       }
+//     } else {
+//       await db.BrokerInvitations.create({
+//         email,
+//         invitation_status: "REGISTERED",
+//         invited_by: parentBroker?.id,
+//         last_invitation_sent: new Date(),
+//       });
+//       console.log("===================NEW EMAIL WITH INVITATION=====================");
+//     }
+
+
+//     // Update parent's children count
+//     if (!isAdminParent && parentBroker) {
+//       await parentBroker.update({
+//         children_count: parentBroker.children_count + 1,
+//       });
+//     }
+
+//     // 🔹 Create entry in MyStoreSettings
+//     // await db.MyStoreSetting.create({
+//     //   user_id: user_id,
+//     //   category: "all",
+//     //   paymentOption: "Cash_question, Card_question, Bank_Transfer_question",
+//     // });
+
+//     // ✅ Save language to UsersMeta table
+//     console.log(`[BrokerRegistration] Saving language to UsersMeta - user_id: ${user_id}, language: "${languageValue}"`);
+
+//     try {
+//       // Check if language meta already exists
+//       const existingLanguageMeta = await db.UsersMeta.findOne({
+//         where: {
+//           user_id: user_id,
+//           meta_key: "language",
+//         },
+//       });
+
+//       if (existingLanguageMeta) {
+//         // Update existing entry
+//         await existingLanguageMeta.update({
+//           meta_value: languageValue,
+//         });
+//         console.log(`[BrokerRegistration] ✅ Updated language meta: "${languageValue}"`);
+//       } else {
+//         // Create new entry
+//         await db.UsersMeta.create({
+//           user_id: user_id,
+//           meta_key: "language",
+//           meta_value: languageValue,
+//         });
+//         console.log(`[BrokerRegistration] ✅ Created language meta: "${languageValue}"`);
+//       }
+
+//       // Verify it was saved
+//       const verifyMeta = await db.UsersMeta.findOne({
+//         where: {
+//           user_id: user_id,
+//           meta_key: "language",
+//         },
+//       });
+
+//       if (verifyMeta) {
+//         console.log(`[BrokerRegistration] ✅ Verified language saved: "${verifyMeta.meta_value}"`);
+//       } else {
+//         console.error(`[BrokerRegistration] ❌ ERROR: Language meta not found after save`);
+//       }
+//     } catch (langError) {
+//       console.error(`[BrokerRegistration] ❌ Error saving language:`, langError);
+//       // Don't fail the registration if language save fails
+//     }
+
+//     // Create user object for frontend
+//     const userResponse = {
+//       ID: user_id,
+//       fullName,
+//       email,
+//       username,
+//       referral_code: newReferralCode,
+//       role: "BROKER",
+//     };
+
+//     // Generate JWT token
+//     const token = jwt.sign({ user: userResponse }, JWT_ACCESS_TOKEN, {
+//       expiresIn: process.env.JWT_EXPIRE || "90d",
+//     });
+
+//     const templateVariables = {
+//       name: fullName,
+//       email: email,
+//       mobile_number: mobile,
+//     };
+
+//     let emailData;
+//     try {
+//       // Template ID 92 used (adjust as required)
+//       emailData = await getRenderedEmail(96, parentBroker.language, templateVariables);
+//     } catch (templateError) {
+//       console.error(templateError);
+//       throw new Error(
+//         "Email template (ID: 92) not found. Please ensure it exists in 6lwup_email_view table."
+//       );
+//     }
+
+//     let finalFrom = MAIL_SENDER; // fallback to verified sender domain
+
+//     mailOptions = {
+//       from: finalFrom,
+//       to: parentBroker.user?.user_email,
+//       subject: emailData.subject,
+//       html: emailData.htmlContent,
+//     };
+
+//     await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, null, null, from = null);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Broker registered successfully",
+//       data: {
+//         user: userResponse,
+//         token,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error in BrokerRegistration:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// };
+
+// module.exports = BrokerRegistration;
 require("dotenv").config();
 const db = require("../../models");
 const bcrypt = require("bcrypt");
@@ -38,6 +791,348 @@ const formatLegalDate = (dateInput) => {
     year: date.getFullYear(),
   };
 };
+
+const runBrokerRegisterBackground = async ({
+  fullName,
+  username,
+  u_street_no,
+  address,
+  city,
+  postalCode,
+  languageForApi,
+  ip,
+  parentBroker,
+  apiResponse,
+  isAdminParent,
+  veriff_session_id,
+  phone,
+  vatId,
+  taxNumber,
+  website,
+  lang,
+  languageParam,
+  email,
+  mobile,
+  company,
+  newReferralCode
+}) => {
+
+  try {
+    const userSign = await db.UsersMeta.findOne({
+      where: {
+        user_id: apiResponse.data?.data?.user_id,
+        meta_key: "signatureData"
+      },
+      attributes: ["meta_value"],
+      raw: true
+    });
+
+    const addressParts = [u_street_no, address, city, postalCode]
+      .map(v => v?.toString().trim())                                          // remove spaces
+      .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
+
+    const formattedAddress = addressParts.join(", ");
+
+    let brockerPdfData = {
+      name: fullName,
+      username: username,
+      address: formattedAddress,
+      u_street_no: u_street_no,
+      u_street: address,
+      u_location: city,
+      u_postcode: postalCode,
+      date: new Date().toISOString().split("T")[0],
+      signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
+      language: languageForApi,
+      stamp_logo: await generateImageUrl("agreements/stamp.png", 'agreements'),
+      mlm_structure_image: await generateImageUrl("agreements/mlm_structure.png", 'agreements'),
+      ipaddress: ip
+    };
+
+    // if (languageForApi == "en-US") {
+    let docsData = await generateAgreementPDF(brockerPdfData, parentBroker);
+
+    const parentCompanyName = getMetaValue(
+      parentBroker.user?.user_meta,
+      "u_company"
+    );
+
+    const parentSignature = getMetaValue(
+      parentBroker.user?.user_meta,
+      "signatureData"
+    );
+
+    const parentstreetno = getMetaValue(
+      parentBroker.user?.user_meta,
+      "u_street_no"
+    );
+
+    const parentaddress = getMetaValue(
+      parentBroker.user?.user_meta,
+      "u_street"
+    );
+
+    const parentcity = getMetaValue(
+      parentBroker.user?.user_meta,
+      "u_location"
+    );
+
+    const parentpostalcode = getMetaValue(
+      parentBroker.user?.user_meta,
+      "u_postcode"
+    );
+
+    const parentCountry = getMetaValue(
+      parentBroker.user?.user_meta,
+      "u_country"
+    )
+
+    const parentaddressParts = [parentstreetno, parentaddress, parentcity, parentpostalcode, parentCountry]
+      .map(v => v?.toString().trim())                                          // remove spaces
+      .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
+
+    const parentformattedAddress = parentaddressParts.join(", ");
+
+    const parentVatId = getMetaValue(
+      parentBroker.user?.user_meta,
+      "u_vat_no"
+    )
+
+    const parentTaxId = getMetaValue(
+      parentBroker.user?.user_meta,
+      "u_tax_no"
+    )
+
+    const parentPhone = getMetaValue(
+      parentBroker.user?.user_meta,
+      "u_phone"
+    )
+
+    const parentInfoParts = [parentBroker.user?.display_name, parentVatId, parentTaxId, parentformattedAddress, parentPhone]
+      .map(v => v?.toString().trim())                                          // remove spaces
+      .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
+
+    const parentInfo = parentInfoParts.join(", ");
+
+    const brokerInfoParts = [username, formattedAddress, phone, vatId, taxNumber, website]
+      .map(v => v?.toString().trim())                                          // remove spaces
+      .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
+
+    const brokerInfo = brokerInfoParts.join(", ");
+
+    const { day, month, year } = formatLegalDate(new Date());
+
+    let partnerPdfData = {
+      day: day,
+      month: month,
+      year: year,
+      name: fullName,
+      address: formattedAddress,
+      date: new Date().toISOString().split("T")[0],
+      entity: company,
+      parent_broker_name: parentBroker.user?.display_name,
+      parent_broker_company: parentCompanyName,
+      parent_broker_email: parentBroker.user?.user_email,
+      parent_broker_info: parentInfo,
+      partner_info_full: brokerInfo,
+      parent_broker_signature: `${process.env.PUBLIC_URL}${parentSignature}`,
+      partner_signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
+      parent_broker_address: parentformattedAddress,
+      signature_stamp: await generateImageUrl("agreements/sign_with_stamp.png", 'agreements'),
+      signature: await generateImageUrl("agreements/sign.png", 'agreements'),
+      secretary_signature: await generateImageUrl("agreements/sign_secretary.png", 'agreements'),
+      ipaddress: ip,
+      partner_id: apiResponse.data?.data?.user_id
+    };
+
+    console.log(partnerPdfData, "partnerPdfData");
+
+    let partnerDocsData = await generatePartnerShipPDF(partnerPdfData);
+
+    const user_id = apiResponse.data?.data?.user_id;
+    console.log("user_id:", user_id);
+
+    if (!user_id) {
+      return res.status(400).json({
+        success: false,
+        message: "External API did not return a valid user_id",
+      });
+    }
+
+    // Verify user exists in database before creating broker
+    const userExists = await db.Users.findOne({
+      where: { ID: user_id },
+    });
+
+    if (!userExists) {
+      return res.status(500).json({
+        success: false,
+        message: "User was created in external system but not found in database. Please try again in a few moments.",
+      });
+    }
+
+    console.log(partnerDocsData, "partnerDocsData");
+
+    // Map frontend language codes to database format (we'll save this at the end)
+    // Accept both 'lang' and 'language' from request body (frontend sends 'language')
+    const langParam = lang || languageParam; // Use 'lang' if provided, otherwise use 'language'
+    let languageValue = "en-US"; // Default to English
+
+    if (langParam) {
+      const langStr = String(langParam).toLowerCase().trim();
+      if (langStr === "de-DE" || langStr === "de" || langStr === "german" || langStr === "deutsch") {
+        languageValue = "de-DE"; // German format
+      } else if (langStr === "en" || langStr === "english") {
+        languageValue = "en-US"; // English format
+      }
+    }
+    console.log(`[BrokerRegistration] Language mapping - lang: "${lang}", language: "${languageParam}", using: "${langParam}", mapped to: "${languageValue}"`);
+
+    // Create broker entry
+    const broker = await db.Brokers.create({
+      user_id: user_id,
+      parent_id: isAdminParent ? null : parentBroker?.id || null,
+      referral_code: newReferralCode,
+      referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+      children_count: 0,
+      total_commission_amount: 0,
+      veriff_session_id: veriff_session_id || null,
+      untermaklervertrag_doc: `uploads/agreements/${docsData.untermaklervertrag_doc}`,
+      maklervertrag_doc: `uploads/agreements/${docsData.maklervertrag_doc}`,
+      inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
+      llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
+      goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
+      hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData.white_label_partner_doc}`
+    });
+
+    const invitation = await db.BrokerInvitations.findOne({
+      where: {
+        email
+      },
+    });
+
+    if (invitation) {
+      try {
+        await db.BrokerInvitations.update({
+          invitation_status: "REGISTERED",
+        });
+      } catch (error) {
+        console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
+        console.log("error = ", error);
+        console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
+      }
+    } else {
+      await db.BrokerInvitations.create({
+        email,
+        invitation_status: "REGISTERED",
+        invited_by: parentBroker?.id,
+        last_invitation_sent: new Date(),
+      });
+      console.log("===================NEW EMAIL WITH INVITATION=====================");
+    }
+
+
+    // Update parent's children count
+    if (!isAdminParent && parentBroker) {
+      await parentBroker.update({
+        children_count: parentBroker.children_count + 1,
+      });
+    }
+
+    // ✅ Save language to UsersMeta table
+    console.log(`[BrokerRegistration] Saving language to UsersMeta - user_id: ${user_id}, language: "${languageValue}"`);
+
+    try {
+      // Check if language meta already exists
+      const existingLanguageMeta = await db.UsersMeta.findOne({
+        where: {
+          user_id: user_id,
+          meta_key: "language",
+        },
+      });
+
+      if (existingLanguageMeta) {
+        // Update existing entry
+        await existingLanguageMeta.update({
+          meta_value: languageValue,
+        });
+        console.log(`[BrokerRegistration] ✅ Updated language meta: "${languageValue}"`);
+      } else {
+        // Create new entry
+        await db.UsersMeta.create({
+          user_id: user_id,
+          meta_key: "language",
+          meta_value: languageValue,
+        });
+        console.log(`[BrokerRegistration] ✅ Created language meta: "${languageValue}"`);
+      }
+
+      // Verify it was saved
+      const verifyMeta = await db.UsersMeta.findOne({
+        where: {
+          user_id: user_id,
+          meta_key: "language",
+        },
+      });
+
+      if (verifyMeta) {
+        console.log(`[BrokerRegistration] ✅ Verified language saved: "${verifyMeta.meta_value}"`);
+      } else {
+        console.error(`[BrokerRegistration] ❌ ERROR: Language meta not found after save`);
+      }
+    } catch (langError) {
+      console.error(`[BrokerRegistration] ❌ Error saving language:`, langError);
+      // Don't fail the registration if language save fails
+    }
+
+    // Create user object for frontend
+    const userResponse = {
+      ID: user_id,
+      fullName,
+      email,
+      username,
+      referral_code: newReferralCode,
+      role: "BROKER",
+    };
+
+    // Generate JWT token
+    const token = jwt.sign({ user: userResponse }, JWT_ACCESS_TOKEN, {
+      expiresIn: process.env.JWT_EXPIRE || "90d",
+    });
+
+    const templateVariables = {
+      name: fullName,
+      email: email,
+      mobile_number: mobile,
+    };
+
+    let emailData;
+    try {
+      // Template ID 92 used (adjust as required)
+      emailData = await getRenderedEmail(96, parentBroker.language, templateVariables);
+    } catch (templateError) {
+      console.error(templateError);
+      throw new Error(
+        "Email template (ID: 92) not found. Please ensure it exists in 6lwup_email_view table."
+      );
+    }
+
+    let finalFrom = MAIL_SENDER; // fallback to verified sender domain
+
+    mailOptions = {
+      from: finalFrom,
+      to: parentBroker.user?.user_email,
+      subject: emailData.subject,
+      html: emailData.htmlContent,
+    };
+
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, null, null, from = null);
+
+    console.log(`Broker Registeration Process Completed Successfully for -> ${fullName} ${email}`);
+  } catch (error) {
+    console.error("Error in BrokerRegistration:", error);
+  }
+}
 
 
 const BrokerRegistration = async (req, res) => {
@@ -137,7 +1232,7 @@ const BrokerRegistration = async (req, res) => {
       });
     }
 
-    // Check if username already exists
+    // // Check if username already exists
     const existingUserByUsername = await db.Users.findOne({
       where: { user_login: username },
     });
@@ -149,7 +1244,7 @@ const BrokerRegistration = async (req, res) => {
       });
     }
 
-    // Check if mystorekey already exists
+    // // Check if mystorekey already exists
     const existingUserByMyStore = await db.Users.findOne({
       where: { mystorekey: company },
     });
@@ -161,14 +1256,6 @@ const BrokerRegistration = async (req, res) => {
       });
     }
     console.log("222222222222222222222222222");
-
-    // ================== VAT VALIDATION ==================
-    // if (vatId) {
-    //   const vatCheck = await validateVatNumber(vatId);
-    //   if (!vatCheck.valid) {
-    //     return res.status(400).json({ success: false, message: vatCheck.message });
-    //   }
-    // }
 
     // Determine parent (admin or broker)
     const isAdminParent = referralCode === process.env.ADMIN_REFERRAL_CODE;
@@ -197,7 +1284,7 @@ const BrokerRegistration = async (req, res) => {
                     "u_location",
                     "u_postcode",
                     "signatureData",
-                    "language", "u_company"]
+                    "language", "u_company", "u_vat_no", "u_tax_no", "u_phone", "u_country", "u_postcode", "u_web_site"]
                 },
                 required: false
               }
@@ -213,21 +1300,6 @@ const BrokerRegistration = async (req, res) => {
       }
     }
     console.log("3333333333333333333333333");
-    // File uploads (if any)
-    // const u_trade_register = req.files?.u_trade_register?.[0]?.filename || null;
-    // const u_travel_id = req.files?.u_travel_id?.[0]?.filename || null;
-    // const signatureData = req.files?.signatureData?.[0]?.filename || null;
-
-    // if (!u_trade_register || !u_travel_id || !signatureData) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Trade register, Travel ID and Signature Data required",
-    //   });
-    // }
-
-    // Hash password and replace $2b with $2y
-    // let hashedPassword = await bcrypt.hash(password, 10);
-    // hashedPassword = hashedPassword.replace(/^\$2b/, "$2y");
 
     const newReferralCode = generateReferralCode();
     console.log("444444444444444444444444444");
@@ -292,28 +1364,6 @@ const BrokerRegistration = async (req, res) => {
     form.append("language", languageForApi);
     form.append("u_date", idExpiryDate || new Date().toISOString().split("T")[0]);
 
-    // if (req.files?.u_trade_register) {
-    //   form.append(
-    //     "u_trade_register",
-    //     fs.createReadStream(req.files.u_trade_register.tempFilePath),
-    //     req.files.u_trade_register.name
-    //   );
-    // }
-
-    // if (req.files?.u_travel_id) {
-    //   form.append(
-    //     "u_travel_id",
-    //     fs.createReadStream(req.files.u_travel_id.tempFilePath),
-    //     req.files.u_travel_id.name
-    //   );
-    // }
-
-    // if (req.files?.signatureData) {
-    //   const sigBuffer = fs.readFileSync(req.files.signatureData.tempFilePath);
-    //   const sigBase64 = sigBuffer.toString("base64");
-
-    //   form.append("signatureData", sigBase64);
-    // }
     if (req.files?.u_travel_id?.[0]) {
       const file = req.files.u_travel_id[0];
       form.append("u_travel_id", file.buffer, { filename: file.originalname });
@@ -342,10 +1392,10 @@ const BrokerRegistration = async (req, res) => {
       headers: form.getHeaders(),
     });
 
-    console.log("External API response:", apiResponse.data);
-    console.log("External API response 2:", apiResponse.data?.data);
+    // console.log("External API response:", apiResponse.data);
+    // console.log("External API response 2:", apiResponse.data?.data);
 
-    // Check if external API returned an error
+    // // Check if external API returned an error
     if (!apiResponse.data?.success) {
       return res.status(400).json({
         success: false,
@@ -353,321 +1403,40 @@ const BrokerRegistration = async (req, res) => {
       });
     }
 
-    const userSign = await db.UsersMeta.findOne({
-      where: {
-        user_id: apiResponse.data?.data?.user_id,
-        meta_key: "signatureData"
-      },
-      attributes: ["meta_value"],
-      raw: true
-    });
-
-    const addressParts = [u_street_no, address, city, postalCode]
-      .map(v => v?.toString().trim())                                          // remove spaces
-      .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
-
-    const formattedAddress = addressParts.join(", ");
-
-    let brockerPdfData = {
-      name: fullName,
-      username: username,
-      address: formattedAddress,
-      u_street_no: u_street_no,
-      u_street: address,
-      u_location: city,
-      u_postcode: postalCode,
-      date: new Date().toISOString().split("T")[0],
-      signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
-      language: languageForApi,
-      stamp_logo: await generateImageUrl("agreements/stamp.png", 'agreements'),
-      mlm_structure_image: await generateImageUrl("agreements/mlm_structure.png", 'agreements'),
-      ipaddress: ip
-    };
-
-    // if (languageForApi == "en-US") {
-    let docsData = await generateAgreementPDF(brockerPdfData, parentBroker);
-
-    const parentCompanyName = getMetaValue(
-      parentBroker.user?.user_meta,
-      "u_company"
-    );
-
-    const { day, month, year } = formatLegalDate(new Date());
-
-    let partnerPdfData = {
-      day: day,
-      month: month,
-      year: year,
-      name: fullName,
-      address: formattedAddress,
-      date: new Date().toISOString().split("T")[0],
-      entity: company,
-      parent_broker_name: parentBroker.user?.display_name,
-      parent_broker_company: parentCompanyName,
-      partner_signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
-      signature: await generateImageUrl("agreements/sign.png", 'agreements'),
-      secretary_signature: await generateImageUrl("agreements/sign_secretary.png", 'agreements'),
-      ipaddress: ip
-    };
-
-    let partnerDocsData = await generatePartnerShipPDF(partnerPdfData);
-
-    console.log(partnerDocsData, "partnerDocsData");
-    // } else if (languageForApi == "de-DE") {
-    // }
-
-    const user_id = apiResponse.data?.data?.user_id;
-    console.log("user_id:", user_id);
-    // Create new user (6LWUP_users)
-    // const createdAt = new Date();
-    // const newUser = await db.Users.create({
-    //   user_login: username,
-    //   user_nicename: username,
-    //   user_email: email,
-    //   user_pass: hashedPassword,
-    //   user_registered: createdAt,
-    //   display_name: fullName,
-    //   user_type: 0,
-    //   mystorekey: email,
-    // });
-
-    // Prepare usermeta key-value pairs
-    // const userMetaData = {
-    //   u_trade_register,
-    //   u_travel_id,
-    //   signatureData,
-    //   u_company: company,
-    //   u_contact_person: contactPerson,
-    //   u_street_no: u_street_no || "21",
-    //   u_street: u_street || "street",
-    //   u_location: u_location || city,
-    //   u_postcode: postalCode,
-    //   u_country: country,
-    //   u_vat_no: vatId || "",
-    //   u_tax_no: taxNumber || "",
-    //   u_phone: phone,
-    //   u_landline_number: mobile,
-    //   u_web_site: website || "",
-    //   u_i_or_we: "I",
-    //   u_other_i_or_we: "I",
-    //   u_date: new Date(),
-    //   language: "English",
-    //   date: new Date(),
-    //   vat_exempt: "0",
-    //   IdCardIsExpiredUrl: "test",
-    //   u_describe_business: u_describe_business || "",
-    //   u_other_describe_business: "test",
-    //   u_business_purpose: u_business_purpose || "",
-    //   u_other_business_purpose: "t",
-    //   u_export_import: u_export_import || "",
-    //   u_country_origin: u_country_origin || "",
-    //   u_recipient_country: u_recipient_country || "",
-    //   u_account_owner: fullName,
-    //   u_bank: bankName,
-    //   u_iban: iban,
-    //   u_bic: bic,
-    //   u_bank_address: bankAddress,
-    // };
-
-    // const metaEntries = Object.entries(userMetaData).map(([key, value]) => ({
-    //   user_id: user_id,
-    //   meta_key: key,
-    //   meta_value: value,
-    // }));
-
-    // await db.UsersMeta.bulkCreate(metaEntries);
-    // const newUser = {
-    //   ID: "2345"
-    // }
-    if (!user_id) {
-      return res.status(400).json({
-        success: false,
-        message: "External API did not return a valid user_id",
-      });
-    }
-
-    // Verify user exists in database before creating broker
-    const userExists = await db.Users.findOne({
-      where: { ID: user_id },
-    });
-
-    if (!userExists) {
-      return res.status(500).json({
-        success: false,
-        message: "User was created in external system but not found in database. Please try again in a few moments.",
-      });
-    }
-
-    // Map frontend language codes to database format (we'll save this at the end)
-    // Accept both 'lang' and 'language' from request body (frontend sends 'language')
-    const langParam = lang || languageParam; // Use 'lang' if provided, otherwise use 'language'
-    let languageValue = "en-US"; // Default to English
-
-    if (langParam) {
-      const langStr = String(langParam).toLowerCase().trim();
-      if (langStr === "de-DE" || langStr === "de" || langStr === "german" || langStr === "deutsch") {
-        languageValue = "de-DE"; // German format
-      } else if (langStr === "en" || langStr === "english") {
-        languageValue = "en-US"; // English format
-      }
-    }
-    console.log(`[BrokerRegistration] Language mapping - lang: "${lang}", language: "${languageParam}", using: "${langParam}", mapped to: "${languageValue}"`);
-
-    // Create broker entry
-    const broker = await db.Brokers.create({
-      user_id: user_id,
-      parent_id: isAdminParent ? null : parentBroker?.id || null,
-      referral_code: newReferralCode,
-      referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
-      children_count: 0,
-      total_commission_amount: 0,
-      veriff_session_id: veriff_session_id || null,
-      untermaklervertrag_doc: `uploads/agreements/${docsData.untermaklervertrag_doc}`,
-      maklervertrag_doc: `uploads/agreements/${docsData.maklervertrag_doc}`,
-      inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
-      llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
-      goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`
-    });
-
-    const invitation = await db.BrokerInvitations.findOne({
-      where: {
-        email
-      },
-    });
-
-    if (invitation) {
-      try {
-        await db.BrokerInvitations.update({
-          invitation_status: "REGISTERED",
-        });
-      } catch (error) {
-        console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
-        console.log("error = ", error);
-        console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
-      }
-    } else {
-      await db.BrokerInvitations.create({
+    setImmediate(async () => {
+      await runBrokerRegisterBackground({
+        fullName,
+        username,
+        u_street_no,
+        address,
+        city,
+        postalCode,
+        languageForApi,
+        ip,
+        parentBroker,
+        apiResponse,
+        isAdminParent,
+        veriff_session_id,
+        phone,
+        vatId,
+        taxNumber,
+        website,
+        lang,
+        languageParam,
         email,
-        invitation_status: "REGISTERED",
-        invited_by: parentBroker?.id,
-        last_invitation_sent: new Date(),
+        mobile,
+        company,
+        newReferralCode
       });
-      console.log("===================NEW EMAIL WITH INVITATION=====================");
-    }
-
-
-    // Update parent's children count
-    if (!isAdminParent && parentBroker) {
-      await parentBroker.update({
-        children_count: parentBroker.children_count + 1,
-      });
-    }
-
-    // 🔹 Create entry in MyStoreSettings
-    // await db.MyStoreSetting.create({
-    //   user_id: user_id,
-    //   category: "all",
-    //   paymentOption: "Cash_question, Card_question, Bank_Transfer_question",
-    // });
-
-    // ✅ Save language to UsersMeta table
-    console.log(`[BrokerRegistration] Saving language to UsersMeta - user_id: ${user_id}, language: "${languageValue}"`);
-
-    try {
-      // Check if language meta already exists
-      const existingLanguageMeta = await db.UsersMeta.findOne({
-        where: {
-          user_id: user_id,
-          meta_key: "language",
-        },
-      });
-
-      if (existingLanguageMeta) {
-        // Update existing entry
-        await existingLanguageMeta.update({
-          meta_value: languageValue,
-        });
-        console.log(`[BrokerRegistration] ✅ Updated language meta: "${languageValue}"`);
-      } else {
-        // Create new entry
-        await db.UsersMeta.create({
-          user_id: user_id,
-          meta_key: "language",
-          meta_value: languageValue,
-        });
-        console.log(`[BrokerRegistration] ✅ Created language meta: "${languageValue}"`);
-      }
-
-      // Verify it was saved
-      const verifyMeta = await db.UsersMeta.findOne({
-        where: {
-          user_id: user_id,
-          meta_key: "language",
-        },
-      });
-
-      if (verifyMeta) {
-        console.log(`[BrokerRegistration] ✅ Verified language saved: "${verifyMeta.meta_value}"`);
-      } else {
-        console.error(`[BrokerRegistration] ❌ ERROR: Language meta not found after save`);
-      }
-    } catch (langError) {
-      console.error(`[BrokerRegistration] ❌ Error saving language:`, langError);
-      // Don't fail the registration if language save fails
-    }
-
-    // Create user object for frontend
-    const userResponse = {
-      ID: user_id,
-      fullName,
-      email,
-      username,
-      referral_code: newReferralCode,
-      role: "BROKER",
-    };
-
-    // Generate JWT token
-    const token = jwt.sign({ user: userResponse }, JWT_ACCESS_TOKEN, {
-      expiresIn: process.env.JWT_EXPIRE || "90d",
     });
-
-    const templateVariables = {
-      name: fullName,
-      email: email,
-      mobile_number: mobile,
-    };
-
-    let emailData;
-    try {
-      // Template ID 92 used (adjust as required)
-      emailData = await getRenderedEmail(96, parentBroker.language, templateVariables);
-    } catch (templateError) {
-      console.error(templateError);
-      throw new Error(
-        "Email template (ID: 92) not found. Please ensure it exists in 6lwup_email_view table."
-      );
-    }
-
-    let finalFrom = MAIL_SENDER; // fallback to verified sender domain
-
-    console.log(parentBroker, "parentBroker");
-
-    mailOptions = {
-      from: finalFrom,
-      to: parentBroker.user?.user_email,
-      subject: emailData.subject,
-      html: emailData.htmlContent,
-    };
-
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, null, null, from = null);
 
     return res.status(200).json({
       success: true,
       message: "Broker registered successfully",
-      data: {
-        user: userResponse,
-        token,
-      },
+      // data: {
+      //   user: userResponse,
+      //   token,
+      // },
     });
   } catch (error) {
     console.error("Error in BrokerRegistration:", error);

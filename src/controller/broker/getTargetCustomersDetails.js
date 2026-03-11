@@ -73,9 +73,14 @@ const GetTargetCustomersDetails = async (req, res) => {
       userMeta[meta.meta_key] = meta.meta_value;
     });
 
-    const fullAddress = [
+    const street_house = [
       userMeta.u_street_no,
-      userMeta.u_street,
+      userMeta.u_street
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    const postalcode_city = [
       userMeta.u_location,
       userMeta.u_country,
       userMeta.u_postcode
@@ -83,19 +88,17 @@ const GetTargetCustomersDetails = async (req, res) => {
       .filter(Boolean)
       .join(", ");
 
-    const brokerInfoLine = [
-      fullAddress,
-      `${user.display_name || ""}, ${userMeta.u_phone || ""}`
-    ]
-      .filter(Boolean)
-      .join(" / ");
-
     return res.status(200).json({
       success: true,
       message: "Target customer retrieved successfully",
       country,
       language,
-      brokerInfoLine
+      companyname: userMeta.u_company,
+      display_name: user.display_name || "",
+      street_house: street_house,
+      postalcode_city: postalcode_city,
+      email_address: user.user_email,
+      phone: userMeta.u_phone || "",
     });
   } catch (error) {
     console.error("Error fetching target customer:", error);

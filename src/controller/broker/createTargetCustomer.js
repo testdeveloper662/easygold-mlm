@@ -190,6 +190,7 @@ const CreateTargetCustomer = async (req, res) => {
     });
 
     let sending_link = "";
+    let contract_link = "";
 
     let brokerLanguage = "en";
     if (metaMap.language == "de-DE") {
@@ -203,15 +204,22 @@ const CreateTargetCustomer = async (req, res) => {
     if (interest_in === "Landingpage") {
       const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
+      contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
     } else if (interest_in === "easygold Token") {
       const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/easygold`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
+      const sendingUrl = `${process.env.EASY_GOLD_FRONTEND_URL}`;
+      sending_link = `<a href="${sendingUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
+      contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
     } else if (interest_in === "Primeinvest") {
       const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/primeinvest`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
+      const sendingUrl = `${process.env.PRIME_INVEST_URL}`;
+      sending_link = `<a href="${sendingUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
+      contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
     } else if (interest_in === "goldflex") {
       const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/goldflex`;
-      sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
+      const sendingUrl = `${process.env.GOLD_FLEX_URL}`;
+      sending_link = `<a href="${sendingUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
+      contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
     }
 
     const brokerCompany = sanitizeValue(metaMap.u_company);
@@ -245,6 +253,7 @@ const CreateTargetCustomer = async (req, res) => {
     const templateVariables = {
       b2b_partner: brokerCompany,
       sending_link: sending_link,
+      contract_link: contract_link,
       b2b_info: b2bInfoFormatted || "",
     };
 
@@ -261,7 +270,7 @@ const CreateTargetCustomer = async (req, res) => {
     let emailData;
     try {
       // Template ID 92 used (adjust as required)
-      emailData = await getRenderedEmail(92, language, templateVariables);
+      emailData = await getRenderedEmail(104, language, templateVariables);
     } catch (templateError) {
       console.error(templateError);
       throw new Error(

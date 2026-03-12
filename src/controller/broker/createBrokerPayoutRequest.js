@@ -31,12 +31,17 @@ const CreateBrokerPayoutRequest = async (req, res) => {
                             as: "user_meta",
                             attributes: ["meta_key", "meta_value"],
                             where: {
-                                meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street", "u_postcode", "u_location", "u_account_owner", "u_account_holder", "u_bank", "u_iban", "u_bic"]
+                                meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street", "u_postcode", "u_location", "u_account_owner"]
                             },
                             required: false
                         },
                     ]
                 },
+                {
+                    model: db.BrokerBankDetails,
+                    as: "bank_details",
+                    attributes: ["ac_holder_name", "iban", "bic_swift_code", "bank_name"]
+                }
             ]
         });
         brokerDetails = brokerDetails?.get({ plain: true });
@@ -84,11 +89,18 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         const phone = metas.find(m => m.meta_key === "u_phone")?.meta_value;
         const web_site = metas.find(m => m.meta_key === "u_web_site")?.meta_value;
         const account_owner = metas.find(m => m.meta_key === "u_account_owner")?.meta_value;
-        const account_holder = metas.find(m => m.meta_key === "u_account_holder")?.meta_value;
-        const bank = metas.find(m => m.meta_key === "u_bank")?.meta_value;
+        const bankDetails = brokerDetails?.bank_details || {};
+
+        const account_holder = bankDetails?.ac_holder_name;
+        const bank = bankDetails?.bank_name;
+        const iban = bankDetails?.iban;
+        const bic = bankDetails?.bic_swift_code;
+
+        // const account_holder = metas.find(m => m.meta_key === "u_account_holder")?.meta_value;
+        // const bank = metas.find(m => m.meta_key === "u_bank")?.meta_value;
         const language = metas.find(m => m.meta_key === "language")?.meta_value;
-        const iban = metas.find(m => m.meta_key === "u_iban")?.meta_value;
-        const bic = metas.find(m => m.meta_key === "u_bic")?.meta_value;
+        // const iban = metas.find(m => m.meta_key === "u_iban")?.meta_value;
+        // const bic = metas.find(m => m.meta_key === "u_bic")?.meta_value;
         const addressMap = companyAddressMap();
         const to_company_address = addressMap[payout_for] || "";
 

@@ -81,9 +81,9 @@ const GetTargetCustomersDetails = async (req, res) => {
       .join(", ");
 
     const postalcode_city = [
+      userMeta.u_postcode,
       userMeta.u_location,
-      userMeta.u_country,
-      userMeta.u_postcode
+      userMeta.u_country
     ]
       .filter(Boolean)
       .join(", ");

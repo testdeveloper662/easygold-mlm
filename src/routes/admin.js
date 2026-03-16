@@ -1,6 +1,32 @@
 const express = require("express");
 const adminRouter = express.Router();
 const authenticateToken = require("../middleware/authentication");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+// Set up multer
+const uploadPath = path.join(__dirname, "../../public/uploads/contracts");
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+
+        // Create directory if it does not exist
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+
+        cb(null, uploadPath);
+    },
+
+    filename: function (req, file, cb) {
+        const uniqueName =
+            Date.now() + "-" + Math.round(Math.random() * 1e9);
+
+        cb(null, uniqueName + path.extname(file.originalname));
+    },
+});
+
+const upload = multer({ storage });
 
 const RegisterBroker = require("../controller/admin/registerBroker");
 const GetFixedAffiliateCommissions = require("../controller/admin/getFixedAffiliateCommissions");
@@ -25,6 +51,9 @@ const GetTargetCustomersByBroker = require("../controller/admin/getTargetCustome
 const GetTargetCustomerStatsOverall = require("../controller/admin/getTargetCustomerStatsOverall");
 const GetBrokerBankDetails = require("../controller/admin/getBrokerBankDetails");
 const GetCustomerDetails = require("../controller/admin/getCustomerDetails");
+const GetAllAdminContracts = require("../controller/admin/getAllAdminContracts");
+const GetAdminContractsById = require("../controller/admin/getAdminContractsById");
+const UpdateAdminContract = require("../controller/admin/updateAdminContract");
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
@@ -59,5 +88,13 @@ adminRouter.get("/broker/:brokerId/bank-details", authenticateToken, GetBrokerBa
 adminRouter.get("/target-customers", authenticateToken, GetAllTargetCustomers);
 adminRouter.get("/target-customers/stats", authenticateToken, GetTargetCustomerStatsOverall);
 adminRouter.get("/target-customers/broker/:broker_id", authenticateToken, GetTargetCustomersByBroker);
+
+//Admin Contracts Routes
+adminRouter.get("/admin-contracts", authenticateToken, GetAllAdminContracts);
+adminRouter.get("/admin-contracts/:id", authenticateToken, GetAdminContractsById);
+adminRouter.put("/admin-contracts/:id", authenticateToken, upload.fields([
+    { name: "english_pdf_file", maxCount: 1 },
+    { name: "german_pdf_file", maxCount: 1 },
+]), UpdateAdminContract);
 
 module.exports = adminRouter;

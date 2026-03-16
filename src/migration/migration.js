@@ -9,7 +9,8 @@ const {
   BrokerPayoutRequests,
   TargetCustomers,
   BrokerInvitations,
-  AffiliateBanners
+  AffiliateBanners,
+  AdminContracts
 } = require("../models");
 
 async function createTable() {
@@ -19,9 +20,10 @@ async function createTable() {
     // await AdminFixedBrokerCommission.sync({ alter: true });
     // await BrokerBankDetails.sync({ alter: true });
     // await BrokerPayoutRequests.sync({ alter: true });
-    await TargetCustomers.sync({ alter: true });
+    // await TargetCustomers.sync({ alter: true });
     // await BrokerInvitations.sync({ alter: true });
     // await AffiliateBanners.sync({ alter: true });
+    await AdminContracts.sync({ alter: true });
 
     console.log("Table created successfully.");
   } catch (error) {

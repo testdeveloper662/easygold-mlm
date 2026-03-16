@@ -26,6 +26,7 @@ const AffiliateBanners = require("./affiliateBanners");
 const GoldPurchaseSellOrders = require("./goldPurchaseSellOrders");
 const BrokerInvitations = require("./brokerInvitations");
 const TaxCountry = require("./taxCountry");
+const AdminContracts = require("./adminContracts");
 
 const db = {};
 
@@ -58,6 +59,7 @@ db.GoldPurchaseSellOrders = GoldPurchaseSellOrders;
 db.BrokerInvitations = BrokerInvitations;
 db.AffiliateBanners = AffiliateBanners;
 db.TaxCountry = TaxCountry;
+db.AdminContracts = AdminContracts;
 
 // Relationships
 db.TargetCustomers.belongsTo(db.Brokers, {

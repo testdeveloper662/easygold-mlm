@@ -29,9 +29,39 @@ const GetReferralDetails = async (req, res) => {
         referral_name: null,
         limitReached: false,
         language,
-        country
+        country,
+        contracts: null
       });
     }
+
+    const contracts = await db.AdminContracts.findAll({
+      where: {
+        showonregister: 1
+      },
+      attributes: [
+        "id",
+        "document_key",
+        "english_name",
+        "german_name",
+        "english_pdf_file",
+        "german_pdf_file"
+      ],
+      order: [["id", "ASC"]],
+      raw: true
+    });
+
+    const formattedContracts = contracts.map(contract => ({
+      id: contract.id,
+      document_key: contract.document_key,
+      english_name: contract.english_name ? contract.english_name : contract.german_name,
+      german_name: contract.german_name ? contract.german_name : contract.english_name,
+      english_pdf_file: contract.english_pdf_file
+        ? `${process.env.NODE_URL}public/uploads/contracts/${contract.english_pdf_file}`
+        : `${process.env.NODE_URL}public/uploads/contracts/${contract.german_pdf_file}`,
+      german_pdf_file: contract.german_pdf_file
+        ? `${process.env.NODE_URL}public/uploads/contracts/${contract.german_pdf_file}`
+        : `${process.env.NODE_URL}public/uploads/contracts/${contract.english_pdf_file}`
+    }));
 
     // 1️⃣ Find parent broker by referral_code
     const parentBroker = await db.Brokers.findOne({
@@ -100,7 +130,8 @@ const GetReferralDetails = async (req, res) => {
       total_children: totalChildren,
       limitReached,
       language,
-      country
+      country,
+      contracts: formattedContracts
     });
   } catch (error) {
     console.error("Error fetching referral details:", error);

@@ -764,6 +764,7 @@ const { generateImageUrl } = require("../../utils/Helper");
 const { generatePartnerShipPDF } = require("../../utils/partnerShipPdfHelper");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
+const { generatePartnerPDF } = require("../../utils/partnerPdfHelper");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 const MAIL_SENDER = process.env.MAIL_SENDER;
@@ -833,24 +834,24 @@ const runBrokerRegisterBackground = async ({
 
     const formattedAddress = addressParts.join(", ");
 
-    let brockerPdfData = {
-      name: fullName,
-      username: username,
-      address: formattedAddress,
-      u_street_no: u_street_no,
-      u_street: address,
-      u_location: city,
-      u_postcode: postalCode,
-      date: new Date().toISOString().split("T")[0],
-      signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
-      language: languageForApi,
-      stamp_logo: await generateImageUrl("agreements/stamp.png", 'agreements'),
-      mlm_structure_image: await generateImageUrl("agreements/mlm_structure.png", 'agreements'),
-      ipaddress: ip
-    };
+    // let brockerPdfData = {
+    //   name: fullName,
+    //   username: username,
+    //   address: formattedAddress,
+    //   u_street_no: u_street_no,
+    //   u_street: address,
+    //   u_location: city,
+    //   u_postcode: postalCode,
+    //   date: new Date().toISOString().split("T")[0],
+    //   signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
+    //   language: languageForApi,
+    //   stamp_logo: await generateImageUrl("agreements/stamp.png", 'agreements'),
+    //   mlm_structure_image: await generateImageUrl("agreements/mlm_structure.png", 'agreements'),
+    //   ipaddress: ip
+    // };
 
     // if (languageForApi == "en-US") {
-    let docsData = await generateAgreementPDF(brockerPdfData, parentBroker);
+    // let docsData = await generateAgreementPDF(brockerPdfData, parentBroker);
 
     const parentCompanyName = getMetaValue(
       parentBroker.user?.user_meta,
@@ -929,32 +930,30 @@ const runBrokerRegisterBackground = async ({
     const { day, month, year } = formatLegalDate(new Date());
 
     let partnerPdfData = {
+      b2b_name: fullName,
+      b2b_address: formattedAddress,
+      b2b_location: city,
+      b2b_company: company,
+      b2b_signature: `<img src="${process.env.PUBLIC_URL}${userSign?.meta_value}" style="width:150px;height:100px;" />`,
+      b2b_userid: apiResponse.data?.data?.user_id,
+      parent_b2b_signature: `<img src="${process.env.PUBLIC_URL}${parentSignature}" style="width:150px;height:100px;" />`,
+      date: new Date().toISOString().split("T")[0],
+      ip_address: ip,
+      parent_b2b_name: parentBroker.user?.display_name,
+      parent_b2b_address: parentformattedAddress,
+      parent_b2b_email: parentBroker.user?.user_email,
+      parent_b2b_location: parentcity,
+      language: languageForApi,
       day: day,
       month: month,
       year: year,
-      name: fullName,
-      address: formattedAddress,
-      date: new Date().toISOString().split("T")[0],
-      entity: company,
-      parent_broker_name: parentBroker.user?.display_name,
-      parent_broker_company: parentCompanyName,
-      parent_broker_email: parentBroker.user?.user_email,
-      partner_info: partnerInfo,
-      parent_broker_info: parentInfo,
-      partner_info_full: brokerInfo,
-      parent_broker_signature: `${process.env.PUBLIC_URL}${parentSignature}`,
-      partner_signature: `${process.env.PUBLIC_URL}${userSign?.meta_value}`,
-      parent_broker_address: parentformattedAddress,
-      signature_stamp: await generateImageUrl("agreements/sign_with_stamp.png", 'agreements'),
-      signature: await generateImageUrl("agreements/sign.png", 'agreements'),
-      secretary_signature: await generateImageUrl("agreements/sign_secretary.png", 'agreements'),
-      ipaddress: ip,
-      partner_id: apiResponse.data?.data?.user_id
+      b2b_info: partnerInfo,
+      b2b_info_full: brokerInfo,
     };
 
     console.log(partnerPdfData, "partnerPdfData");
 
-    let partnerDocsData = await generatePartnerShipPDF(partnerPdfData);
+    let partnerDocsData = await generatePartnerPDF(partnerPdfData);
 
     const user_id = apiResponse.data?.data?.user_id;
     console.log("user_id:", user_id);
@@ -1004,12 +1003,12 @@ const runBrokerRegisterBackground = async ({
       children_count: 0,
       total_commission_amount: 0,
       veriff_session_id: veriff_session_id || null,
-      untermaklervertrag_doc: `uploads/agreements/${docsData.untermaklervertrag_doc}`,
-      maklervertrag_doc: `uploads/agreements/${docsData.maklervertrag_doc}`,
+      untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
+      maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
       inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
       llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
       goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
-      hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData.white_label_partner_doc}`
+      hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`
     });
 
     const invitation = await db.BrokerInvitations.findOne({

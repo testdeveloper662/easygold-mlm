@@ -10,6 +10,7 @@ const authRouter = require("./src/routes/auth");
 const adminRouter = require("./src/routes/admin");
 const brokerRouter = require("./src/routes/broker");
 const userRouter = require("./src/routes/user");
+const uploadRouter = require("./src/routes/upload");
 
 const port = process.env.PORT || 4000;
 
@@ -44,6 +45,7 @@ app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/broker", brokerRouter);
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/users", userRouter); // Support both singular and plural
+app.use("/api/v1/upload-image", uploadRouter); // Support both singular and plural
 
 app.listen(port, () => {
   console.log(`Server running on PORT: ${port} 🚀`);

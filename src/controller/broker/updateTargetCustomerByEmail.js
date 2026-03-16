@@ -12,6 +12,23 @@ function getMeta(user, key) {
   return user?.user_meta?.find(m => m.meta_key === key)?.meta_value || "";
 }
 
+const formatLegalDate = (dateInput) => {
+  const date = new Date(dateInput);
+
+  const day = date.getDate();
+
+  const suffix =
+    day > 3 && day < 21
+      ? "th"
+      : ["th", "st", "nd", "rd"][day % 10] || "th";
+
+  return {
+    day: `${day}${suffix}`,
+    month: date.toLocaleString("en-US", { month: "long" }),
+    year: date.getFullYear(),
+  };
+};
+
 const UpdateTargetCustomerByEmail = async (req, res) => {
   try {
     let ip =
@@ -115,7 +132,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
         item !== "null"
     );
 
-    parent_address = parts.join(", ");
+    const parent_address = parts.join(", ");
 
     const date = new Date(consent_at);
 
@@ -124,25 +141,28 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       String(date.getMonth() + 1).padStart(2, "0") + "-" +
       date.getFullYear();
 
+    const { day, month, year } = formatLegalDate(new Date());
+
     let partnerPdfData = {
-      broker_signature: `${process.env.PUBLIC_URL}${parent_signaturedata}`,
-      broker_name: parent_name,
-      broker_company_name: parent_company,
-      broker_email: parent_email,
-      broker_address: parent_address,
-      broker_telephone: parent_telephone,
+      product_type: product_type,
+      b2c_name: customer_name,
+      b2c_email: customer_email,
+      b2c_address: formattedAddress,
+      b2c_phone: telephone,
+      b2c_signature: `<img src="${signature_data}" style="width:150px;height:100px;" />`,
+      b2c_social_security: tax_id,
+      b2c_state: state,
       date: formatted,
-      customer_name: customer_name,
-      customer_email: customer_email,
-      customer_address: formattedAddress,
-      customer_telephone: telephone,
-      customer_social_security: tax_id,
-      customer_signature: signature_data,
-      customer_state: state,
-      signature: await generateImageUrl("agreements/sign.png", 'agreements'),
-      secretary_signature: await generateImageUrl("agreements/sign_secretary.png", 'agreements'),
-      customer_ipaddress: ip,
-      product_type: product_type
+      b2b_name: parent_name,
+      b2b_company: parent_company,
+      b2b_address: parent_address,
+      b2b_email: parent_email,
+      b2b_phone: parent_telephone,
+      b2b_signature: `<img src="${process.env.PUBLIC_URL}${parent_signaturedata}" style="width:150px;height:100px;" />`,
+      ip_address: ip,
+      day: day,
+      month: month,
+      year: year,
     };
 
     let partnerDocsData = await generateTargetCustomerPDF(partnerPdfData);

@@ -43,6 +43,7 @@ const GetCustomerDetails = require("../controller/broker/getCustomerDetails");
 const CreateReferralTargetCustomer = require("../controller/broker/createReferralTargetCustomer");
 const referNudgeBroker = require("../controller/broker/referNudgeBroker");
 const CheckExist = require("../controller/auth/checkExist");
+const GetBrokerOwnContract = require("../controller/broker/getBrokerOwnContract");
 
 brokerRouter.post(
   "/register",
@@ -91,6 +92,7 @@ brokerRouter.put("/target-customers/:id", authenticateToken, UpdateTargetCustome
 brokerRouter.delete("/target-customers/:id", authenticateToken, DeleteTargetCustomer);
 
 brokerRouter.get("/brokers", authenticateToken, GetAllBrokers);
+brokerRouter.get("/owncontracts", authenticateToken, GetBrokerOwnContract);
 brokerRouter.post("/target-customers/signup", customerSignupEasyGoldToken);
 
 // Dashboard

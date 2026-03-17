@@ -74,6 +74,7 @@ const ReferBroker = async (req, res) => {
     // }
 
     let mailOptions;
+    let attachmentPath = null;
 
     // ✅ CASE 1: User already exists → return error
     if (userExist) {
@@ -116,9 +117,15 @@ const ReferBroker = async (req, res) => {
         subject: emailData.subject,
         html: emailData.htmlContent,
       };
+
+      if (language == "de") {
+        attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/broker_pdf_de.pdf`;
+      } else {
+        attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/broker_pdf_en.pdf`;
+      }
     }
 
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to);
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath);
 
     const invitation = await db.BrokerInvitations.findOne({
       where: {

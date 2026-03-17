@@ -123,9 +123,9 @@ const ReferBroker = async (req, res) => {
       } else {
         attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/broker_pdf_en.pdf`;
       }
-
-      console.log(attachmentPath, "attachmentPath");
     }
+
+    console.log(attachmentPath, "attachmentPath");
 
     await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath);
 

@@ -1,6 +1,8 @@
 const db = require("../../models");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
+const path = require("path");
+const fs = require("fs");
 
 const MAIL_SENDER = process.env.MAIL_SENDER;
 const MAIL_PASSWORD = process.env.MAIL_PASSWORD;
@@ -118,16 +120,30 @@ const ReferBroker = async (req, res) => {
         html: emailData.htmlContent,
       };
 
-      if (language == "de") {
-        attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/broker_pdf_de.pdf`;
+      if (language === "de") {
+        attachmentPath = path.join(
+          process.cwd(),
+          "public/uploads/agreements/broker_pdf_de.pdf"
+        );
       } else {
-        attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/broker_pdf_en.pdf`;
+        attachmentPath = path.join(
+          process.cwd(),
+          "public/uploads/agreements/broker_pdf_en.pdf"
+        );
       }
     }
 
     console.log(attachmentPath, "attachmentPath");
 
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath);
+    // await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath);
+    if (!fs.existsSync(attachmentPath)) {
+      console.log("❌ File not found:", attachmentPath);
+
+      // fallback without attachment
+      await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to);
+    } else {
+      await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath);
+    }
 
     const invitation = await db.BrokerInvitations.findOne({
       where: {

@@ -67,7 +67,7 @@ const ReferCustomerMail = async (req, res) => {
 
     console.log(attachmentPath, "attachmentPath");
 
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath);
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, MAIL_SENDER);
 
     return res.status(200).json({
       success: true,

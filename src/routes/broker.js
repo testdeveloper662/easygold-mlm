@@ -44,6 +44,7 @@ const CreateReferralTargetCustomer = require("../controller/broker/createReferra
 const referNudgeBroker = require("../controller/broker/referNudgeBroker");
 const CheckExist = require("../controller/auth/checkExist");
 const GetBrokerOwnContract = require("../controller/broker/getBrokerOwnContract");
+const ReferCustomerMail = require("../controller/broker/referCustomerMail");
 
 brokerRouter.post(
   "/register",
@@ -58,6 +59,7 @@ brokerRouter.post(
 
 brokerRouter.post("/checkexist", CheckExist);
 brokerRouter.post("/referral", authenticateToken, ReferBroker);
+brokerRouter.post("/referralcustomer", authenticateToken, ReferCustomerMail);
 brokerRouter.post("/nudgereferral", authenticateToken, referNudgeBroker);
 brokerRouter.get("/network", authenticateToken, GetBrokerNetwork);
 brokerRouter.get("/referralname", GetReferralDetails);

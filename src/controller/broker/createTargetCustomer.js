@@ -354,6 +354,48 @@ const CreateTargetCustomer = async (req, res) => {
       await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom);
     }
 
+    let address = "";
+
+    if (interest_in == "easygold Token") {
+      address = "HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.easygold.io<br>support@easygold.io";
+    } else if (interest_in == "Primeinvest") {
+      address = "Hartmann & Benz Inc<br>8 The Green, Suite A<br>19901 Dover Kent County<br>United States of America (USA)<br>support@hbprimeinvest.com";
+    } else if (interest_in == "goldflex") {
+      address = "Service in NGR – U.S. headquarters.<br><br>HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.goldflex.io<br>support @goldflex.io";
+    }
+
+    const brokerTemplateVariables = {
+      details: address
+    };
+
+    let brokerEmailData;
+    try {
+      // Template ID 92 used (adjust as required)
+      brokerEmailData = await getRenderedEmail(105, brokerLanguage, brokerTemplateVariables);
+    } catch (templateError) {
+      console.error(templateError);
+      throw new Error(
+        "Email template (ID: 92) not found. Please ensure it exists in 6lwup_email_view table."
+      );
+    }
+
+    if (interest_in !== "Landingpage" && brokerLanguage === "en") {
+      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/gold_bonus_for_referrals_en.pdf`;
+    } else if (interest_in !== "Landingpage" && brokerLanguage === "de") {
+      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/gold_bonus_for_referrals_de.pdf`;
+    }
+
+    let beokerMailOptions = {
+      from: MAIL_SENDER,
+      to: brokerEmail,
+      subject: brokerEmailData.subject,
+      html: brokerEmailData.htmlContent,
+    };
+
+    if (interest_in !== "Landingpage") {
+      await SendEmailHelper(beokerMailOptions.subject, beokerMailOptions.html, beokerMailOptions.to, attachmentPath);
+    }
+
     return res.status(201).json({
       success: true,
       message: "Target customer created successfully",

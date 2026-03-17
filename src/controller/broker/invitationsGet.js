@@ -46,10 +46,15 @@ const GetInvitations = async (req, res) => {
             offset,
         });
 
+        const downloadlinkEnglish = `${process.env.NODE_URL}public/uploads/agreements/broker_pdf_en.pdf`;
+        const downloadlinkGerman = `${process.env.NODE_URL}public/uploads/agreements/broker_pdf_de.pdf`;
+
         return res.status(200).json({
             success: true,
             message: "Invitations retrieved successfully",
             data: {
+                downloadlinkEnglish,
+                downloadlinkGerman,
                 invitations,
                 total: totalCount,
                 currentPage: page,

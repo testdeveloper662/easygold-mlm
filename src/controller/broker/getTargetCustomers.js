@@ -93,6 +93,8 @@ const GetTargetCustomers = async (req, res) => {
         // primeInvestReferralLink: `${process.env.PRIME_INVEST_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`,
         // landingPageReferralLink: `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`,
         // goldflexReferralLink: `${process.env.GOLD_FLEX_FRONTEND_URL}/register?ref=${easyGoldReferralCode}`,
+        referralPdfEnLink: `${process.env.NODE_URL}uploads/agreements/customer_referral_program_en.pdf`,
+        referralPdfDeLink: `${process.env.NODE_URL}uploads/agreements/customer_referral_program_de.pdf`,
         easyGoldLink: `${process.env.EASY_GOLD_FRONTEND_URL}`,
         easyGoldReferralLink: `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/easygold`,
         easygoldPdfLink: `${process.env.NODE_URL}uploads/agreements/whitepaper_easygold_token.pdf`,

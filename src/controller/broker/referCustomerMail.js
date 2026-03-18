@@ -53,9 +53,9 @@ const ReferCustomerMail = async (req, res) => {
 
     let attachmentPath = null;
     if (language == "en") {
-      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/gold_bonus_for_referrals_en.pdf`;
+      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/customer_referral_program_en.pdf`;
     } else {
-      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/gold_bonus_for_referrals_de.pdf`;
+      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/customer_referral_program_de.pdf`;
     }
 
     mailOptions = {

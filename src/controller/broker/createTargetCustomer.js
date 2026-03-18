@@ -380,9 +380,9 @@ const CreateTargetCustomer = async (req, res) => {
     }
 
     if (interest_in !== "Landingpage" && brokerLanguage === "en") {
-      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/gold_bonus_for_referrals_en.pdf`;
+      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/customer_referral_program_en.pdf`;
     } else if (interest_in !== "Landingpage" && brokerLanguage === "de") {
-      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/gold_bonus_for_referrals_de.pdf`;
+      attachmentPath = `${process.env.NODE_URL}public/uploads/agreements/customer_referral_program_de.pdf`;
     }
 
     let beokerMailOptions = {

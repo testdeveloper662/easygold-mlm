@@ -44,6 +44,9 @@ const GetBrokerOwnContract = async (req, res) => {
             hartmann_benz_gmbh_doc: broker.hartmann_benz_gmbh_doc
                 ? `${process.env.NODE_URL}${broker.hartmann_benz_gmbh_doc}`
                 : null,
+            binding_loi_doc: broker.binding_loi_doc
+                ? `${process.env.NODE_URL}${broker.binding_loi_doc}`
+                : null,
         };
 
         return res.status(200).json({

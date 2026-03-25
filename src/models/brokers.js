@@ -77,6 +77,10 @@ const Brokers = sequelize.define(
     hartmann_benz_gmbh_doc: {
       type: Sequelize.TEXT("long"),
       allowNull: true
+    },
+    binding_loi_doc: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true
     }
   },
   {

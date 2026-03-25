@@ -88,6 +88,7 @@ const GetAllBrokers = async (req, res) => {
             const llc_partnership_doc = broker.llc_partnership_doc !== null ? `${process.env.NODE_URL}${broker.llc_partnership_doc}` : null;
             const goldflex_partnership_doc = broker.goldflex_partnership_doc !== null ? `${process.env.NODE_URL}${broker.goldflex_partnership_doc}` : null;
             const hartmann_benz_gmbh_doc = broker.hartmann_benz_gmbh_doc !== null ? `${process.env.NODE_URL}${broker.hartmann_benz_gmbh_doc}` : null;
+            const binding_loi_doc = broker.binding_loi_doc !== null ? `${process.env.NODE_URL}${broker.binding_loi_doc}` : null;
 
             // Construct public URLs if exist
             // const tradeRegisterUrl = m.u_trade_register
@@ -134,6 +135,7 @@ const GetAllBrokers = async (req, res) => {
                 llc_partnership_doc: llc_partnership_doc,
                 goldflex_partnership_doc: goldflex_partnership_doc,
                 hartmann_benz_gmbh_doc: hartmann_benz_gmbh_doc,
+                binding_loi_doc: binding_loi_doc,
 
                 createdAt: broker.createdAt,
                 updatedAt: broker.updatedAt,

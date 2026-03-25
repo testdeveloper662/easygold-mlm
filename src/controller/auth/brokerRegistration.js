@@ -1008,7 +1008,8 @@ const runBrokerRegisterBackground = async ({
       inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
       llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
       goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
-      hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`
+      hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
+      binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
     });
 
     const invitation = await db.BrokerInvitations.findOne({

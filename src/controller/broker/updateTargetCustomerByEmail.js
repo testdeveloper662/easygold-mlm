@@ -294,6 +294,8 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     let attachmentPath = null;
 
+    console.log(interest_in,"interest_in");
+
     if (interest_in === "easygold Token") {
       attachmentPath = [`${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`, `${process.env.NODE_URL}/public/uploads/agreements/whitepaper_easygold_token.pdf`];
     } else if (interest_in === "Primeinvest") {

@@ -15,6 +15,8 @@ const customerSignupEasyGoldToken = async (req, res) => {
             product_type
         } = req.body;
 
+        console.log(req.body, "req.body");
+
         if (!customer_name || !customer_email || !type || !referred_by_code) {
             return res.status(400).json({
                 success: false,
@@ -45,6 +47,10 @@ const customerSignupEasyGoldToken = async (req, res) => {
                 where: { referral_code: normalizedReferralCode },
                 transaction,
             });
+
+            console.log(normalizedReferralCode, "normalizedReferralCode");
+
+            console.log(parentCustomer, "parentCustomer");
 
             if (!parentCustomer) {
                 return res.status(400).json({
@@ -128,6 +134,8 @@ const customerSignupEasyGoldToken = async (req, res) => {
                 { transaction }
             );
         }
+
+        console.log(customer, "customer after update");
 
         /** 5️⃣ Reward ONLY customer parent */
         if (parentCustomer && type === "CUSTOMER") {

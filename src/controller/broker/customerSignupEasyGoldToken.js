@@ -45,15 +45,12 @@ const customerSignupEasyGoldToken = async (req, res) => {
         /** 2️⃣ Resolve referral */
         if (type === "CUSTOMER") {
             const normalizedReferralCode = String(decoded_referred_by_code).trim();
+            console.log(`---------${normalizedReferralCode}------`, "normalizedReferralCode");
+
             parentCustomer = await db.TargetCustomers.findOne({
-                where: db.Sequelize.where(
-                    db.Sequelize.fn("LOWER", db.Sequelize.col("referral_code")),
-                    normalizedReferralCode.toLowerCase()
-                ),
+                where: { referral_code: normalizedReferralCode, interest_in: product_type },
                 transaction,
             });
-
-            console.log(normalizedReferralCode, "normalizedReferralCode");
 
             console.log(parentCustomer, "parentCustomer");
 
@@ -63,6 +60,8 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     message: "Invalid customer referral code",
                 });
             }
+
+            console.log("Parent customer found:", parentCustomer.referral_code !== normalizedReferralCode);
 
             if (parentCustomer.referral_code !== normalizedReferralCode) {
                 return res.status(400).json({

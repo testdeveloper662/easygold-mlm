@@ -421,6 +421,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       success: true,
       message: "Target customer register successfully",
       data: targetCustomer,
+      referral_code: easyGoldReferralCode
     });
   } catch (error) {
     console.error("Error updating target customer:", error);

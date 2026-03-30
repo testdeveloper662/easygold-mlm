@@ -46,7 +46,10 @@ const customerSignupEasyGoldToken = async (req, res) => {
         if (type === "CUSTOMER") {
             const normalizedReferralCode = String(decoded_referred_by_code).trim();
             parentCustomer = await db.TargetCustomers.findOne({
-                where: { referral_code: normalizedReferralCode },
+                where: db.Sequelize.where(
+                    db.Sequelize.fn("LOWER", db.Sequelize.col("referral_code")),
+                    normalizedReferralCode.toLowerCase()
+                ),
                 transaction,
             });
 

@@ -1,4 +1,5 @@
 const db = require("../../models");
+const ReferralLogs = db.TargetCustomerReferralLogs;
 
 const getNetAmount = (gross, vatPercent) => {
   if (!vatPercent || vatPercent <= 0) return gross;
@@ -370,6 +371,7 @@ const CaptureOrder = async (req, res) => {
 
     let broker = null;
     let targetCustomerBroker = false;
+    let targetCustomerLogFound = null;
 
     if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
       // For Gold Flex, get broker using b2bEmail
@@ -397,6 +399,7 @@ const CaptureOrder = async (req, res) => {
         }
         let customer = await db.TargetCustomers.findOne({
           where: { customer_email: b2bEmail, interest_in, status: "REGISTERED" },
+          raw: true,
         });
 
         if (!customer) {
@@ -424,6 +427,60 @@ const CaptureOrder = async (req, res) => {
       broker = await db.Brokers.findOne({
         where: { user_id: order.user_id },
       });
+    }
+
+    console.log(targetCustomerLogFound, "targetCustomerLogFound");
+    console.log(targetCustomerBroker, "targetCustomerBroker");
+    console.log("----------------------------------------------");
+    console.log("Investement check");
+    console.log("----------------------------------------------");
+    console.log(targetCustomerBroker, "targetCustomerBroker");
+    console.log("----------------------------------------------");
+    if (targetCustomerBroker) {
+      let interest_in;
+
+      if (orderType == "goldflex") {
+        interest_in = "goldflex";
+      } else if (orderType == "easygoldtoken") {
+        interest_in = "easygold Token";
+      } else if (orderType == "primeinvest") {
+        interest_in = "Primeinvest";
+      }
+
+      const customer = await db.TargetCustomers.findOne({
+        where: {
+          customer_email: b2bEmail,
+          interest_in,
+          status: "REGISTERED",
+        },
+      });
+
+      console.log(customer, "customer");
+      console.log(customer.parent_customer_id, "customer.parent_customer_id");
+
+      if (customer && customer.parent_customer_id) {
+        const investment = parseFloat(b2bCommissionAmount || 0);
+
+        // ✅ Calculate commission based on rule
+        const commission_amount = Math.floor(investment / 5000);
+
+        targetCustomerLogFound = await ReferralLogs.create({
+          broker_id: customer.broker_id,
+          from_customer_id: customer.parent_customer_id,
+          to_customer_id: customer.id,
+          type: "INVESTMENT_DONE",
+          investment_amount: investment,
+          commission_amount, // 🔥 added
+          product: interest_in,
+          status: "PENDING",
+        });
+
+        console.log("✅ INVESTMENT_DONE log created", {
+          investment,
+          commission_amount,
+          targetCustomerLogFound
+        });
+      }
     }
     if (!broker)
       return res
@@ -615,6 +672,8 @@ const CaptureOrder = async (req, res) => {
         console.error(` [CAPTURE ORDER] ⚠️ Raw calculation result: ${rawCalculation}`);
       }
 
+      console.log(targetCustomerLogFound, "targetCustomerLogFound");
+
       distribution.push({
         level: i + 1,
         broker_id: currentBroker.id,
@@ -622,6 +681,7 @@ const CaptureOrder = async (req, res) => {
         commission_percent: commissionPercent,
         commission_amount: commissionAmount,
         is_seller: isSeller,
+        target_customer_log_id: targetCustomerLogFound !== null ? targetCustomerLogFound.id : null
       });
 
       // ✅ Save in BrokerCommissionHistory with order_type and distribution timestamp
@@ -701,6 +761,7 @@ const CaptureOrder = async (req, res) => {
         tree,
         is_seller: isSeller,
         selected_payment_method: selected_payment || 1, // default to 1 (bank) if not present
+        target_customer_log_id: targetCustomerLogFound ? targetCustomerLogFound.id : null,
       };
 
       console.log(`\n [CAPTURE ORDER] Database Create Object:`);

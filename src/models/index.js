@@ -27,6 +27,7 @@ const GoldPurchaseSellOrders = require("./goldPurchaseSellOrders");
 const BrokerInvitations = require("./brokerInvitations");
 const TaxCountry = require("./taxCountry");
 const AdminContracts = require("./adminContracts");
+const TargetCustomerReferralLogs = require("./targetCustomerReferralLogs");
 
 const db = {};
 
@@ -60,9 +61,15 @@ db.BrokerInvitations = BrokerInvitations;
 db.AffiliateBanners = AffiliateBanners;
 db.TaxCountry = TaxCountry;
 db.AdminContracts = AdminContracts;
+db.TargetCustomerReferralLogs = TargetCustomerReferralLogs;
 
 // Relationships
 db.TargetCustomers.belongsTo(db.Brokers, {
+  foreignKey: "broker_id",
+  as: "broker",
+});
+
+db.TargetCustomerReferralLogs.belongsTo(db.Brokers, {
   foreignKey: "broker_id",
   as: "broker",
 });
@@ -97,5 +104,16 @@ db.UsersMeta.belongsTo(db.Users, {
   foreignKey: "user_id",
   as: "user",
 });
+
+db.TargetCustomerReferralLogs.belongsTo(db.TargetCustomers, {
+  foreignKey: "from_customer_id",
+  as: "fromCustomer",
+});
+
+db.TargetCustomerReferralLogs.belongsTo(db.TargetCustomers, {
+  foreignKey: "to_customer_id",
+  as: "toCustomer",
+});
+
 
 module.exports = db;

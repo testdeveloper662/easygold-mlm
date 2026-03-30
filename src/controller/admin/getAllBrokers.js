@@ -14,18 +14,43 @@ const GetAllBrokers = async (req, res) => {
       });
     }
 
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, search = "" } = req.query;
     const offset = (page - 1) * limit;
+
+    // ✅ WHERE with search
+    const whereClause = {};
+
+    if (search) {
+      whereClause[Op.or] = [
+        { "$user.display_name$": { [Op.like]: `%${search}%` } },
+        { "$user.user_email$": { [Op.like]: `%${search}%` } },
+        { "$user.user_meta.meta_value$": { [Op.like]: `%${search}%` } },
+      ];
+    }
 
     // 1️⃣ Get paginated brokers with their user info
     const { count, rows: brokers } = await db.Brokers.findAndCountAll({
+      where: whereClause,
       include: [
         {
           model: db.Users,
           as: "user",
           attributes: ["ID", "user_email", "display_name"],
+          include: [
+            {
+              model: db.UsersMeta,
+              as: "user_meta",
+              attributes: [],
+              where: {
+                meta_key: "u_company",
+              },
+              required: false,
+            },
+          ],
         },
       ],
+      distinct: true,     // 🔥 important
+      subQuery: false,    // 🔥 important
       order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),

@@ -1,5 +1,6 @@
 const db = require("../../models");
 const { sequelize } = require("../../config/database");
+const ReferralLogs = db.TargetCustomerReferralLogs;
 
 const customerSignupEasyGoldToken = async (req, res) => {
     const transaction = await sequelize.transaction();
@@ -138,6 +139,17 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     where: { id: parentCustomer.id },
                     transaction,
                 }
+            );
+
+            await ReferralLogs.create(
+                {
+                    broker_id: finalBrokerId,
+                    from_customer_id: parentCustomer.id,
+                    to_customer_id: customer.id,
+                    type: "REFERRAL_CREATED",
+                    status: "PENDING",
+                },
+                { transaction }
             );
         }
 

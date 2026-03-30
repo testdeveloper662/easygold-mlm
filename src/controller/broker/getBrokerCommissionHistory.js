@@ -23,7 +23,7 @@ const GetBrokerCommissionHistory = async (req, res) => {
 
     let whereClause;
 
-    const GOLD_ORDER_TYPES = [];
+    const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken", "primeinvest"];
 
     if (isSellerFilter === true) {
       whereClause = {
@@ -35,7 +35,23 @@ const GetBrokerCommissionHistory = async (req, res) => {
           {
             selected_payment_method: 1,
             is_payment_declined: false,
-            order_type: { [Op.notIn]: GOLD_ORDER_TYPES },
+            order_type: {
+              [Op.notIn]: [
+                ...GOLD_ORDER_TYPES,
+                "gold_purchase_sell_orders",
+                "gold_purchase"
+              ]
+            }
+          },
+          {
+            selected_payment_method: 1,
+            is_payment_done: true,
+            order_type: {
+              [Op.in]: [
+                "gold_purchase_sell_orders",
+                "gold_purchase"
+              ]
+            },
           },
           {
             order_type: { [Op.in]: GOLD_ORDER_TYPES },
@@ -57,7 +73,27 @@ const GetBrokerCommissionHistory = async (req, res) => {
           {
             is_seller: true,
             [Op.or]: [
-              { selected_payment_method: 1, is_payment_declined: false, order_type: { [Op.notIn]: GOLD_ORDER_TYPES }, }, // seller + method 1 (always show)
+              {
+                selected_payment_method: 1,
+                is_payment_declined: false,
+                order_type: {
+                  [Op.notIn]: [
+                    ...GOLD_ORDER_TYPES,
+                    "gold_purchase_sell_orders",
+                    "gold_purchase"
+                  ]
+                },
+              }, // seller + method 1 (always show)
+              {
+                selected_payment_method: 1,
+                is_payment_done: true,
+                order_type: {
+                  [Op.in]: [
+                    "gold_purchase_sell_orders",
+                    "gold_purchase"
+                  ]
+                },
+              },
               {
                 order_type: { [Op.in]: GOLD_ORDER_TYPES },
                 is_payment_done: true,

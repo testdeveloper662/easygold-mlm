@@ -8,6 +8,24 @@ const SendEmailHelper = require("../../utils/sendEmailHelper");
 const MAIL_SENDER = process.env.MAIL_SENDER;
 const EASY_GOLD_CUSTOMER_SUPPORT_EMAIL = process.env.EASY_GOLD_CUSTOMER_SUPPORT_EMAIL;
 
+const MAIL_HOST = process.env.MAIL_HOST;
+const GOLDFLEX_MAIL_HOST = process.env.GOLDFLEX_MAIL_HOST;
+
+const GOLD_FLEX_SUPPORT_MAIL_SENDER = process.env.GOLD_FLEX_SUPPORT_MAIL_SENDER;
+const GOLD_FLEX_SUPPORT_MAIL_PASSWORD = process.env.GOLD_FLEX_SUPPORT_MAIL_PASSWORD;
+const GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS = process.env.GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS;
+const GOLD_FLEX_SUPPORT_MAIL_FROM_NAME = process.env.GOLD_FLEX_SUPPORT_MAIL_FROM_NAME;
+
+const PRIME_INVEST_SUPPORT_MAIL_SENDER = process.env.PRIME_INVEST_SUPPORT_MAIL_SENDER;
+const PRIME_INVEST_SUPPORT_MAIL_PASSWORD = process.env.PRIME_INVEST_SUPPORT_MAIL_PASSWORD;
+const PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS = process.env.PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS;
+const PRIME_INVEST_SUPPORT_MAIL_FROM_NAME = process.env.PRIME_INVEST_SUPPORT_MAIL_FROM_NAME;
+
+const EASY_GOLD_SUPPORT_MAIL_SENDER = process.env.EASY_GOLD_SUPPORT_MAIL_SENDER;
+const EASY_GOLD_SUPPORT_MAIL_PASSWORD = process.env.EASY_GOLD_SUPPORT_MAIL_PASSWORD;
+const EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS = process.env.EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS;
+const EASY_GOLD_SUPPORT_MAIL_FROM_NAME = process.env.EASY_GOLD_SUPPORT_MAIL_FROM_NAME;
+
 function getMeta(user, key) {
   return user?.user_meta?.find(m => m.meta_key === key)?.meta_value || "";
 }
@@ -54,6 +72,13 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
         interest_in: interest_in,
         customer_email: customer_email,
       },
+      include: [
+        {
+          model: db.TargetCustomers,
+          as: "parent",
+          attributes: ["id", "customer_email", "customer_name"],
+        },
+      ],
     });
 
     if (!targetCustomer) {
@@ -69,6 +94,8 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
         message: "This target customer is already registered.",
       });
     }
+
+    const parentEmail = targetCustomer?.parent?.customer_email;
 
     let parentBroker = await db.Brokers.findOne({
       where: { id: targetCustomer.broker_id },
@@ -218,10 +245,54 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       .map(v => `${v},`)
       .join("<br>");
 
+    let address = "";
+
+    let mailConfig = {};
+    let finalFrom;
+
+    const senderEmailConfig = {
+      easygold: {
+        user: EASY_GOLD_SUPPORT_MAIL_SENDER,
+        pass: EASY_GOLD_SUPPORT_MAIL_PASSWORD,
+      },
+      goldflex: {
+        user: GOLD_FLEX_SUPPORT_MAIL_SENDER,
+        pass: GOLD_FLEX_SUPPORT_MAIL_PASSWORD,
+      },
+      primeinvest: {
+        user: PRIME_INVEST_SUPPORT_MAIL_SENDER,
+        pass: PRIME_INVEST_SUPPORT_MAIL_PASSWORD,
+      }
+    };
+
+    let host = MAIL_HOST;
+
+    if (interest_in == "easygold Token") {
+      host = MAIL_HOST;
+      finalFrom = `"${EASY_GOLD_SUPPORT_MAIL_FROM_NAME}" <${EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS}>`;
+      mailConfig = senderEmailConfig.easygold;
+
+      address = "HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.easygold.io<br>support@easygold.io";
+    } else if (interest_in == "Primeinvest") {
+      host = MAIL_HOST;
+      finalFrom = `"${PRIME_INVEST_SUPPORT_MAIL_FROM_NAME}" <${PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS}>`;
+      mailConfig = senderEmailConfig.primeinvest;
+
+      address = "Hartmann & Benz Inc<br>8 The Green, Suite A<br>19901 Dover Kent County<br>United States of America (USA)<br>support@hbprimeinvest.com";
+    } else if (interest_in == "goldflex") {
+      host = GOLDFLEX_MAIL_HOST;
+      finalFrom = `"${GOLD_FLEX_SUPPORT_MAIL_FROM_NAME}" <${GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS}>`;
+      mailConfig = senderEmailConfig.goldflex;
+
+      address = "Service in NGR – U.S. headquarters.<br><br>HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.goldflex.io<br>support@goldflex.io";
+    }
+
     const templateVariables = {
+      customer_name: customer_name,
       b2b_partner: brokerCompany,
       sending_link: sending_link,
       b2b_info: b2bInfoFormatted || "",
+      address: address
     };
 
     // "de-DE" "en-US"
@@ -235,10 +306,12 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     }
 
     let emailData;
+    let customerEmailData;
     let brokeremailData;
     try {
       // Template ID 92 used (adjust as required)
       emailData = await getRenderedEmail(98, language, templateVariables);
+      customerEmailData = await getRenderedEmail(107, "en", templateVariables);
       brokeremailData = await getRenderedEmail(99, language, templateVariables);
     } catch (templateError) {
       console.error(templateError);
@@ -270,22 +343,29 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     const dynamicFrom = `"${senderName}" <${senderEmail}>`;
 
-    let finalFrom;
+    // let finalFrom;
 
     // if (isAllowedEmail(senderEmail)) {
     // finalFrom = dynamicFrom; // allow Gmail, Yahoo, Outlook, company domain
     // } else {
-    finalFrom = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL; // fallback to verified sender domain
+    // finalFrom = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL; // fallback to verified sender domain
     // }
 
-    mailOptions = {
+    const mailOptions = {
       from: finalFrom,
       to: customer_email,
       subject: emailData.subject,
       html: emailData.htmlContent,
     };
 
-    brokermailOptions = {
+    const customerMailOptions = {
+      from: finalFrom,
+      to: parentEmail,
+      subject: customerEmailData.subject,
+      html: customerEmailData.htmlContent,
+    };
+
+    const brokermailOptions = {
       from: MAIL_SENDER,
       to: parent_email,
       subject: brokeremailData.subject,
@@ -293,8 +373,6 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     };
 
     let attachmentPath = null;
-
-    console.log(interest_in, "interest_in");
 
     if (interest_in === "easygold Token") {
       attachmentPath = [`${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`];
@@ -315,7 +393,9 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     let brokerAttachmentPath = `${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`;
 
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom);
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom, mailConfig);
+
+    await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig);
 
     await SendEmailHelper(brokermailOptions.subject, brokermailOptions.html, brokermailOptions.to, brokerAttachmentPath, null, null);
 

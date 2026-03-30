@@ -6,6 +6,24 @@ const SendEmailHelper = require("../../utils/sendEmailHelper");
 const MAIL_SENDER = process.env.MAIL_SENDER;
 const EASY_GOLD_CUSTOMER_SUPPORT_EMAIL = process.env.EASY_GOLD_CUSTOMER_SUPPORT_EMAIL;
 
+const MAIL_HOST = process.env.MAIL_HOST;
+const GOLDFLEX_MAIL_HOST = process.env.GOLDFLEX_MAIL_HOST;
+
+const GOLD_FLEX_SUPPORT_MAIL_SENDER = process.env.GOLD_FLEX_SUPPORT_MAIL_SENDER;
+const GOLD_FLEX_SUPPORT_MAIL_PASSWORD = process.env.GOLD_FLEX_SUPPORT_MAIL_PASSWORD;
+const GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS = process.env.GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS;
+const GOLD_FLEX_SUPPORT_MAIL_FROM_NAME = process.env.GOLD_FLEX_SUPPORT_MAIL_FROM_NAME;
+
+const PRIME_INVEST_SUPPORT_MAIL_SENDER = process.env.PRIME_INVEST_SUPPORT_MAIL_SENDER;
+const PRIME_INVEST_SUPPORT_MAIL_PASSWORD = process.env.PRIME_INVEST_SUPPORT_MAIL_PASSWORD;
+const PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS = process.env.PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS;
+const PRIME_INVEST_SUPPORT_MAIL_FROM_NAME = process.env.PRIME_INVEST_SUPPORT_MAIL_FROM_NAME;
+
+const EASY_GOLD_SUPPORT_MAIL_SENDER = process.env.EASY_GOLD_SUPPORT_MAIL_SENDER;
+const EASY_GOLD_SUPPORT_MAIL_PASSWORD = process.env.EASY_GOLD_SUPPORT_MAIL_PASSWORD;
+const EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS = process.env.EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS;
+const EASY_GOLD_SUPPORT_MAIL_FROM_NAME = process.env.EASY_GOLD_SUPPORT_MAIL_FROM_NAME;
+
 const CreateTargetCustomer = async (req, res) => {
   try {
     const { user } = req.user;
@@ -199,23 +217,56 @@ const CreateTargetCustomer = async (req, res) => {
       brokerLanguage = "en";
     }
 
+    let senderEmail = "";
+    let mailConfig = {};
+    let finalFrom;
+
+    const senderEmailConfig = {
+      easygold: {
+        user: EASY_GOLD_SUPPORT_MAIL_SENDER,
+        pass: EASY_GOLD_SUPPORT_MAIL_PASSWORD,
+      },
+      goldflex: {
+        user: GOLD_FLEX_SUPPORT_MAIL_SENDER,
+        pass: GOLD_FLEX_SUPPORT_MAIL_PASSWORD,
+      },
+      primeinvest: {
+        user: PRIME_INVEST_SUPPORT_MAIL_SENDER,
+        pass: PRIME_INVEST_SUPPORT_MAIL_PASSWORD,
+      }
+    };
+
+    let host = MAIL_HOST;
+
     let easyGoldReferralCode = Buffer.from(String(broker.referral_code), "utf-8").toString("base64");
 
     if (interest_in === "Landingpage") {
+      host = MAIL_HOST;
+      finalFrom = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL;
       const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
       contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
     } else if (interest_in === "easygold Token") {
+      host = MAIL_HOST;
+      finalFrom = `"${EASY_GOLD_SUPPORT_MAIL_FROM_NAME}" <${EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS}>`;
+      mailConfig = senderEmailConfig.easygold;
       const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/easygold`;
       const sendingUrl = `${process.env.EASY_GOLD_FRONTEND_URL}`;
       sending_link = `<a href="${sendingUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
       contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
     } else if (interest_in === "Primeinvest") {
+      host = MAIL_HOST;
+      finalFrom = `"${PRIME_INVEST_SUPPORT_MAIL_FROM_NAME}" <${PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS}>`;
+      mailConfig = senderEmailConfig.primeinvest;
       const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/primeinvest`;
       const sendingUrl = `${process.env.PRIME_INVEST_URL}`;
       sending_link = `<a href="${sendingUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
       contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
     } else if (interest_in === "goldflex") {
+      host = GOLDFLEX_MAIL_HOST;
+      finalFrom = `"${GOLD_FLEX_SUPPORT_MAIL_FROM_NAME}" <${GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS}>`;
+      mailConfig = senderEmailConfig.goldflex;
+
       const registrationUrl = `${process.env.FRONTEND_URL}/customer-register/${customer_email}/goldflex`;
       const sendingUrl = `${process.env.GOLD_FLEX_URL}`;
       sending_link = `<a href="${sendingUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
@@ -311,16 +362,14 @@ const CreateTargetCustomer = async (req, res) => {
     };
 
     const senderName = "EasyGold24 Team";
-    const senderEmail = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL;
+    // const senderEmail = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL;
 
     const dynamicFrom = `"${senderName}" <${senderEmail}>`;
-
-    let finalFrom;
 
     // if (isAllowedEmail(senderEmail)) {
     // finalFrom = dynamicFrom; // allow Gmail, Yahoo, Outlook, company domain
     // } else {
-    finalFrom = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL; // fallback to verified sender domain
+    // finalFrom = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL; // fallback to verified sender domain
     // }
 
     if (interest_in == "Landingpage") {
@@ -351,7 +400,7 @@ const CreateTargetCustomer = async (req, res) => {
       // Send email to customer
       await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom);
     } else {
-      await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom);
+      await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom, mailConfig, host);
     }
 
     let address = "";

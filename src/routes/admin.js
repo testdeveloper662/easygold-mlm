@@ -54,6 +54,7 @@ const GetCustomerDetails = require("../controller/admin/getCustomerDetails");
 const GetAllAdminContracts = require("../controller/admin/getAllAdminContracts");
 const GetAdminContractsById = require("../controller/admin/getAdminContractsById");
 const UpdateAdminContract = require("../controller/admin/updateAdminContract");
+const UpdateReferralLogStatus = require("../controller/broker/updateReferralLogStatus");
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
@@ -88,6 +89,8 @@ adminRouter.get("/broker/:brokerId/bank-details", authenticateToken, GetBrokerBa
 adminRouter.get("/target-customers", authenticateToken, GetAllTargetCustomers);
 adminRouter.get("/target-customers/stats", authenticateToken, GetTargetCustomerStatsOverall);
 adminRouter.get("/target-customers/broker/:broker_id", authenticateToken, GetTargetCustomersByBroker);
+
+adminRouter.put("/target-customers/referral-log/:id/status", authenticateToken, UpdateReferralLogStatus);
 
 //Admin Contracts Routes
 adminRouter.get("/admin-contracts", authenticateToken, GetAllAdminContracts);

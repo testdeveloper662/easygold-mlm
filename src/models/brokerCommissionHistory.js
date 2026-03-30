@@ -63,6 +63,10 @@ const BrokerCommissionHistory = sequelize.define(
       defaultValue: 1,
       comment: "1 - bank, 2 - crypto",
     },
+    target_customer_log_id: {
+      type: Sequelize.INTEGER,
+      allowNull: true, // or false if required
+    },
     is_deleted: {
       type: Sequelize.BOOLEAN,
       default: false,

@@ -7,24 +7,25 @@ const nodemailer = require("nodemailer");
 //         user: process.env.MAIL_SENDER,
 //         pass: process.env.MAIL_PASSWORD,
 //     },
-// });
-const transporter = nodemailer.createTransport({
-    host: process.env.MAIL_HOST,
-    port: Number(process.env.MAIL_PORT),
-    secure: Number(process.env.MAIL_PORT) === 465, // true for port 465
-    auth: {
-        user: process.env.MAIL_SENDER,
-        pass: process.env.MAIL_PASSWORD,
-    },
-    tls: {
-        rejectUnauthorized: false, // optional, fixes some SSL issues
-    },
-});
+// })
 
 
-const SendEmailHelper = (subject, htmlContent, to, attachments = null, cc = null, from = null) => {
+const SendEmailHelper = (subject, htmlContent, to, attachments = null, cc = null, from = null, smtpConfig = {}, host = null) => {
     try {
         return new Promise((resolve, reject) => {
+            const transporter = nodemailer.createTransport({
+                host: host || process.env.MAIL_HOST,
+                port: Number(process.env.MAIL_PORT),
+                secure: Number(process.env.MAIL_PORT) === 465, // true for port 465
+                auth: {
+                    user: smtpConfig?.user || process.env.MAIL_SENDER,
+                    pass: smtpConfig?.pass || process.env.MAIL_PASSWORD,
+                },
+                tls: {
+                    rejectUnauthorized: false, // optional, fixes some SSL issues
+                },
+            });
+
             const mailOptions = {
                 from: from || process.env.MAIL_SENDER,
                 to: to,
@@ -47,10 +48,12 @@ const SendEmailHelper = (subject, htmlContent, to, attachments = null, cc = null
                     path: filePath,
                 }));
             }
-            
+
             if (cc) {
                 mailOptions.cc = cc;
             }
+
+            console.log("Sending email with options:", mailOptions);
 
             transporter.sendMail(mailOptions, (error, info) => {
                 if (error) {

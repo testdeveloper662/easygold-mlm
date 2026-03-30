@@ -351,6 +351,8 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     // finalFrom = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL; // fallback to verified sender domain
     // }
 
+    let customerMailOptions = null;
+
     const mailOptions = {
       from: finalFrom,
       to: customer_email,
@@ -358,12 +360,14 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       html: emailData.htmlContent,
     };
 
-    const customerMailOptions = {
-      from: finalFrom,
-      to: parentEmail,
-      subject: customerEmailData.subject,
-      html: customerEmailData.htmlContent,
-    };
+    if (parent_email) {
+      customerMailOptions = {
+        from: finalFrom,
+        to: parentEmail,
+        subject: customerEmailData.subject,
+        html: customerEmailData.htmlContent,
+      };
+    }
 
     const brokermailOptions = {
       from: MAIL_SENDER,
@@ -395,7 +399,9 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom, mailConfig, host);
 
-    await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig, host);
+    if (customerMailOptions) {
+      await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig, host);
+    }
 
     await SendEmailHelper(brokermailOptions.subject, brokermailOptions.html, brokermailOptions.to, brokerAttachmentPath, null, null);
 

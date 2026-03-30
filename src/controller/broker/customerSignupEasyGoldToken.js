@@ -102,10 +102,21 @@ const customerSignupEasyGoldToken = async (req, res) => {
         if (customer) {
             if (customer.status === "REGISTERED") {
                 console.log("Customer already registered");
-                return res.status(400).json({
-                    success: false,
-                    message: "Customer already registered",
-                });
+                if (product_type === customer.interest_in && (product_type === "easygold Token" || product_type === "primeInvest")) {
+                    customer = await customer.update(
+                        {
+                            referral_code: referral_code,
+                            interest_in: product_type,
+                        },
+                        { transaction }
+                    );
+                } else {
+
+                    return res.status(400).json({
+                        success: false,
+                        message: "Customer already registered",
+                    });
+                }
             }
 
             await db.TargetCustomers.update(

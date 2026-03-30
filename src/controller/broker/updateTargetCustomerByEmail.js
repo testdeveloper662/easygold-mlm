@@ -360,9 +360,9 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       html: emailData.htmlContent,
     };
 
-    console.log("parent_email", parent_email);
+    console.log("parentEmail", parentEmail);
 
-    if (parent_email) {
+    if (parentEmail) {
       customerMailOptions = {
         from: finalFrom,
         to: parentEmail,

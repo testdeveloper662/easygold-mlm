@@ -169,7 +169,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     to_customer_id: customer.id,
                     type: "REFERRAL_CREATED",
                     status: "APPROVED",
-                    product: interest_in
+                    product: product_type
                 },
                 { transaction }
             );

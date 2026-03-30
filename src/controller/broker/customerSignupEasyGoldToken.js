@@ -49,6 +49,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
             parentCustomer = await db.TargetCustomers.findOne({
                 where: { referral_code: normalizedReferralCode, interest_in: product_type },
+                raw: true,
                 transaction,
             });
 

@@ -15,7 +15,9 @@ const customerSignupEasyGoldToken = async (req, res) => {
             product_type
         } = req.body;
 
-        console.log(req.body, "req.body");
+        console.log("======================================");
+        console.log("Signup request received with data from other platform - referral:", req.body);
+        console.log("======================================");
 
         if (!customer_name || !customer_email || !type || !referred_by_code) {
             return res.status(400).json({
@@ -135,8 +137,6 @@ const customerSignupEasyGoldToken = async (req, res) => {
             );
         }
 
-        console.log(customer, "customer after update");
-
         /** 5️⃣ Reward ONLY customer parent */
         if (parentCustomer && type === "CUSTOMER") {
             await db.TargetCustomers.increment(
@@ -155,7 +155,8 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     from_customer_id: parentCustomer.id,
                     to_customer_id: customer.id,
                     type: "REFERRAL_CREATED",
-                    status: "PENDING",
+                    status: "APPROVED",
+                    product: interest_in
                 },
                 { transaction }
             );

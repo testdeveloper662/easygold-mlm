@@ -3,6 +3,10 @@ const db = require("../../models");
 const GetAllReferralLogs = async (req, res) => {
     try {
         const { id } = req.params;
+        const { user } = req.user;
+
+        const broker_id = user.broker_id;
+
         const { page = 1, limit = 10, search, product } = req.query;
 
         const offset = (page - 1) * limit;
@@ -16,20 +20,73 @@ const GetAllReferralLogs = async (req, res) => {
             });
         }
 
+        const customerId = parseInt(id);
+
         const where = {
             [db.Sequelize.Op.or]: [
-                { from_customer_id: id },
-                { to_customer_id: id },
+                { from_customer_id: customerId },
+                { to_customer_id: customerId },
             ],
         };
 
         if (search) {
+            const searchConditions = [
+                // 👤 from customer
+                {
+                    "$fromCustomer.customer_name$": {
+                        [db.Sequelize.Op.like]: `%${search}%`,
+                    },
+                },
+                {
+                    "$fromCustomer.customer_email$": {
+                        [db.Sequelize.Op.like]: `%${search}%`,
+                    },
+                },
+
+                // 👤 to customer
+                {
+                    "$toCustomer.customer_name$": {
+                        [db.Sequelize.Op.like]: `%${search}%`,
+                    },
+                },
+                {
+                    "$toCustomer.customer_email$": {
+                        [db.Sequelize.Op.like]: `%${search}%`,
+                    },
+                },
+
+                // 📦 product
+                {
+                    product: {
+                        [db.Sequelize.Op.like]: `%${search}%`,
+                    },
+                },
+            ];
+
+            // ✅ ONLY add these when broker_id is NOT present
+            if (!broker_id) {
+                searchConditions.push(
+                    {
+                        "$broker.user.user_email$": {
+                            [db.Sequelize.Op.like]: `%${search}%`,
+                        },
+                    },
+                    {
+                        "$broker.user.display_name$": {
+                            [db.Sequelize.Op.like]: `%${search}%`,
+                        },
+                    },
+                    {
+                        status: {
+                            [db.Sequelize.Op.like]: `%${search}%`,
+                        },
+                    }
+                );
+            }
+
             where[db.Sequelize.Op.and] = [
                 {
-                    [db.Sequelize.Op.or]: [
-                        { product: { [db.Sequelize.Op.like]: `%${search}%` } },
-                        { status: { [db.Sequelize.Op.like]: `%${search}%` } },
-                    ],
+                    [db.Sequelize.Op.or]: searchConditions,
                 },
             ];
         }
@@ -50,7 +107,6 @@ const GetAllReferralLogs = async (req, res) => {
                 limit: parseInt(limit),
                 offset: parseInt(offset),
                 order: [["createdAt", "DESC"]],
-
                 include: [
                     {
                         model: db.TargetCustomers,

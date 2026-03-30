@@ -393,9 +393,9 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     let brokerAttachmentPath = `${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`;
 
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom, mailConfig);
+    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom, mailConfig, host);
 
-    await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig);
+    await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig, host);
 
     await SendEmailHelper(brokermailOptions.subject, brokermailOptions.html, brokermailOptions.to, brokerAttachmentPath, null, null);
 

@@ -30,7 +30,24 @@ const GetInvestmentLogs = async (req, res) => {
         // ✅ filters
         if (product) where.product = product;
         if (status) where.status = status;
-        if (broker_id) where.broker_id = broker_id;
+        if (broker_id) {
+            where.broker_id = broker_id;
+
+            // 🔥 APPLY ONLY WHEN broker_id EXISTS
+            where[Op.and] = [
+                db.Sequelize.literal(`
+            EXISTS (
+                SELECT 1
+                FROM broker_commission_histories AS bch
+                WHERE 
+                    bch.target_customer_log_id = referral_logs.id
+                    AND bch.is_payment_done = true
+                    AND bch.is_deleted = false
+                    AND bch.broker_id = ${broker_id}
+            )
+        `),
+            ];
+        }
 
         // 🔥 SEARCH LOGIC
         if (search) {
@@ -122,6 +139,23 @@ const GetInvestmentLogs = async (req, res) => {
                         ],
                     },
                 ],
+                attributes: {
+                    include: [
+                        [
+                            db.Sequelize.literal(`
+                EXISTS (
+                    SELECT 1 
+                    FROM broker_commission_histories AS bch
+                    WHERE 
+                        bch.target_customer_log_id = referral_logs.id
+                        AND bch.is_payment_done = true
+                        AND bch.is_deleted = false
+                )
+            `),
+                            "commission_devided"
+                        ]
+                    ]
+                },
             });
 
         const formattedData = rows.map((log) => ({
@@ -148,6 +182,8 @@ const GetInvestmentLogs = async (req, res) => {
             tracking_number: log.tracking_number || "",
             tracking_link: log.tracking_link || "",
             remark: log.remark || "",
+
+            commission_devided: log.get("commission_devided") ? true : false,
 
             createdAt: log.createdAt,
         }));

@@ -33,6 +33,8 @@ const GetInvestmentLogs = async (req, res) => {
         if (broker_id) {
             where.broker_id = broker_id;
 
+            where.status = "APPROVED";
+
             // 🔥 APPLY ONLY WHEN broker_id EXISTS
             where[Op.and] = [
                 db.Sequelize.literal(`

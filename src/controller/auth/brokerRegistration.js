@@ -1324,8 +1324,8 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_vat_no", vatId || "");
     form.append("u_tax_no", taxNumber || "");
     form.append("u_email", email);
-    form.append("u_phone", phone);
-    form.append("u_landline_number", mobile);
+    form.append("u_landline_number", phone);
+    form.append("u_phone", mobile);
     form.append("u_username", username);
     form.append("u_password", password);
     form.append("u_web_site", website);

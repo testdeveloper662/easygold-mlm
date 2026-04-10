@@ -103,7 +103,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
         if (customer) {
             if (customer.status === "REGISTERED") {
                 console.log("Customer already registered");
-                if (product_type === customer.interest_in && (product_type === "easygold Token" || product_type === "Primeinvest")) {
+                if (product_type === customer.interest_in && (product_type === "easygold Token" || product_type === "Primeinvest" || product_type === "goldflex")) {
                     customer = await customer.update(
                         {
                             referral_code: referral_code,

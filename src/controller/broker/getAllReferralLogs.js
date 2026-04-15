@@ -160,6 +160,7 @@ const GetAllReferralLogs = async (req, res) => {
             tracking_number: log.tracking_number,
             tracking_link: log.tracking_link,
             remark: log.remark,
+            address: log.address,
 
             createdAt: log.createdAt,
         }));

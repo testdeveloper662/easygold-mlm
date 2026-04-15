@@ -52,6 +52,8 @@ const CaptureOrder = async (req, res) => {
 
     const { orderId, orderType, b2bCommissionAmount, b2bEmail, selected_payment_method, b2bAddress } = req.body;
 
+    console.log(b2bAddress, "b2bAddress");
+
     const existingCommission = await db.BrokerCommissionHistory.findOne({
       where: {
         order_id: orderId,
@@ -463,6 +465,8 @@ const CaptureOrder = async (req, res) => {
 
         // ✅ Calculate commission based on rule
         const commission_amount = Math.floor(investment / 5000);
+
+        console.log(b2bAddress, "b2bAddress inside call");
 
         targetCustomerLogFound = await ReferralLogs.create({
           broker_id: customer.broker_id,

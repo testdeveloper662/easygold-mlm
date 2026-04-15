@@ -81,6 +81,10 @@ const Brokers = sequelize.define(
     binding_loi_doc: {
       type: Sequelize.TEXT("long"),
       allowNull: true
+    },
+    partner_tax_billing_doc: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true
     }
   },
   {

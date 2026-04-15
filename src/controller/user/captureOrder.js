@@ -50,7 +50,7 @@ const CaptureOrder = async (req, res) => {
       });
     }
 
-    const { orderId, orderType, b2bCommissionAmount, b2bEmail, selected_payment_method } = req.body;
+    const { orderId, orderType, b2bCommissionAmount, b2bEmail, selected_payment_method, b2bAddress } = req.body;
 
     const existingCommission = await db.BrokerCommissionHistory.findOne({
       where: {
@@ -473,6 +473,7 @@ const CaptureOrder = async (req, res) => {
           commission_amount, // 🔥 added
           product: interest_in,
           status: "PENDING",
+          address: b2bAddress
         });
 
         console.log("✅ INVESTMENT_DONE log created", {

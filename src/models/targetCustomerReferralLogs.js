@@ -87,6 +87,10 @@ const TargetCustomerReferralLogs = sequelize.define(
             type: Sequelize.TEXT,
             allowNull: true,
         },
+        address: {
+            type: Sequelize.TEXT,
+            allowNull: true,
+        },
         tracking_number: {
             type: Sequelize.TEXT,
             allowNull: true,

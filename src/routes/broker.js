@@ -47,6 +47,7 @@ const GetBrokerOwnContract = require("../controller/broker/getBrokerOwnContract"
 const ReferCustomerMail = require("../controller/broker/referCustomerMail");
 const GetInvestmentLogs = require("../controller/broker/getInvestmentLogs");
 const GetAllReferralLogs = require("../controller/broker/getAllReferralLogs");
+const GetReferralLogsByEmail = require("../controller/broker/getReferralLogsByEmail");
 
 brokerRouter.post(
   "/register",
@@ -100,6 +101,7 @@ brokerRouter.get("/owncontracts", authenticateToken, GetBrokerOwnContract);
 brokerRouter.post("/target-customers/signup", customerSignupEasyGoldToken);
 
 brokerRouter.get("/target-customers-logs/investement-logs", authenticateToken, GetInvestmentLogs);
+brokerRouter.get("/target-customers-logs/investnent-logs-external", GetReferralLogsByEmail);
 brokerRouter.get("/target-customers-logs/:id", authenticateToken, GetAllReferralLogs);
 
 // Dashboard

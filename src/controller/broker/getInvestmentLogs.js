@@ -185,6 +185,7 @@ const GetInvestmentLogs = async (req, res) => {
             tracking_link: log.tracking_link || "",
             remark: log.remark || "",
             address: log.address,
+            b2bName: log.b2bName,
 
             commission_devided: log.get("commission_devided") ? true : false,
 

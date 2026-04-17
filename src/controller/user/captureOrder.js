@@ -50,7 +50,7 @@ const CaptureOrder = async (req, res) => {
       });
     }
 
-    const { orderId, orderType, b2bCommissionAmount, b2bEmail, selected_payment_method, b2bAddress } = req.body;
+    const { orderId, orderType, b2bCommissionAmount, b2bEmail, selected_payment_method, b2bAddress, b2bName } = req.body;
 
     console.log(b2bAddress, "b2bAddress");
 
@@ -477,7 +477,8 @@ const CaptureOrder = async (req, res) => {
           commission_amount, // 🔥 added
           product: interest_in,
           status: "PENDING",
-          address: b2bAddress
+          address: b2bAddress,
+          b2bName: b2bName
         });
 
         console.log("✅ INVESTMENT_DONE log created", {

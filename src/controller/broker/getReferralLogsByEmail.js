@@ -82,16 +82,6 @@ const GetReferralLogsByEmail = async (req, res) => {
             ];
         }
 
-        if (product) {
-            if (!where[db.Sequelize.Op.and]) {
-                where[db.Sequelize.Op.and] = [];
-            }
-
-            where[db.Sequelize.Op.and].push({
-                product: product,
-            });
-        }
-
         const { count, rows } =
             await db.TargetCustomerReferralLogs.findAndCountAll({
                 where,

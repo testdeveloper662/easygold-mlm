@@ -3,9 +3,6 @@ const db = require("../../models");
 const GetReferralLogsByEmail = async (req, res) => {
     try {
         const { email } = req.query; // ✅ use email
-        const { user } = req.user;
-
-        const broker_id = user?.broker_id;
 
         const { page = 1, limit = 10, search, product } = req.query;
 
@@ -68,21 +65,6 @@ const GetReferralLogsByEmail = async (req, res) => {
                     },
                 },
             ];
-
-            if (!broker_id) {
-                searchConditions.push(
-                    {
-                        "$broker.user.user_email$": {
-                            [db.Sequelize.Op.like]: `%${search}%`,
-                        },
-                    },
-                    {
-                        status: {
-                            [db.Sequelize.Op.like]: `%${search}%`,
-                        },
-                    }
-                );
-            }
 
             where[db.Sequelize.Op.and] = [
                 {

@@ -82,6 +82,8 @@ const GetReferralLogsByEmail = async (req, res) => {
             ];
         }
 
+        console.log(where, "where");
+
         const { count, rows } =
             await db.TargetCustomerReferralLogs.findAndCountAll({
                 where,
@@ -113,6 +115,8 @@ const GetReferralLogsByEmail = async (req, res) => {
                     },
                 ],
             });
+
+        console.log(rows, "rows");
 
         const formattedData = rows.map((log) => ({
             id: log.id,

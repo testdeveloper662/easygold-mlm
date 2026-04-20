@@ -15,9 +15,17 @@ const GetReferralLogsByEmail = async (req, res) => {
 
         const offset = (page - 1) * limit;
 
+        let productMap = {
+            primeinvest: "Primeinvest",
+            goldflex: "goldflex",
+            easygold: "easygold Token"
+        };
+
+        const normalizedProduct = productMap[product?.toLowerCase()];
+
         // ✅ Find customer by email
         const customer = await db.TargetCustomers.findOne({
-            where: { customer_email: email },
+            where: { customer_email: email, interest_in: normalizedProduct },
         });
 
         if (!customer) {
@@ -36,14 +44,6 @@ const GetReferralLogsByEmail = async (req, res) => {
                 { to_customer_id: customerId },
             ],
         };
-
-        let productMap = {
-            primeinvest: "Primeinvest",
-            goldflex: "goldflex",
-            easygold: "easygold Token"
-        };
-
-        const normalizedProduct = productMap[product?.toLowerCase()];
 
         if (normalizedProduct) {
             where.product = normalizedProduct;

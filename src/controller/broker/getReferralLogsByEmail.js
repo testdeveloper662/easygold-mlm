@@ -37,6 +37,20 @@ const GetReferralLogsByEmail = async (req, res) => {
             ],
         };
 
+        let productMap = {
+            primeinvest: "Primeinvest",
+            goldflex: "goldflex",
+            easygold: "easygold Token"
+        };
+
+        const normalizedProduct = productMap[product?.toLowerCase()];
+
+        if (normalizedProduct) {
+            where.product = normalizedProduct;
+        }
+
+        console.log(normalizedProduct, "normalizedproduct");
+
         if (search) {
             const searchConditions = [
                 {
@@ -58,12 +72,7 @@ const GetReferralLogsByEmail = async (req, res) => {
                     "$toCustomer.customer_email$": {
                         [db.Sequelize.Op.like]: `%${search}%`,
                     },
-                },
-                {
-                    product: {
-                        [db.Sequelize.Op.like]: `%${search}%`,
-                    },
-                },
+                }
             ];
 
             where[db.Sequelize.Op.and] = [

@@ -761,9 +761,7 @@ const CaptureOrder = async (req, res) => {
         order_id: orderId,
         order_type: commissionHistoryOrderType,
         order_amount: isGoldFlex || isEasyGoldToken || isPrimeInvest ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
-        profit_amount: (isGoldFlex || isEasyGoldToken || isPrimeInvest)
-          ? safeCommissionAmount
-          : (isEasyGoldToken || isPrimeInvest) ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
         commission_amount: safeCommissionAmount,
         tree,

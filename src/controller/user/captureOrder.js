@@ -674,7 +674,7 @@ const CaptureOrder = async (req, res) => {
 
       if (commissionAmount <= 0 || isNaN(commissionAmount)) {
         console.error(` [CAPTURE ORDER] ⚠️ WARNING: Commission Amount is ${commissionAmount} for Level ${i + 1}!`);
-        console.error(` [CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : totalProfitAmount}`);
         console.error(` [CAPTURE ORDER] ⚠️ Raw calculation result: ${rawCalculation}`);
       }
 
@@ -719,9 +719,9 @@ const CaptureOrder = async (req, res) => {
 
       if (isNaN(commissionAmount) || commissionAmount < 0) {
         console.error(` [CAPTURE ORDER] ❌ ERROR: Invalid commission_amount: ${commissionAmount}`);
-        console.error(` [CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : totalProfitAmount}`);
         console.error(` [CAPTURE ORDER] ❌ commissionPercent type: ${typeof commissionPercent}`);
-        console.error(` [CAPTURE ORDER] ❌ totalProfitAmount type: ${typeof isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ totalProfitAmount type: ${typeof isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : totalProfitAmount}`);
       }
 
       // Calculate safe commission amount
@@ -760,8 +760,8 @@ const CaptureOrder = async (req, res) => {
         user_id: currentBroker.user_id,
         order_id: orderId,
         order_type: commissionHistoryOrderType,
-        order_amount: isGoldFlex || isEasyGoldToken || isPrimeInvest ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
-        profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        order_amount: isGoldFlex || isEasyGoldToken || isPrimeInvest ? parseFloat(totalOrderAmount.toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
+        profit_amount: isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
         commission_amount: safeCommissionAmount,
         tree,
@@ -870,8 +870,8 @@ const CaptureOrder = async (req, res) => {
       success: true,
       message: "Commission distribution stored successfully",
       data: {
-        totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
-        totalProfitAmount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
+        totalProfitAmount: isGoldPurchase || isGoldPurchaseSell ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         distribution,
         tree,
         timestamp: endTime.toISOString(),

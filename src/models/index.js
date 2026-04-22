@@ -115,5 +115,15 @@ db.TargetCustomerReferralLogs.belongsTo(db.TargetCustomers, {
   as: "toCustomer",
 });
 
+db.BrokerCommissionHistory.belongsTo(db.TargetCustomerReferralLogs, {
+  foreignKey: "target_customer_log_id",
+  as: "referralLog",
+});
+
+db.TargetCustomerReferralLogs.hasMany(db.BrokerCommissionHistory, {
+  foreignKey: "target_customer_log_id",
+  as: "commissions",
+});
+
 
 module.exports = db;

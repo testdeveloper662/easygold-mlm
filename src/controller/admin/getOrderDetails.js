@@ -4,10 +4,208 @@ const GetOrderDetails = async (req, res) => {
   try {
     const { orderId, orderType } = req.body;
 
-    let orderShippingMeta = [];
-    let orderPivots = [];
     let order = null;
     let userId = null;
+
+    // ===============================
+    // ✅ GOLD ORDER TYPES
+    // ===============================
+    if (orderType === "gold_purchase") {
+      order = await db.GoldPurchaseOrder.findOne({
+        where: { id: orderId },
+      });
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      userId = order.user_id;
+
+      // ✅ GET BROKER COMMISSIONS
+      const brokerCommissions = await db.BrokerCommissionHistory.findAll({
+        where: {
+          order_id: orderId,
+          order_type: orderType,
+        },
+        include: [
+          {
+            model: db.Users,
+            as: "commission_from_user", // ✅ MUST MATCH ASSOCIATION
+            attributes: ["ID", "user_email"],
+            required: false,
+          },
+        ],
+      });
+
+      const formattedBrokerCommissions = brokerCommissions.map((bc) => {
+        const json = bc.toJSON();
+
+        return {
+          broker_id: json.broker_id,
+          user_id: json.user_id,
+          user_email: json.commission_from_user?.user_email || null,
+
+          commission_percent: json.commission_percent,
+          commission_amount: json.commission_amount,
+
+          selected_payment_method: json.selected_payment_method,
+
+          is_seller: json.is_seller,
+          is_payment_done: json.is_payment_done,
+          is_payment_declined: json.is_payment_declined,
+
+          tree: json.tree,
+        };
+      });
+
+      const totalProfit = brokerCommissions.reduce((sum, bc) => {
+        return sum + parseFloat(bc.commission_amount || 0);
+      }, 0);
+
+      const paymentMethod = brokerCommissions?.[0]?.selected_payment_method;
+
+      const paymentType =
+        paymentMethod === 1
+          ? "Bank Transfer"
+          : paymentMethod === 2
+            ? "Crypto Payment"
+            : paymentMethod === 3
+              ? "Cash"
+              : paymentMethod === 4
+                ? "Card"
+                : null;
+
+      return res.json({
+        success: true,
+        data: {
+          order_id: order.id,
+          order_type: orderType,
+
+          order_amount: order.confirmed_price || 0,
+          profit_amount: totalProfit || 0,
+
+          payment_type: paymentType,
+
+          tracking_number: order.tracking_number,
+          createdAt: order.created_at,
+          updatedAt: order.updated_at,
+
+          broker_commissions: formattedBrokerCommissions || [],
+          tree: brokerCommissions?.[0]?.tree || null,
+
+          customer: {
+            name: `${order.first_name} ${order.last_name}`,
+            email: order.email,
+            phone: order.phone,
+            address: order.address,
+            city: order.city,
+            country: order.country,
+          },
+        },
+      });
+    }
+
+    if (orderType === "gold_purchase_sell_orders") {
+      order = await db.GoldPurchaseSellOrders.findOne({
+        where: { id: orderId },
+      });
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      userId = order.user_id;
+
+      const brokerCommissions = await db.BrokerCommissionHistory.findAll({
+        where: {
+          order_id: orderId,
+          order_type: orderType,
+        },
+        include: [
+          {
+            model: db.Users,
+            as: "commission_from_user", // ✅ MUST MATCH ASSOCIATION
+            attributes: ["ID", "user_email"],
+            required: false,
+          },
+        ],
+      });
+
+      const formattedBrokerCommissions = brokerCommissions.map((bc) => {
+        const json = bc.toJSON();
+
+        return {
+          broker_id: json.broker_id,
+          user_id: json.user_id,
+          user_email: json.commission_from_user?.user_email || null,
+
+          commission_percent: json.commission_percent,
+          commission_amount: json.commission_amount,
+
+          selected_payment_method: json.selected_payment_method,
+
+          is_seller: json.is_seller,
+          is_payment_done: json.is_payment_done,
+          is_payment_declined: json.is_payment_declined,
+
+          tree: json.tree,
+        };
+      });
+
+      const totalProfit = brokerCommissions.reduce((sum, bc) => {
+        return sum + parseFloat(bc.commission_amount || 0);
+      }, 0);
+
+      const paymentMethod = brokerCommissions?.[0]?.selected_payment_method;
+
+      const paymentType =
+        paymentMethod === 1
+          ? "Bank Transfer"
+          : paymentMethod === 2
+            ? "Crypto Payment"
+            : paymentMethod === 3
+              ? "Cash"
+              : paymentMethod === 4
+                ? "Card"
+                : null;
+
+      return res.json({
+        success: true,
+        data: {
+          order_id: order.id,
+          order_type: orderType,
+
+          order_amount: order.confirmed_price || order.estimated_value || 0,
+          profit_amount: totalProfit || 0,
+
+          payment_type: paymentType,
+
+          tracking_number: order.tracking_number,
+          createdAt: order.created_at,
+          updatedAt: order.updated_at,
+
+          broker_commissions: formattedBrokerCommissions || [],
+          tree: brokerCommissions?.[0]?.tree || null,
+
+          customer: {
+            name: `${order.first_name || ""} ${order.last_name || ""}`,
+            email: order.email,
+            phone: order.phone,
+            address: order.address,
+            city: order.city,
+          },
+        },
+      });
+    }
+
+    let orderShippingMeta = [];
+    let orderPivots = [];
 
     // Fetch order shipping details, pivots, and order info based on type
     if (orderType === "landing_page") {

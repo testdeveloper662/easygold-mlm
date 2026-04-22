@@ -55,6 +55,7 @@ const GetAllAdminContracts = require("../controller/admin/getAllAdminContracts")
 const GetAdminContractsById = require("../controller/admin/getAdminContractsById");
 const UpdateAdminContract = require("../controller/admin/updateAdminContract");
 const UpdateReferralLogStatus = require("../controller/broker/updateReferralLogStatus");
+const GetCustomerByOrderId = require("../controller/admin/getCustomerByOrderId");
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
@@ -74,6 +75,7 @@ adminRouter.post("/affiliate/variable-commissions", authenticateToken, AdjustVar
 adminRouter.get("/brokers", authenticateToken, GetAllBrokers);
 adminRouter.get("/brokers/list", authenticateToken, GetBrokersList);
 adminRouter.get("/commission-history", authenticateToken, GetAllBrokerCommissionHistory);
+adminRouter.get("/ordercustomer/detail", authenticateToken, GetCustomerByOrderId);
 adminRouter.post("/broker/update-payment-status", authenticateToken, UpdateBrokerPaymentStatus);
 adminRouter.post("/commission/send-payment-confirmation-email", authenticateToken, SendPaymentConfirmationEmail);
 adminRouter.post("/commission/send-payment-decline-email", authenticateToken, SendPaymentDeclineEmail);

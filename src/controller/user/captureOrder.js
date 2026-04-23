@@ -99,8 +99,6 @@ const CaptureOrder = async (req, res) => {
     // Step 1: 
     let OrderModel, PivotModel;
 
-
-
     if (orderType === "landing_page") {
       OrderModel = db.LpOrders;
       PivotModel = db.LpOrderPivots;
@@ -374,6 +372,7 @@ const CaptureOrder = async (req, res) => {
     let broker = null;
     let targetCustomerBroker = false;
     let targetCustomerLogFound = null;
+    let customerInfo = null;
 
     if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
       // For Gold Flex, get broker using b2bEmail
@@ -456,6 +455,8 @@ const CaptureOrder = async (req, res) => {
           status: "REGISTERED",
         },
       });
+
+      customerInfo = customer;
 
       console.log(customer, "customer");
       console.log(customer.parent_customer_id, "customer.parent_customer_id");
@@ -652,7 +653,17 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Commission Percent (type): ${typeof commissionPercent}`);
 
       // Calculate commission amount with detailed logging
-      const rawCalculation = (isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
+      // const rawCalculation = (isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
+      let rawCalculation;
+
+      if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
+        // ✅ Fixed 5% commission on order_amount
+        rawCalculation = 0.05 * b2bCommissionAmount;
+      } else if (isGoldPurchase || isGoldPurchaseSell) {
+        rawCalculation = (commissionPercent / 100) * b2bCommissionAmount;
+      } else {
+        rawCalculation = (commissionPercent / 100) * totalProfitAmount;
+      }
       console.log(` [CAPTURE ORDER] Calculation Steps:`);
       console.log(`   - Step 1: (${commissionPercent} / 100) = ${commissionPercent / 100}`);
       console.log(`   - Step 2: ${commissionPercent / 100} * ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);
@@ -687,7 +698,8 @@ const CaptureOrder = async (req, res) => {
         commission_percent: commissionPercent,
         commission_amount: commissionAmount,
         is_seller: isSeller,
-        target_customer_log_id: targetCustomerLogFound !== null ? targetCustomerLogFound.id : null
+        target_customer_log_id: targetCustomerLogFound !== null ? targetCustomerLogFound.id : customerInfo ? customerInfo.id : null,
+        is_send_bonus: targetCustomerLogFound !== null ? true : false
       });
 
       // ✅ Save in BrokerCommissionHistory with order_type and distribution timestamp
@@ -761,13 +773,14 @@ const CaptureOrder = async (req, res) => {
         order_id: orderId,
         order_type: commissionHistoryOrderType,
         order_amount: isGoldFlex || isEasyGoldToken || isPrimeInvest ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
-        profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        profit_amount: rawCalculation,
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
         commission_amount: safeCommissionAmount,
         tree,
         is_seller: isSeller,
         selected_payment_method: selected_payment || 1, // default to 1 (bank) if not present
-        target_customer_log_id: targetCustomerLogFound ? targetCustomerLogFound.id : null,
+        target_customer_log_id: targetCustomerLogFound ? targetCustomerLogFound.id : customerInfo ? customerInfo.id : null,
+        is_send_bonus: targetCustomerLogFound ? true : false,
       };
 
       console.log(`\n [CAPTURE ORDER] Database Create Object:`);

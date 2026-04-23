@@ -43,6 +43,7 @@ const GetInvestmentLogs = async (req, res) => {
                 FROM broker_commission_histories AS bch
                 WHERE 
                     bch.target_customer_log_id = referral_logs.id
+                    AND bch.is_send_bonus = true
                     AND bch.is_payment_done = true
                     AND bch.is_deleted = false
                     AND bch.broker_id = ${broker_id}
@@ -150,6 +151,7 @@ const GetInvestmentLogs = async (req, res) => {
                     FROM broker_commission_histories AS bch
                     WHERE 
                         bch.target_customer_log_id = referral_logs.id
+                        AND bch.is_send_bonus = true
                         AND bch.is_payment_done = true
                         AND bch.is_deleted = false
                 )

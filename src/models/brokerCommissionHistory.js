@@ -67,6 +67,10 @@ const BrokerCommissionHistory = sequelize.define(
       type: Sequelize.INTEGER,
       allowNull: true, // or false if required
     },
+    is_send_bonus: {
+      type: Sequelize.BOOLEAN,
+      default: false,
+    },
     is_deleted: {
       type: Sequelize.BOOLEAN,
       default: false,

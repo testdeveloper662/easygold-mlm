@@ -16,20 +16,20 @@ const GetCustomerByOrderId = async (req, res) => {
         }
 
         // ✅ Main record (with referral log)
-        const data = await db.BrokerCommissionHistory.findOne({
+        const data = await BrokerCommissionHistory.findOne({
             where: { order_id },
             include: [
                 {
-                    model: db.TargetCustomerReferralLogs,
+                    model: TargetCustomerReferralLogs,
                     as: "referralLog",
                     include: [
                         {
-                            model: db.TargetCustomers,
+                            model: TargetCustomers,
                             as: "fromCustomer",
                             attributes: ["id", "customer_name", "customer_email", "telephone"],
                         },
                         {
-                            model: db.TargetCustomers,
+                            model: TargetCustomers,
                             as: "toCustomer",
                             attributes: ["id", "customer_name", "customer_email", "telephone"],
                         },
@@ -45,8 +45,29 @@ const GetCustomerByOrderId = async (req, res) => {
             });
         }
 
+        // ✅ Decide source of customer data
+        let referralLogData = null;
+
+        if (data.is_send_bonus) {
+            // ✅ Use referral log
+            referralLogData = data.referralLog;
+        } else {
+            // ❌ No referral log → fetch from TargetCustomers
+            const customer = await TargetCustomers.findOne({
+                where: { id: data.target_customer_log_id },
+                attributes: ["id", "customer_name", "customer_email", "telephone"],
+            });
+
+            if (customer) {
+                referralLogData = {
+                    fromCustomer: null,
+                    toCustomer: customer,
+                };
+            }
+        }
+
         // ✅ Get ALL broker commissions for same order
-        const allCommissions = await db.BrokerCommissionHistory.findAll({
+        const allCommissions = await BrokerCommissionHistory.findAll({
             where: { order_id },
             include: [
                 {
@@ -70,7 +91,7 @@ const GetCustomerByOrderId = async (req, res) => {
             tree: item.tree,
         }));
 
-        // ✅ Final response format
+        // ✅ Final response
         const response = {
             order_id: data.order_id,
             order_type: data.order_type,
@@ -83,11 +104,15 @@ const GetCustomerByOrderId = async (req, res) => {
                 data.selected_payment_method === 1
                     ? "Bank Transfer"
                     : data.selected_payment_method === 2
-                        ? "Crypto"
-                        : "Unknown",
+                    ? "Crypto"
+                    : "Unknown",
 
             broker_commissions,
-            referralLog: data.referralLog,
+
+            // ✅ Unified customer structure
+            referralLog: referralLogData,
+            customer: referralLogData?.toCustomer || null,
+            referrer: referralLogData?.fromCustomer || null,
         };
 
         return res.status(200).json({
@@ -95,7 +120,7 @@ const GetCustomerByOrderId = async (req, res) => {
             data: response,
         });
     } catch (error) {
-        console.error(error);
+        console.error("GetCustomerByOrderId Error:", error);
         return res.status(500).json({
             success: false,
             message: "Something went wrong",

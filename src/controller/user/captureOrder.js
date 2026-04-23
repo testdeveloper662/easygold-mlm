@@ -653,17 +653,17 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Commission Percent (type): ${typeof commissionPercent}`);
 
       // Calculate commission amount with detailed logging
-      // const rawCalculation = (isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
-      let rawCalculation;
+      const rawCalculation = (isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
+      // let rawCalculation;
 
-      if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
-        // ✅ Fixed 5% commission on order_amount
-        rawCalculation = 0.05 * b2bCommissionAmount;
-      } else if (isGoldPurchase || isGoldPurchaseSell) {
-        rawCalculation = (commissionPercent / 100) * b2bCommissionAmount;
-      } else {
-        rawCalculation = (commissionPercent / 100) * totalProfitAmount;
-      }
+      // if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
+      //   // ✅ Fixed 5% commission on order_amount
+      //   rawCalculation = 0.05 * b2bCommissionAmount;
+      // } else if (isGoldPurchase || isGoldPurchaseSell) {
+      //   rawCalculation = (commissionPercent / 100) * b2bCommissionAmount;
+      // } else {
+      //   rawCalculation = (commissionPercent / 100) * totalProfitAmount;
+      // }
       console.log(` [CAPTURE ORDER] Calculation Steps:`);
       console.log(`   - Step 1: (${commissionPercent} / 100) = ${commissionPercent / 100}`);
       console.log(`   - Step 2: ${commissionPercent / 100} * ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);

@@ -636,6 +636,7 @@ const CaptureOrder = async (req, res) => {
 
     // Step 9: Calculate and store each broker's commission
     const distribution = [];
+    let rowsToInsert = [];
 
     let totalCommissionAmount = 0;
 
@@ -758,71 +759,128 @@ const CaptureOrder = async (req, res) => {
         }
       }
 
-
-      // Prepare data object for database
-      const commissionData = {
+      rowsToInsert.push({
         broker_id: currentBroker.id,
         user_id: currentBroker.user_id,
         order_id: orderId,
-        order_type: commissionHistoryOrderType,
-        order_amount: isGoldFlex || isEasyGoldToken || isPrimeInvest ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
-        // profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
-        profit_amount:
+        order_type: orderType,
+        order_amount:
           isGoldFlex || isEasyGoldToken || isPrimeInvest
-            ? parseFloat(totalCommissionAmount.toFixed(2)) // ✅ FIXED
+            ? parseFloat(Number(b2bCommissionAmount).toFixed(2))
             : isGoldPurchase || isGoldPurchaseSell
-              ? b2bCommissionAmount
-              : parseFloat(totalProfitAmount.toFixed(2)),
+              ? parseFloat(order.confirmed_price.toFixed(2))
+              : parseFloat(totalOrderAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
-        commission_amount: safeCommissionAmount,
+        commission_amount: commissionAmount,
         tree,
         is_seller: isSeller,
-        selected_payment_method: selected_payment || 1, // default to 1 (bank) if not present
-        target_customer_log_id: targetCustomerLogFound ? targetCustomerLogFound.id : customerInfo ? customerInfo.id : null,
+        selected_payment_method: selected_payment_method || 1,
+        target_customer_log_id: targetCustomerLogFound
+          ? targetCustomerLogFound.id
+          : customerInfo
+            ? customerInfo.id
+            : null,
         is_send_bonus: targetCustomerLogFound ? true : false,
+      });
+
+      const tempCommissionData = {
+        broker_id: currentBroker.id,
+        user_id: currentBroker.user_id,
+        order_id: orderId,
+        order_type: orderType,
+        order_amount:
+          isGoldFlex || isEasyGoldToken || isPrimeInvest
+            ? parseFloat(Number(b2bCommissionAmount).toFixed(2))
+            : isGoldPurchase || isGoldPurchaseSell
+              ? parseFloat(order.confirmed_price.toFixed(2))
+              : parseFloat(totalOrderAmount.toFixed(2)),
+        profit_amount: parseFloat(totalCommissionAmount.toFixed(2)), // running total (for debug only)
+        commission_percent: parseFloat(commissionPercent.toFixed(2)),
+        commission_amount: commissionAmount,
+        tree,
+        is_seller: isSeller,
       };
 
-      console.log(`\n [CAPTURE ORDER] Database Create Object:`);
-      console.log(`   - broker_id: ${commissionData.broker_id} (type: ${typeof commissionData.broker_id})`);
-      console.log(`   - user_id: ${commissionData.user_id} (type: ${typeof commissionData.user_id})`);
-      console.log(`   - order_id: ${commissionData.order_id} (type: ${typeof commissionData.order_id})`);
-      console.log(`   - order_type: ${commissionData.order_type} (type: ${typeof commissionData.order_type})`);
-      console.log(`   - order_amount: ${commissionData.order_amount} (type: ${typeof commissionData.order_amount})`);
-      console.log(`   - profit_amount: ${commissionData.profit_amount} (type: ${typeof commissionData.profit_amount})`);
-      console.log(`   - commission_percent: ${commissionData.commission_percent} (type: ${typeof commissionData.commission_percent})`);
-      console.log(`   - commission_amount: ${commissionData.commission_amount} (type: ${typeof commissionData.commission_amount})`);
-      console.log(`   - commission_amount is null: ${commissionData.commission_amount === null}`);
-      console.log(`   - commission_amount is undefined: ${commissionData.commission_amount === undefined}`);
-      console.log(`   - commission_amount is NaN: ${isNaN(commissionData.commission_amount)}`);
-      console.log(`   - tree: ${commissionData.tree} (type: ${typeof commissionData.tree})`);
-      console.log(`   - is_seller: ${commissionData.is_seller} (type: ${typeof commissionData.is_seller})`);
+
+      // Prepare data object for database
+      // const commissionData = {
+      //   broker_id: currentBroker.id,
+      //   user_id: currentBroker.user_id,
+      //   order_id: orderId,
+      //   order_type: commissionHistoryOrderType,
+      //   order_amount: isGoldFlex || isEasyGoldToken || isPrimeInvest ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
+      //   // profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+      //   profit_amount:
+      //     isGoldFlex || isEasyGoldToken || isPrimeInvest
+      //       ? parseFloat(totalCommissionAmount.toFixed(2)) // ✅ FIXED
+      //       : isGoldPurchase || isGoldPurchaseSell
+      //         ? b2bCommissionAmount
+      //         : parseFloat(totalProfitAmount.toFixed(2)),
+      //   commission_percent: parseFloat(commissionPercent.toFixed(2)),
+      //   commission_amount: safeCommissionAmount,
+      //   tree,
+      //   is_seller: isSeller,
+      //   selected_payment_method: selected_payment || 1, // default to 1 (bank) if not present
+      //   target_customer_log_id: targetCustomerLogFound ? targetCustomerLogFound.id : customerInfo ? customerInfo.id : null,
+      //   is_send_bonus: targetCustomerLogFound ? true : false,
+      // };
+
+      console.log(`\n [CAPTURE ORDER] Database Create Object (Preview):`);
+      console.log(`   - broker_id: ${tempCommissionData.broker_id} (type: ${typeof tempCommissionData.broker_id})`);
+      console.log(`   - user_id: ${tempCommissionData.user_id} (type: ${typeof tempCommissionData.user_id})`);
+      console.log(`   - order_id: ${tempCommissionData.order_id} (type: ${typeof tempCommissionData.order_id})`);
+      console.log(`   - order_type: ${tempCommissionData.order_type} (type: ${typeof tempCommissionData.order_type})`);
+      console.log(`   - order_amount: ${tempCommissionData.order_amount} (type: ${typeof tempCommissionData.order_amount})`);
+      console.log(`   - profit_amount: ${tempCommissionData.profit_amount} (type: ${typeof tempCommissionData.profit_amount})`);
+      console.log(`   - commission_percent: ${tempCommissionData.commission_percent} (type: ${typeof tempCommissionData.commission_percent})`);
+      console.log(`   - commission_amount: ${tempCommissionData.commission_amount} (type: ${typeof tempCommissionData.commission_amount})`);
+      console.log(`   - commission_amount is null: ${tempCommissionData.commission_amount === null}`);
+      console.log(`   - commission_amount is undefined: ${tempCommissionData.commission_amount === undefined}`);
+      console.log(`   - commission_amount is NaN: ${isNaN(tempCommissionData.commission_amount)}`);
+      console.log(`   - tree: ${tempCommissionData.tree} (type: ${typeof tempCommissionData.tree})`);
+      console.log(`   - is_seller: ${tempCommissionData.is_seller} (type: ${typeof tempCommissionData.is_seller})`);
+
+      // console.log(`\n [CAPTURE ORDER] Database Create Object:`);
+      // console.log(`   - broker_id: ${commissionData.broker_id} (type: ${typeof commissionData.broker_id})`);
+      // console.log(`   - user_id: ${commissionData.user_id} (type: ${typeof commissionData.user_id})`);
+      // console.log(`   - order_id: ${commissionData.order_id} (type: ${typeof commissionData.order_id})`);
+      // console.log(`   - order_type: ${commissionData.order_type} (type: ${typeof commissionData.order_type})`);
+      // console.log(`   - order_amount: ${commissionData.order_amount} (type: ${typeof commissionData.order_amount})`);
+      // console.log(`   - profit_amount: ${commissionData.profit_amount} (type: ${typeof commissionData.profit_amount})`);
+      // console.log(`   - commission_percent: ${commissionData.commission_percent} (type: ${typeof commissionData.commission_percent})`);
+      // console.log(`   - commission_amount: ${commissionData.commission_amount} (type: ${typeof commissionData.commission_amount})`);
+      // console.log(`   - commission_amount is null: ${commissionData.commission_amount === null}`);
+      // console.log(`   - commission_amount is undefined: ${commissionData.commission_amount === undefined}`);
+      // console.log(`   - commission_amount is NaN: ${isNaN(commissionData.commission_amount)}`);
+      // console.log(`   - tree: ${commissionData.tree} (type: ${typeof commissionData.tree})`);
+      // console.log(`   - is_seller: ${commissionData.is_seller} (type: ${typeof commissionData.is_seller})`);
 
       console.log(`\n [CAPTURE ORDER] Attempting Database Create...`);
 
-      let commissionRecord;
-      try {
-        commissionRecord = await db.BrokerCommissionHistory.create(commissionData);
-        console.log(` [CAPTURE ORDER] ✅ Database create successful!`);
-      } catch (createError) {
-        console.error(`\n [CAPTURE ORDER] ❌❌❌ DATABASE CREATE ERROR ❌❌❌`);
-        console.error(` [CAPTURE ORDER] Error Type: ${createError.name}`);
-        console.error(` [CAPTURE ORDER] Error Message: ${createError.message}`);
-        console.error(` [CAPTURE ORDER] Error Stack: ${createError.stack}`);
-        if (createError.errors && createError.errors.length > 0) {
-          console.error(` [CAPTURE ORDER] Validation Errors:`);
-          createError.errors.forEach((err, idx) => {
-            console.error(`   ${idx + 1}. Field: ${err.path}`);
-            console.error(`      Type: ${err.type}`);
-            console.error(`      Message: ${err.message}`);
-            console.error(`      Value: ${err.value}`);
-            console.error(`      Origin: ${err.origin}`);
-          });
-        }
-        console.error(` [CAPTURE ORDER] Commission Data that failed:`);
-        console.error(JSON.stringify(commissionData, null, 2));
-        console.error(` [CAPTURE ORDER] ❌❌❌ END ERROR ❌❌❌\n`);
-        throw createError; // Re-throw to stop execution
-      }
+      // let commissionRecord;
+      // try {
+      //   commissionRecord = await db.BrokerCommissionHistory.create(commissionData);
+      //   console.log(` [CAPTURE ORDER] ✅ Database create successful!`);
+      // } catch (createError) {
+      //   console.error(`\n [CAPTURE ORDER] ❌❌❌ DATABASE CREATE ERROR ❌❌❌`);
+      //   console.error(` [CAPTURE ORDER] Error Type: ${createError.name}`);
+      //   console.error(` [CAPTURE ORDER] Error Message: ${createError.message}`);
+      //   console.error(` [CAPTURE ORDER] Error Stack: ${createError.stack}`);
+      //   if (createError.errors && createError.errors.length > 0) {
+      //     console.error(` [CAPTURE ORDER] Validation Errors:`);
+      //     createError.errors.forEach((err, idx) => {
+      //       console.error(`   ${idx + 1}. Field: ${err.path}`);
+      //       console.error(`      Type: ${err.type}`);
+      //       console.error(`      Message: ${err.message}`);
+      //       console.error(`      Value: ${err.value}`);
+      //       console.error(`      Origin: ${err.origin}`);
+      //     });
+      //   }
+      //   console.error(` [CAPTURE ORDER] Commission Data that failed:`);
+      //   console.error(JSON.stringify(commissionData, null, 2));
+      //   console.error(` [CAPTURE ORDER] ❌❌❌ END ERROR ❌❌❌\n`);
+      //   throw createError; // Re-throw to stop execution
+      // }
 
       console.log(`\n [CAPTURE ORDER] ✅ Commission saved successfully!`);
       console.log(` [CAPTURE ORDER] Database Record Details:`);
@@ -855,6 +913,20 @@ const CaptureOrder = async (req, res) => {
         console.log(` [CAPTURE ORDER] Updated total commission for broker ID: ${currentBroker.id}`);
       }
     }
+
+    const finalProfitAmount =
+      isGoldFlex || isEasyGoldToken || isPrimeInvest
+        ? parseFloat(totalCommissionAmount.toFixed(2)) // ✅ 132
+        : isGoldPurchase || isGoldPurchaseSell
+          ? b2bCommissionAmount
+          : parseFloat(totalProfitAmount.toFixed(2));
+
+    rowsToInsert = rowsToInsert.map((row) => ({
+      ...row,
+      profit_amount: finalProfitAmount,
+    }));
+
+    await db.BrokerCommissionHistory.bulkCreate(rowsToInsert);
 
     const endTime = new Date();
     const duration = endTime - startTime;

@@ -637,6 +637,8 @@ const CaptureOrder = async (req, res) => {
     // Step 9: Calculate and store each broker's commission
     const distribution = [];
 
+    let totalCommissionAmount = 0;
+
     console.log(` [CAPTURE ORDER] Starting commission distribution for ${activeLevels.length} brokers`);
 
     for (let i = 0; i < activeLevels.length; i++) {
@@ -654,22 +656,13 @@ const CaptureOrder = async (req, res) => {
 
       // Calculate commission amount with detailed logging
       const rawCalculation = (isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
-      // let rawCalculation;
-
-      // if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
-      //   // ✅ Fixed 5% commission on order_amount
-      //   rawCalculation = 0.05 * b2bCommissionAmount;
-      // } else if (isGoldPurchase || isGoldPurchaseSell) {
-      //   rawCalculation = (commissionPercent / 100) * b2bCommissionAmount;
-      // } else {
-      //   rawCalculation = (commissionPercent / 100) * totalProfitAmount;
-      // }
       console.log(` [CAPTURE ORDER] Calculation Steps:`);
       console.log(`   - Step 1: (${commissionPercent} / 100) = ${commissionPercent / 100}`);
       console.log(`   - Step 2: ${commissionPercent / 100} * ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);
       console.log(`   - Step 3: ${rawCalculation}.toFixed(2) = ${rawCalculation.toFixed(2)}`);
 
       const commissionAmount = parseFloat(rawCalculation.toFixed(2));
+      totalCommissionAmount += commissionAmount;
       console.log(`   - Step 4: parseFloat(${rawCalculation.toFixed(2)}) = ${commissionAmount}`);
       console.log(` [CAPTURE ORDER] Final Commission Amount:`);
       console.log(`   - Value: ${commissionAmount}`);
@@ -773,7 +766,13 @@ const CaptureOrder = async (req, res) => {
         order_id: orderId,
         order_type: commissionHistoryOrderType,
         order_amount: isGoldFlex || isEasyGoldToken || isPrimeInvest ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
-        profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        // profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        profit_amount:
+          isGoldFlex || isEasyGoldToken || isPrimeInvest
+            ? parseFloat(totalCommissionAmount.toFixed(2)) // ✅ FIXED
+            : isGoldPurchase || isGoldPurchaseSell
+              ? b2bCommissionAmount
+              : parseFloat(totalProfitAmount.toFixed(2)),
         commission_percent: parseFloat(commissionPercent.toFixed(2)),
         commission_amount: safeCommissionAmount,
         tree,
@@ -884,7 +883,13 @@ const CaptureOrder = async (req, res) => {
       message: "Commission distribution stored successfully",
       data: {
         totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
-        totalProfitAmount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        // totalProfitAmount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        totalProfitAmount:
+          isGoldFlex || isEasyGoldToken || isPrimeInvest
+            ? parseFloat(totalCommissionAmount.toFixed(2))
+            : isGoldPurchase || isGoldPurchaseSell
+              ? b2bCommissionAmount
+              : parseFloat(totalProfitAmount.toFixed(2)),
         distribution,
         tree,
         timestamp: endTime.toISOString(),

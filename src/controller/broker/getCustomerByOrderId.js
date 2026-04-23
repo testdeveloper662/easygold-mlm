@@ -10,7 +10,7 @@ const GetCustomerByOrderId = async (req, res) => {
 
         const { user } = req.user;
 
-        const loggedInUserId = req.user.id;
+        const loggedInUserId = user.ID;
 
         if (!order_id) {
             return res.status(400).json({

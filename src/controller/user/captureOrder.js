@@ -882,26 +882,26 @@ const CaptureOrder = async (req, res) => {
       //   throw createError; // Re-throw to stop execution
       // }
 
-      console.log(`\n [CAPTURE ORDER] ✅ Commission saved successfully!`);
-      console.log(` [CAPTURE ORDER] Database Record Details:`);
-      console.log(`   - Record ID: ${commissionRecord.id}`);
-      console.log(`   - Commission Percent (DB): ${commissionRecord.commission_percent} (type: ${typeof commissionRecord.commission_percent})`);
-      console.log(`   - Commission Amount (DB): ${commissionRecord.commission_amount} (type: ${typeof commissionRecord.commission_amount})`);
-      console.log(`   - Commission Amount is null: ${commissionRecord.commission_amount === null}`);
-      console.log(`   - Commission Amount is undefined: ${commissionRecord.commission_amount === undefined}`);
-      console.log(`   - Commission Amount is NaN: ${isNaN(commissionRecord.commission_amount)}`);
-      console.log(`   - Profit Amount (DB): ${commissionRecord.profit_amount} (type: ${typeof commissionRecord.profit_amount})`);
-      console.log(`   - Order Amount (DB): ${commissionRecord.order_amount} (type: ${typeof commissionRecord.order_amount})`);
-      console.log(`   - Created At (DB): ${commissionRecord.createdAt}`);
-      console.log(` [CAPTURE ORDER] ==========================================`);
-      console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation END`);
-      console.log(` [CAPTURE ORDER] ==========================================\n`);
+      // console.log(`\n [CAPTURE ORDER] ✅ Commission saved successfully!`);
+      // console.log(` [CAPTURE ORDER] Database Record Details:`);
+      // console.log(`   - Record ID: ${commissionRecord.id}`);
+      // console.log(`   - Commission Percent (DB): ${commissionRecord.commission_percent} (type: ${typeof commissionRecord.commission_percent})`);
+      // console.log(`   - Commission Amount (DB): ${commissionRecord.commission_amount} (type: ${typeof commissionRecord.commission_amount})`);
+      // console.log(`   - Commission Amount is null: ${commissionRecord.commission_amount === null}`);
+      // console.log(`   - Commission Amount is undefined: ${commissionRecord.commission_amount === undefined}`);
+      // console.log(`   - Commission Amount is NaN: ${isNaN(commissionRecord.commission_amount)}`);
+      // console.log(`   - Profit Amount (DB): ${commissionRecord.profit_amount} (type: ${typeof commissionRecord.profit_amount})`);
+      // console.log(`   - Order Amount (DB): ${commissionRecord.order_amount} (type: ${typeof commissionRecord.order_amount})`);
+      // console.log(`   - Created At (DB): ${commissionRecord.createdAt}`);
+      // console.log(` [CAPTURE ORDER] ==========================================`);
+      // console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation END`);
+      // console.log(` [CAPTURE ORDER] ==========================================\n`);
 
-      // Verify saved values
-      if (commissionRecord.commission_amount === null || commissionRecord.commission_amount === undefined) {
-        console.error(` [CAPTURE ORDER] ⚠️ WARNING: commission_amount is ${commissionRecord.commission_amount} in database!`);
-        console.error(` [CAPTURE ORDER] Check: commissionPercent=${commissionPercent}, totalProfitAmount=${totalProfitAmount}`);
-      }
+      // // Verify saved values
+      // if (commissionRecord.commission_amount === null || commissionRecord.commission_amount === undefined) {
+      //   console.error(` [CAPTURE ORDER] ⚠️ WARNING: commission_amount is ${commissionRecord.commission_amount} in database!`);
+      //   console.error(` [CAPTURE ORDER] Check: commissionPercent=${commissionPercent}, totalProfitAmount=${totalProfitAmount}`);
+      // }
       console.log(`   - This commission_percent and commission_amount will be shown in frontend via getAllBrokerCommissionHistory API\n`);
 
       if (!isEasyGoldToken && !isGoldFlex && !isPrimeInvest && i === 0) {

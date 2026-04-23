@@ -131,6 +131,24 @@ const GetAllReferralLogs = async (req, res) => {
                         ],
                     },
                 ],
+                attributes: {
+                    include: [
+                        [
+                            db.Sequelize.literal(`
+            EXISTS (
+              SELECT 1 
+              FROM broker_commission_histories AS bch
+              WHERE 
+                bch.target_customer_log_id = referral_logs.id
+                AND bch.is_send_bonus = true
+                AND bch.is_payment_done = true
+                AND bch.is_deleted = false
+            )
+          `),
+                            "commission_devided",
+                        ],
+                    ],
+                },
             });
 
         // ✅ format response
@@ -162,6 +180,8 @@ const GetAllReferralLogs = async (req, res) => {
             remark: log.remark,
             address: log.address,
             b2bName: log.b2bName,
+
+            commission_devided: log.get("commission_devided") ? true : false,
 
             createdAt: log.createdAt,
         }));

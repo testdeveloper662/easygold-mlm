@@ -8,6 +8,10 @@ const GetCustomerByOrderId = async (req, res) => {
     try {
         const { order_id } = req.query;
 
+        const { user } = req.user;
+
+        const loggedInUserId = req.user.id;
+
         if (!order_id) {
             return res.status(400).json({
                 success: false,
@@ -35,25 +39,7 @@ const GetCustomerByOrderId = async (req, res) => {
                         },
                     ],
                 },
-            ],
-            attributes: {
-                include: [
-                    [
-                        db.Sequelize.literal(`
-                    EXISTS (
-                        SELECT 1 
-                        FROM broker_commission_histories AS bch
-                        WHERE 
-                            bch.order_id = ${order_id}
-                            AND bch.is_send_bonus = true
-                            AND bch.is_payment_done = true
-                            AND bch.is_deleted = false
-                    )
-                `),
-                        "commission_devided",
-                    ],
-                ],
-            },
+            ]
         });
 
         if (!data) {
@@ -86,7 +72,7 @@ const GetCustomerByOrderId = async (req, res) => {
 
         // ✅ Get ALL broker commissions for same order
         const allCommissions = await BrokerCommissionHistory.findAll({
-            where: { order_id },
+            where: { order_id, user_id: loggedInUserId },
             include: [
                 {
                     model: db.Users,

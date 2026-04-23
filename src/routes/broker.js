@@ -48,6 +48,7 @@ const ReferCustomerMail = require("../controller/broker/referCustomerMail");
 const GetInvestmentLogs = require("../controller/broker/getInvestmentLogs");
 const GetAllReferralLogs = require("../controller/broker/getAllReferralLogs");
 const GetReferralLogsByEmail = require("../controller/broker/getReferralLogsByEmail");
+const GetCustomerByOrderId = require("../controller/broker/getCustomerByOrderId");
 
 brokerRouter.post(
   "/register",
@@ -99,6 +100,8 @@ brokerRouter.delete("/target-customers/:id", authenticateToken, DeleteTargetCust
 brokerRouter.get("/brokers", authenticateToken, GetAllBrokers);
 brokerRouter.get("/owncontracts", authenticateToken, GetBrokerOwnContract);
 brokerRouter.post("/target-customers/signup", customerSignupEasyGoldToken);
+
+brokerRouter.get("/ordercustomer/detail", authenticateToken, GetCustomerByOrderId);
 
 brokerRouter.get("/target-customers-logs/investement-logs", authenticateToken, GetInvestmentLogs);
 brokerRouter.get("/target-customers-logs/investnent-logs-external", GetReferralLogsByEmail);

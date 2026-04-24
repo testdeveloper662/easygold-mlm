@@ -1,6 +1,7 @@
 const db = require("../../models");
 const { sequelize } = require("../../config/database");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
+const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 const ReferralLogs = db.TargetCustomerReferralLogs;
 
 const MAIL_SENDER = process.env.MAIL_SENDER;

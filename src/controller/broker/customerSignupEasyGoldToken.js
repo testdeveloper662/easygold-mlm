@@ -106,7 +106,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     {
                         model: db.Users, // 👈 your user model
                         as: "user",      // 👈 must match association
-                        attributes: ["email", "name"]
+                        attributes: ["user_email", "display_name"]
                     }
                 ],
                 transaction,
@@ -139,10 +139,10 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
                 console.log("Checking if we need to send email to broker for existing customer registration");
                 console.log("Type:", type);
-                console.log("parentBroker?.email:", parentBroker?.email);
+                console.log("parentBroker?.email:", parentBroker?.user?.user_email);
                 console.log("parentBroker:", parentBroker);
 
-                if (type === "BROKER" && parentBroker?.user?.email) {
+                if (type === "BROKER" && parentBroker?.user?.user_email) {
                     try {
 
                         let address = "";
@@ -199,7 +199,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
                         const customerMailOptions = {
                             from: finalFrom,
-                            to: parentBroker?.user?.email,
+                            to: parentBroker?.user?.user_email,
                             subject: customerEmailData.subject,
                             html: customerEmailData.htmlContent,
                         };

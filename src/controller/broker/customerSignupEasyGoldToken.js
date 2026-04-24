@@ -102,6 +102,13 @@ const customerSignupEasyGoldToken = async (req, res) => {
             console.log("Resolving BROKER referral");
             const broker = await db.Brokers.findOne({
                 where: { referral_code: decoded_referred_by_code },
+                include: [
+                    {
+                        model: db.Users, // 👈 your user model
+                        as: "user",      // 👈 must match association
+                        attributes: ["email", "name"]
+                    }
+                ],
                 transaction,
             });
 
@@ -135,7 +142,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                 console.log("parentBroker?.email:", parentBroker?.email);
                 console.log("parentBroker:", parentBroker);
 
-                if (type === "BROKER" && parentBroker?.email) {
+                if (type === "BROKER" && parentBroker?.user?.email) {
                     try {
 
                         let address = "";
@@ -192,7 +199,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
                         const customerMailOptions = {
                             from: finalFrom,
-                            to: parentBroker.email,
+                            to: parentBroker?.user?.email,
                             subject: customerEmailData.subject,
                             html: customerEmailData.htmlContent,
                         };

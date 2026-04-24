@@ -311,7 +311,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     try {
       // Template ID 92 used (adjust as required)
       emailData = await getRenderedEmail(98, language, templateVariables);
-      customerEmailData = await getRenderedEmail(107, "en", templateVariables);
+      // customerEmailData = await getRenderedEmail(107, "en", templateVariables);
       brokeremailData = await getRenderedEmail(99, language, templateVariables);
     } catch (templateError) {
       console.error(templateError);
@@ -351,7 +351,7 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     // finalFrom = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL; // fallback to verified sender domain
     // }
 
-    let customerMailOptions = null;
+    // let customerMailOptions = null;
 
     const mailOptions = {
       from: finalFrom,
@@ -362,14 +362,14 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     console.log("parentEmail", parentEmail);
 
-    if (parent_email) {
-      customerMailOptions = {
-        from: finalFrom,
-        to: parent_email,
-        subject: customerEmailData.subject,
-        html: customerEmailData.htmlContent,
-      };
-    }
+    // if (parent_email) {
+    //   customerMailOptions = {
+    //     from: finalFrom,
+    //     to: parent_email,
+    //     subject: customerEmailData.subject,
+    //     html: customerEmailData.htmlContent,
+    //   };
+    // }
 
     const brokermailOptions = {
       from: MAIL_SENDER,
@@ -401,9 +401,9 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom, mailConfig, host);
 
-    if (customerMailOptions) {
-      await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig, host);
-    }
+    // if (customerMailOptions) {
+    //   await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig, host);
+    // }
 
     await SendEmailHelper(brokermailOptions.subject, brokermailOptions.html, brokermailOptions.to, brokerAttachmentPath, null, null);
 

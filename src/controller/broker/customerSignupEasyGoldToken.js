@@ -129,7 +129,12 @@ const customerSignupEasyGoldToken = async (req, res) => {
         if (customer) {
             if (customer.status === "REGISTERED") {
                 console.log("Customer already registered");
-                
+
+                console.log("Checking if we need to send email to broker for existing customer registration");
+                console.log("Type:", type);
+                console.log("parentBroker?.email:", parentBroker?.email);
+                console.log("parentBroker:", parentBroker);
+
                 if (type === "BROKER" && parentBroker?.email) {
                     try {
 

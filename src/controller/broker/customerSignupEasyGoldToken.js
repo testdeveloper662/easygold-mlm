@@ -129,6 +129,77 @@ const customerSignupEasyGoldToken = async (req, res) => {
         if (customer) {
             if (customer.status === "REGISTERED") {
                 console.log("Customer already registered");
+                
+                if (type === "BROKER" && parentBroker?.email) {
+                    try {
+
+                        let address = "";
+
+                        let mailConfig = {};
+                        let finalFrom;
+
+                        const senderEmailConfig = {
+                            easygold: {
+                                user: EASY_GOLD_SUPPORT_MAIL_SENDER,
+                                pass: EASY_GOLD_SUPPORT_MAIL_PASSWORD,
+                            },
+                            goldflex: {
+                                user: GOLD_FLEX_SUPPORT_MAIL_SENDER,
+                                pass: GOLD_FLEX_SUPPORT_MAIL_PASSWORD,
+                            },
+                            primeinvest: {
+                                user: PRIME_INVEST_SUPPORT_MAIL_SENDER,
+                                pass: PRIME_INVEST_SUPPORT_MAIL_PASSWORD,
+                            }
+                        };
+
+                        let host = MAIL_HOST;
+
+                        if (product_type == "easygold Token") {
+                            host = MAIL_HOST;
+                            finalFrom = `"${EASY_GOLD_SUPPORT_MAIL_FROM_NAME}" <${EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS}>`;
+                            mailConfig = senderEmailConfig.easygold;
+
+                            address = "HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.easygold.io<br>support@easygold.io";
+                        } else if (product_type == "Primeinvest") {
+                            host = MAIL_HOST;
+                            finalFrom = `"${PRIME_INVEST_SUPPORT_MAIL_FROM_NAME}" <${PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS}>`;
+                            mailConfig = senderEmailConfig.primeinvest;
+
+                            address = "Hartmann & Benz Inc<br>8 The Green, Suite A<br>19901 Dover Kent County<br>United States of America (USA)<br>support@hbprimeinvest.com";
+                        } else if (product_type == "goldflex") {
+                            host = GOLDFLEX_MAIL_HOST;
+                            finalFrom = `"${GOLD_FLEX_SUPPORT_MAIL_FROM_NAME}" <${GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS}>`;
+                            mailConfig = senderEmailConfig.goldflex;
+
+                            address = "Service in NGR – U.S. headquarters.<br><br>HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.goldflex.io<br>support@goldflex.io";
+                        }
+
+                        const templateVariables = {
+                            customer_name: customer_name,
+                            b2b_partner: "",
+                            sending_link: "",
+                            b2b_info: "",
+                            address: address,
+                        };
+
+                        const customerEmailData = await getRenderedEmail(107, "en", templateVariables);
+
+                        const customerMailOptions = {
+                            from: finalFrom,
+                            to: parentBroker.email,
+                            subject: customerEmailData.subject,
+                            html: customerEmailData.htmlContent,
+                        };
+
+                        await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig, host);
+
+                    } catch (mailError) {
+                        console.error("Error sending broker email:", mailError);
+                        // don't fail API if email fails
+                    }
+                }
+
                 if (product_type === customer.interest_in && (product_type === "easygold Token" || product_type === "Primeinvest" || product_type === "goldflex")) {
                     customer = await customer.update(
                         {
@@ -203,76 +274,6 @@ const customerSignupEasyGoldToken = async (req, res) => {
         }
 
         await transaction.commit();
-
-        if (type === "BROKER" && parentBroker?.email) {
-            try {
-
-                let address = "";
-
-                let mailConfig = {};
-                let finalFrom;
-
-                const senderEmailConfig = {
-                    easygold: {
-                        user: EASY_GOLD_SUPPORT_MAIL_SENDER,
-                        pass: EASY_GOLD_SUPPORT_MAIL_PASSWORD,
-                    },
-                    goldflex: {
-                        user: GOLD_FLEX_SUPPORT_MAIL_SENDER,
-                        pass: GOLD_FLEX_SUPPORT_MAIL_PASSWORD,
-                    },
-                    primeinvest: {
-                        user: PRIME_INVEST_SUPPORT_MAIL_SENDER,
-                        pass: PRIME_INVEST_SUPPORT_MAIL_PASSWORD,
-                    }
-                };
-
-                let host = MAIL_HOST;
-
-                if (product_type == "easygold Token") {
-                    host = MAIL_HOST;
-                    finalFrom = `"${EASY_GOLD_SUPPORT_MAIL_FROM_NAME}" <${EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS}>`;
-                    mailConfig = senderEmailConfig.easygold;
-
-                    address = "HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.easygold.io<br>support@easygold.io";
-                } else if (product_type == "Primeinvest") {
-                    host = MAIL_HOST;
-                    finalFrom = `"${PRIME_INVEST_SUPPORT_MAIL_FROM_NAME}" <${PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS}>`;
-                    mailConfig = senderEmailConfig.primeinvest;
-
-                    address = "Hartmann & Benz Inc<br>8 The Green, Suite A<br>19901 Dover Kent County<br>United States of America (USA)<br>support@hbprimeinvest.com";
-                } else if (product_type == "goldflex") {
-                    host = GOLDFLEX_MAIL_HOST;
-                    finalFrom = `"${GOLD_FLEX_SUPPORT_MAIL_FROM_NAME}" <${GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS}>`;
-                    mailConfig = senderEmailConfig.goldflex;
-
-                    address = "Service in NGR – U.S. headquarters.<br><br>HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.goldflex.io<br>support@goldflex.io";
-                }
-
-                const templateVariables = {
-                    customer_name: customer_name,
-                    b2b_partner: "",
-                    sending_link: "",
-                    b2b_info: "",
-                    address: address,
-                };
-
-                const customerEmailData = await getRenderedEmail(107, "en", templateVariables);
-
-                const customerMailOptions = {
-                    from: finalFrom,
-                    to: parentBroker.email,
-                    subject: customerEmailData.subject,
-                    html: customerEmailData.htmlContent,
-                };
-
-                await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig, host);
-
-            } catch (mailError) {
-                console.error("Error sending broker email:", mailError);
-                // don't fail API if email fails
-            }
-        }
 
         return res.json({
             success: true,

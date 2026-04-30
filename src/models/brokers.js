@@ -85,7 +85,11 @@ const Brokers = sequelize.define(
     partner_tax_billing_doc: {
       type: Sequelize.TEXT("long"),
       allowNull: true
-    }
+    },
+    uk_company_sales_platform_doc: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true
+    },
   },
   {
     timestamps: true,

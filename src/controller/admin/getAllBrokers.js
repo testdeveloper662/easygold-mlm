@@ -95,30 +95,6 @@ const GetAllBrokers = async (req, res) => {
       },
     });
 
-    const manualCredits = await db.ManualCommissions.findAll({
-      attributes: [
-        "broker_id",
-        [
-          db.Sequelize.fn("SUM", db.Sequelize.col("remaining_amount")),
-          "total_credit",
-        ],
-      ],
-      where: {
-        broker_id: {
-          [Op.in]: brokerIds,
-        },
-        order_id: null,
-        commission_type: "advance",
-        status: "active",
-      },
-      group: ["broker_id"],
-    });
-
-    const creditMap = {};
-    manualCredits.forEach((item) => {
-      creditMap[item.broker_id] = parseFloat(item.dataValues.total_credit || 0);
-    });
-
     // Group metas by user_id
     const userMetaMap = {};
     metas.forEach((meta) => {
@@ -197,8 +173,6 @@ const GetAllBrokers = async (req, res) => {
 
         travel_id: travelIdUrl,
         signature: signatureUrl,
-
-        broker_credit: creditMap[broker.id] || 0,
 
         createdAt: broker.createdAt,
         updatedAt: broker.updatedAt,

@@ -23,6 +23,7 @@ const EASY_GOLD_SUPPORT_MAIL_SENDER = process.env.EASY_GOLD_SUPPORT_MAIL_SENDER;
 const EASY_GOLD_SUPPORT_MAIL_PASSWORD = process.env.EASY_GOLD_SUPPORT_MAIL_PASSWORD;
 const EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS = process.env.EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS;
 const EASY_GOLD_SUPPORT_MAIL_FROM_NAME = process.env.EASY_GOLD_SUPPORT_MAIL_FROM_NAME;
+const EASY_GOLD_DOCUMENT_URL = process.env.EASY_GOLD_DOCUMENT_URL;
 
 const CreateTargetCustomer = async (req, res) => {
   try {
@@ -209,6 +210,7 @@ const CreateTargetCustomer = async (req, res) => {
 
     let sending_link = "";
     let contract_link = "";
+    let document_link = "";
 
     let brokerLanguage = "en";
     if (metaMap.language == "de-DE") {
@@ -246,6 +248,7 @@ const CreateTargetCustomer = async (req, res) => {
       const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
       contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
+      document_link = "";
     } else if (interest_in === "easygold Token") {
       host = MAIL_HOST;
       finalFrom = `"${EASY_GOLD_SUPPORT_MAIL_FROM_NAME}" <${EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS}>`;
@@ -254,6 +257,7 @@ const CreateTargetCustomer = async (req, res) => {
       const sendingUrl = `${process.env.EASY_GOLD_FRONTEND_URL}`;
       sending_link = `<a href="${sendingUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
       contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
+      document_link = `<a href="${EASY_GOLD_DOCUMENT_URL}" style="color: #0066cc; text-decoration: none; font-weight: bold;">document link</a>`;
     } else if (interest_in === "Primeinvest") {
       host = MAIL_HOST;
       finalFrom = `"${PRIME_INVEST_SUPPORT_MAIL_FROM_NAME}" <${PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS}>`;
@@ -262,6 +266,7 @@ const CreateTargetCustomer = async (req, res) => {
       const sendingUrl = `${process.env.PRIME_INVEST_URL}`;
       sending_link = `<a href="${sendingUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
       contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
+      document_link = "";
     } else if (interest_in === "goldflex") {
       host = GOLDFLEX_MAIL_HOST;
       finalFrom = `"${GOLD_FLEX_SUPPORT_MAIL_FROM_NAME}" <${GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS}>`;
@@ -271,6 +276,7 @@ const CreateTargetCustomer = async (req, res) => {
       const sendingUrl = `${process.env.GOLD_FLEX_URL}`;
       sending_link = `<a href="${sendingUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
       contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
+      document_link = "";
     }
 
     const brokerCompany = sanitizeValue(metaMap.u_company);
@@ -306,6 +312,7 @@ const CreateTargetCustomer = async (req, res) => {
       sending_link: sending_link,
       contract_link: contract_link,
       b2b_info: b2bInfoFormatted || "",
+      document_link: document_link
     };
 
     // "de-DE" "en-US"

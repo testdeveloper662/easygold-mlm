@@ -58,6 +58,8 @@ const GetAllBrokers = async (req, res) => {
 
     const userIds = brokers.map((b) => b.user_id);
 
+    const brokerIds = brokers.map((b) => b.id);
+
     // 2️⃣ Fetch all usermeta for these users
     const metas = await db.UsersMeta.findAll({
       where: {
@@ -93,6 +95,30 @@ const GetAllBrokers = async (req, res) => {
       },
     });
 
+    const manualCredits = await db.ManualCommissions.findAll({
+      attributes: [
+        "broker_id",
+        [
+          db.Sequelize.fn("SUM", db.Sequelize.col("remaining_amount")),
+          "total_credit",
+        ],
+      ],
+      where: {
+        broker_id: {
+          [Op.in]: brokerIds,
+        },
+        order_id: null,
+        commission_type: "advance",
+        status: "active",
+      },
+      group: ["broker_id"],
+    });
+
+    const creditMap = {};
+    manualCredits.forEach((item) => {
+      creditMap[item.broker_id] = parseFloat(item.dataValues.total_credit || 0);
+    });
+
     // Group metas by user_id
     const userMetaMap = {};
     metas.forEach((meta) => {
@@ -112,6 +138,8 @@ const GetAllBrokers = async (req, res) => {
       const goldflex_partnership_doc = broker.goldflex_partnership_doc !== null ? `${process.env.NODE_URL}${broker.goldflex_partnership_doc}` : null;
       const hartmann_benz_gmbh_doc = broker.hartmann_benz_gmbh_doc !== null ? `${process.env.NODE_URL}${broker.hartmann_benz_gmbh_doc}` : null;
       const binding_loi_doc = broker.binding_loi_doc !== null ? `${process.env.NODE_URL}${broker.binding_loi_doc}` : null;
+      const partner_tax_billing_doc = broker.partner_tax_billing_doc !== null ? `${process.env.NODE_URL}${broker.partner_tax_billing_doc}` : null;
+      const uk_company_sales_platform_doc = broker.uk_company_sales_platform_doc !== null ? `${process.env.NODE_URL}${broker.uk_company_sales_platform_doc}` : null;
 
       // Construct public URLs if exist
       const tradeRegisterUrl = m.u_trade_register
@@ -164,9 +192,13 @@ const GetAllBrokers = async (req, res) => {
         goldflex_partnership_doc: goldflex_partnership_doc,
         hartmann_benz_gmbh_doc: hartmann_benz_gmbh_doc,
         binding_loi_doc: binding_loi_doc,
+        partner_tax_billing_doc: partner_tax_billing_doc,
+        uk_company_sales_platform_doc: uk_company_sales_platform_doc,
 
         travel_id: travelIdUrl,
         signature: signatureUrl,
+
+        broker_credit: creditMap[broker.id] || 0,
 
         createdAt: broker.createdAt,
         updatedAt: broker.updatedAt,

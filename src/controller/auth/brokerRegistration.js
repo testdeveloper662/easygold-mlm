@@ -1315,7 +1315,7 @@ const BrokerRegistration = async (req, res) => {
     // ✅ Prepare form-data for external API
     const form = new FormData();
     form.append("veriff_session_id", veriffId);
-    form.append("u_display_name", username);
+    form.append("u_display_name", fullName);
     form.append("u_company", company);
     form.append("u_contact_person", contactPerson);
     form.append("u_street_no", u_street_no);

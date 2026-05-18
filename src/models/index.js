@@ -28,6 +28,7 @@ const BrokerInvitations = require("./brokerInvitations");
 const TaxCountry = require("./taxCountry");
 const AdminContracts = require("./adminContracts");
 const TargetCustomerReferralLogs = require("./targetCustomerReferralLogs");
+const MarketingMaterial = require("./marketingMaterial");
 
 const db = {};
 
@@ -62,6 +63,7 @@ db.AffiliateBanners = AffiliateBanners;
 db.TaxCountry = TaxCountry;
 db.AdminContracts = AdminContracts;
 db.TargetCustomerReferralLogs = TargetCustomerReferralLogs;
+db.MarketingMaterial = MarketingMaterial;
 
 // Relationships
 db.TargetCustomers.belongsTo(db.Brokers, {

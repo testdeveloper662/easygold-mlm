@@ -56,6 +56,26 @@ const GetAdminContractsById = require("../controller/admin/getAdminContractsById
 const UpdateAdminContract = require("../controller/admin/updateAdminContract");
 const UpdateReferralLogStatus = require("../controller/broker/updateReferralLogStatus");
 const GetCustomerByOrderId = require("../controller/admin/getCustomerByOrderId");
+const createMarketingMaterial = require("../controller/admin/createMarketingMaterial");
+const getMarketingMaterials = require("../controller/admin/getMarketingMaterials");
+const updateMarketingMaterial = require("../controller/admin/updateMarketingMaterial");
+const deleteMarketingMaterial = require("../controller/admin/deleteMarketingMaterial");
+
+// Marketing Multer Setup
+const marketingUploadPath = path.join(__dirname, "../../public/uploads/marketing");
+const marketingStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        if (!fs.existsSync(marketingUploadPath)) {
+            fs.mkdirSync(marketingUploadPath, { recursive: true });
+        }
+        cb(null, marketingUploadPath);
+    },
+    filename: function (req, file, cb) {
+        const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        cb(null, uniqueName + path.extname(file.originalname));
+    },
+});
+const marketingUpload = multer({ storage: marketingStorage });
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
@@ -101,5 +121,11 @@ adminRouter.put("/admin-contracts/:id", authenticateToken, upload.fields([
     { name: "english_pdf_file", maxCount: 1 },
     { name: "german_pdf_file", maxCount: 1 },
 ]), UpdateAdminContract);
+
+// Marketing Materials Routes
+adminRouter.get("/marketing-materials", authenticateToken, getMarketingMaterials);
+adminRouter.post("/marketing-materials", authenticateToken, marketingUpload.single("asset"), createMarketingMaterial);
+adminRouter.put("/marketing-materials/:id", authenticateToken, marketingUpload.single("asset"), updateMarketingMaterial);
+adminRouter.delete("/marketing-materials/:id", authenticateToken, deleteMarketingMaterial);
 
 module.exports = adminRouter;

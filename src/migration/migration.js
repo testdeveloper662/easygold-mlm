@@ -11,7 +11,8 @@ const {
   BrokerInvitations,
   AffiliateBanners,
   AdminContracts,
-  TargetCustomerReferralLogs
+  TargetCustomerReferralLogs,
+  MarketingMaterial
 } = require("../models");
 
 async function createTable() {
@@ -25,7 +26,8 @@ async function createTable() {
     // await BrokerInvitations.sync({ alter: true });
     // await AffiliateBanners.sync({ alter: true });
     // await AdminContracts.sync({ alter: true });
-    await TargetCustomerReferralLogs.sync({ alter: true });
+    // await TargetCustomerReferralLogs.sync({ alter: true });
+    await MarketingMaterial.sync({ alter: true });
 
     console.log("Table created successfully.");
   } catch (error) {

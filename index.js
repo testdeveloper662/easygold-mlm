@@ -11,6 +11,7 @@ const adminRouter = require("./src/routes/admin");
 const brokerRouter = require("./src/routes/broker");
 const userRouter = require("./src/routes/user");
 const uploadRouter = require("./src/routes/upload");
+const getPublicVideos = require("./src/controller/user/getPublicVideos");
 
 const port = process.env.PORT || 4000;
 
@@ -46,6 +47,8 @@ app.use("/api/v1/broker", brokerRouter);
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/users", userRouter); // Support both singular and plural
 app.use("/api/v1/upload-image", uploadRouter); // Support both singular and plural
+
+app.get("/api/v1/public/videos", getPublicVideos);
 
 app.listen(port, () => {
   console.log(`Server running on PORT: ${port} 🚀`);

@@ -49,6 +49,7 @@ const GetInvestmentLogs = require("../controller/broker/getInvestmentLogs");
 const GetAllReferralLogs = require("../controller/broker/getAllReferralLogs");
 const GetReferralLogsByEmail = require("../controller/broker/getReferralLogsByEmail");
 const GetCustomerByOrderId = require("../controller/broker/getCustomerByOrderId");
+const GetMarketingMaterialsForBroker = require("../controller/broker/getMarketingMaterials");
 
 brokerRouter.post(
   "/register",
@@ -116,5 +117,6 @@ brokerRouter.delete("/remove-brocker-image/:type", authenticateToken, RemoveBrok
 brokerRouter.post("/invitation", InvitationCreateUpdate);
 brokerRouter.get("/invitations", authenticateToken, GetInvitations);
 
+brokerRouter.get("/marketing-materials", authenticateToken, GetMarketingMaterialsForBroker);
 
 module.exports = brokerRouter;

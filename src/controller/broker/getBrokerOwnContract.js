@@ -47,6 +47,12 @@ const GetBrokerOwnContract = async (req, res) => {
             binding_loi_doc: broker.binding_loi_doc
                 ? `${process.env.NODE_URL}${broker.binding_loi_doc}`
                 : null,
+            partner_tax_billing_doc: broker.partner_tax_billing_doc
+                ? `${process.env.NODE_URL}${broker.partner_tax_billing_doc}`
+                : null,
+            uk_company_sales_platform_doc: broker.uk_company_sales_platform_doc
+                ? `${process.env.NODE_URL}${broker.uk_company_sales_platform_doc}`
+                : null,
         };
 
         return res.status(200).json({

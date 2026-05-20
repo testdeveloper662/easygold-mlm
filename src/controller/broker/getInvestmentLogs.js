@@ -17,39 +17,13 @@ const GetInvestmentLogs = async (req, res) => {
 
         const offset = (page - 1) * limit;
 
-        const where = {
-            type: {
-                [Op.in]: [
-                    "INVESTMENT_DONE",
-                    "COMMISSION_APPROVED",
-                    "COMMISSION_REJECTED"
-                ],
-            },
-        };
+        const where = {};
 
         // ✅ filters
         if (product) where.product = product;
         if (status) where.status = status;
         if (broker_id) {
             where.broker_id = broker_id;
-
-            where.status = "APPROVED";
-
-            // 🔥 APPLY ONLY WHEN broker_id EXISTS
-            where[Op.and] = [
-                db.Sequelize.literal(`
-            EXISTS (
-                SELECT 1
-                FROM broker_commission_histories AS bch
-                WHERE 
-                    bch.target_customer_log_id = referral_logs.id
-                    AND bch.is_send_bonus = true
-                    AND bch.is_payment_done = true
-                    AND bch.is_deleted = false
-                    AND bch.broker_id = ${broker_id}
-            )
-        `),
-            ];
         }
 
         // 🔥 SEARCH LOGIC

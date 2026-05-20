@@ -39,17 +39,17 @@ const GetCustomerByOrderId = async (req, res) => {
             attributes: {
                 include: [
                     [
-                        db.Sequelize.literal(`
-                    EXISTS (
-                        SELECT 1 
-                        FROM broker_commission_histories AS bch
-                        WHERE 
-                            bch.order_id = ${order_id}
-                            AND bch.is_send_bonus = true
-                            AND bch.is_payment_done = true
-                            AND bch.is_deleted = false
-                    )
-                `),
+                        db.sequelize.literal(`
+    EXISTS (
+      SELECT 1 
+      FROM broker_commission_histories AS bch
+      WHERE 
+        bch.order_id = '${String(order_id).replace(/'/g, "\\'")}'
+        AND bch.is_send_bonus = true
+        AND bch.is_payment_done = true
+        AND bch.is_deleted = false
+    )
+  `),
                         "commission_devided",
                     ],
                 ],

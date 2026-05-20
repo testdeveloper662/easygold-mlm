@@ -25,17 +25,21 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
   try {
     const { order_id, order_type, tree } = req.body;
 
-    console.log(req.body);
-
-    if (!order_id) {
+    if (
+      order_id === undefined ||
+      order_id === null ||
+      !String(order_id).trim()
+    ) {
       return res.status(400).json({
         success: false,
         message: "order_id is required",
       });
     }
 
+    const normalizedOrderId = String(order_id).trim();
+
     // Build where clause
-    const whereClause = { order_id };
+    const whereClause = { order_id: normalizedOrderId };
 
     // If order_type is provided, add it to where clause
     if (order_type) {
@@ -54,7 +58,7 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
     // If neither order_type nor tree provided, get order_type from first record
     // if (!order_type && !tree) {
     firstRecord = await db.BrokerCommissionHistory.findOne({
-      where: { order_id },
+      where: { order_id: normalizedOrderId },
       attributes: ["order_type", "target_customer_log_id"],
       raw: true,
     });

@@ -86,6 +86,24 @@ const GetOrderDetails = async (req, res) => {
   try {
     const { orderId, orderType } = req.body;
 
+    if (
+      orderId === undefined ||
+      orderId === null ||
+      !orderId ||
+      !orderType
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "orderId and orderType are required",
+      });
+    }
+
+    const normalizedOrderId = String(orderId).trim();
+
+    const isNumericOrderId = !isNaN(
+      Number(normalizedOrderId)
+    );
+
     let order = null;
     let orderShippingMeta = [];
     let orderPivots = [];
@@ -112,7 +130,7 @@ const GetOrderDetails = async (req, res) => {
       } else {
         // goldflex / easygoldtoken / primeinvest
         order = await db.BrokerCommissionHistory.findOne({
-          where: { order_id: orderId },
+          where: { order_id: normalizedOrderId },
         });
       }
 
@@ -127,7 +145,7 @@ const GetOrderDetails = async (req, res) => {
 
       // ✅ Broker commissions
       const brokerCommissions = await db.BrokerCommissionHistory.findAll({
-        where: { order_id: orderId },
+        where: { order_id: normalizedOrderId },
         include: [
           {
             model: db.Users,

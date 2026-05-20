@@ -11,10 +11,12 @@ const GetCustomerDetails = async (req, res) => {
       });
     }
 
+    const normalizedOrderId = String(orderId).trim();
+
     // 🔹 Get all commission rows
     const commissionRows = await db.BrokerCommissionHistory.findAll({
       where: {
-        order_id: orderId,
+        order_id: normalizedOrderId,
         order_type: orderType,
         is_deleted: false,
       },

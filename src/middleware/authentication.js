@@ -27,6 +27,8 @@ let authenticateToken = (req, res, next) => {
     }
 
     if (err) {
+      
+      console.log(err);
       if (err.name === "TokenExpiredError") {
         return res.status(403).send({
           success: false,

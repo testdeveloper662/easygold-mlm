@@ -71,11 +71,21 @@ const GetAllTargetCustomers = async (req, res) => {
       subQuery: false, // 🔥 IMPORTANT for nested search
     });
 
+    const customersWithPdfUrl = targetCustomers.map(c => {
+      const customer = c.toJSON();
+
+      if (customer.pdf_url) {
+        customer.pdf_url = `${process.env.NODE_URL}${customer.pdf_url}`;
+      }
+
+      return customer;
+    });
+
     return res.status(200).json({
       success: true,
       message: "All target customers retrieved successfully",
       data: {
-        customers: targetCustomers,
+        customers: customersWithPdfUrl,
         total: totalCount,
         currentPage: page,
         totalPages: Math.ceil(totalCount / limit),

@@ -12,16 +12,22 @@ const GetCustomerByOrderId = async (req, res) => {
 
         const loggedInUserId = user.ID;
 
-        if (!order_id) {
+        if (
+            order_id === undefined ||
+            order_id === null ||
+            !String(order_id).trim()
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "order_id is required",
             });
         }
 
+        const normalizedOrderId = String(order_id).trim();
+
         // ✅ Main record (with referral log)
         const data = await BrokerCommissionHistory.findOne({
-            where: { order_id },
+            where: { order_id: normalizedOrderId },
             include: [
                 {
                     model: TargetCustomerReferralLogs,
@@ -72,7 +78,7 @@ const GetCustomerByOrderId = async (req, res) => {
 
         // ✅ Get ALL broker commissions for same order
         const allCommissions = await BrokerCommissionHistory.findAll({
-            where: { order_id, user_id: loggedInUserId },
+            where: { order_id: normalizedOrderId, user_id: loggedInUserId },
             include: [
                 {
                     model: db.Users,
@@ -112,7 +118,7 @@ const GetCustomerByOrderId = async (req, res) => {
                         : "",
 
             broker_commissions,
-            commission_devided: data.get("commission_devided") ? true : false,
+            commission_devided: data?.get("commission_devided") ? true : false,
 
             // ✅ Unified customer structure
             referralLog: referralLogData,

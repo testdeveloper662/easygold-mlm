@@ -56,10 +56,13 @@ const GetAdminContractsById = require("../controller/admin/getAdminContractsById
 const UpdateAdminContract = require("../controller/admin/updateAdminContract");
 const UpdateReferralLogStatus = require("../controller/broker/updateReferralLogStatus");
 const GetCustomerByOrderId = require("../controller/admin/getCustomerByOrderId");
+const SubmitManualCommission = require("../controller/admin/submitManualCommission");
 const createMarketingMaterial = require("../controller/admin/createMarketingMaterial");
 const getMarketingMaterials = require("../controller/admin/getMarketingMaterials");
 const updateMarketingMaterial = require("../controller/admin/updateMarketingMaterial");
 const deleteMarketingMaterial = require("../controller/admin/deleteMarketingMaterial");
+const GetAllCustomerContract = require("../controller/admin/getAllCustomerContract");
+const GetAllBrokerContract = require("../controller/admin/getAllBrokerContract");
 
 // Marketing Multer Setup
 const marketingUploadPath = path.join(__dirname, "../../public/uploads/marketing");
@@ -93,9 +96,11 @@ adminRouter.post("/affiliate/variable-commissions", authenticateToken, AdjustVar
 
 // Brokers
 adminRouter.get("/brokers", authenticateToken, GetAllBrokers);
+adminRouter.get("/brokers-contract", authenticateToken, GetAllBrokerContract);
 adminRouter.get("/brokers/list", authenticateToken, GetBrokersList);
 adminRouter.get("/commission-history", authenticateToken, GetAllBrokerCommissionHistory);
 adminRouter.get("/ordercustomer/detail", authenticateToken, GetCustomerByOrderId);
+adminRouter.post("/commission/manual", authenticateToken, SubmitManualCommission);
 adminRouter.post("/broker/update-payment-status", authenticateToken, UpdateBrokerPaymentStatus);
 adminRouter.post("/commission/send-payment-confirmation-email", authenticateToken, SendPaymentConfirmationEmail);
 adminRouter.post("/commission/send-payment-decline-email", authenticateToken, SendPaymentDeclineEmail);
@@ -109,6 +114,7 @@ adminRouter.get("/broker/:brokerId/bank-details", authenticateToken, GetBrokerBa
 
 // Target Customers Routes
 adminRouter.get("/target-customers", authenticateToken, GetAllTargetCustomers);
+adminRouter.get("/target-customers-contract", authenticateToken, GetAllCustomerContract);
 adminRouter.get("/target-customers/stats", authenticateToken, GetTargetCustomerStatsOverall);
 adminRouter.get("/target-customers/broker/:broker_id", authenticateToken, GetTargetCustomersByBroker);
 

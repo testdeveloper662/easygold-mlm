@@ -2,17 +2,31 @@ const db = require("../../models");
 
 const GetOrderDetails = async (req, res) => {
   try {
-    const { orderId, orderType } = req.body;
+    const { orderId, orderType, commission_type } = req.body;
 
     let order = null;
     let userId = null;
+
+    if (
+      orderId === undefined ||
+      orderId === null ||
+      !String(orderId).trim() ||
+      !orderType
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "orderId and orderType are required",
+      });
+    }
+
+    const normalizedOrderId = String(orderId).trim();
 
     // ===============================
     // ✅ GOLD ORDER TYPES
     // ===============================
     if (orderType === "gold_purchase") {
       order = await db.GoldPurchaseOrder.findOne({
-        where: { id: orderId },
+        where: { id: normalizedOrderId },
       });
 
       if (!order) {
@@ -27,7 +41,7 @@ const GetOrderDetails = async (req, res) => {
       // ✅ GET BROKER COMMISSIONS
       const brokerCommissions = await db.BrokerCommissionHistory.findAll({
         where: {
-          order_id: orderId,
+          order_id: normalizedOrderId,
           order_type: orderType,
         },
         include: [
@@ -110,7 +124,7 @@ const GetOrderDetails = async (req, res) => {
 
     if (orderType === "gold_purchase_sell_orders") {
       order = await db.GoldPurchaseSellOrders.findOne({
-        where: { id: orderId },
+        where: { id: normalizedOrderId },
       });
 
       if (!order) {
@@ -124,7 +138,7 @@ const GetOrderDetails = async (req, res) => {
 
       const brokerCommissions = await db.BrokerCommissionHistory.findAll({
         where: {
-          order_id: orderId,
+          order_id: normalizedOrderId,
           order_type: orderType,
         },
         include: [
@@ -210,29 +224,29 @@ const GetOrderDetails = async (req, res) => {
     // Fetch order shipping details, pivots, and order info based on type
     if (orderType === "landing_page") {
       orderShippingMeta = await db.LpOrderShippingOptions.findAll({
-        where: { lp_order_id: orderId },
+        where: { lp_order_id: normalizedOrderId },
       });
 
       orderPivots = await db.LpOrderPivots.findAll({
-        where: { order_id: orderId },
+        where: { order_id: normalizedOrderId },
       });
 
       order = await db.LpOrders.findOne({
-        where: { id: orderId },
+        where: { id: normalizedOrderId },
       });
 
       userId = order?.user_id;
     } else if (orderType === "my_store" || orderType === "api") {
       orderShippingMeta = await db.MyStoreOrderShippingOptions.findAll({
-        where: { my_store_order_id: orderId },
+        where: { my_store_order_id: normalizedOrderId },
       });
 
       orderPivots = await db.MyStoreOrderPivots.findAll({
-        where: { order_id: orderId },
+        where: { order_id: normalizedOrderId },
       });
 
       order = await db.MyStoreOrder.findOne({
-        where: { id: orderId },
+        where: { id: normalizedOrderId },
       });
 
       userId = order?.user_id;
@@ -258,7 +272,7 @@ const GetOrderDetails = async (req, res) => {
 
     // Build order details object from shipping meta
     const orderDetails = {
-      order_id: orderId,
+      order_id: normalizedOrderId,
       order_type: orderType,
     };
 

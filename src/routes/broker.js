@@ -50,6 +50,9 @@ const GetAllReferralLogs = require("../controller/broker/getAllReferralLogs");
 const GetReferralLogsByEmail = require("../controller/broker/getReferralLogsByEmail");
 const GetCustomerByOrderId = require("../controller/broker/getCustomerByOrderId");
 const GetMarketingMaterialsForBroker = require("../controller/broker/getMarketingMaterials");
+const GetBrokerUplineNetworkById = require("../controller/broker/getBrokerUplineNetworkById");
+const GetAllCustomerContract = require("../controller/broker/getAllCustomerContract");
+const GetAllBrokerContract = require("../controller/broker/getAllBrokerContract");
 
 brokerRouter.post(
   "/register",
@@ -70,6 +73,7 @@ brokerRouter.get("/network", authenticateToken, GetBrokerNetwork);
 brokerRouter.get("/referralname", GetReferralDetails);
 brokerRouter.get("/checkvalidvat", CheckVatnumberValid);
 brokerRouter.get("/network/:broker_id", authenticateToken, GetBrokerNetworkById);
+brokerRouter.get("/uplinenetwork/:broker_id", authenticateToken, GetBrokerUplineNetworkById);
 brokerRouter.get("/commissions/:id", authenticateToken, GetBrokerCommissionHistory);
 brokerRouter.post("/order/detail", authenticateToken, GetOrderDetails);
 brokerRouter.post("/customer/detail", authenticateToken, GetCustomerDetails);
@@ -91,6 +95,7 @@ brokerRouter.post("/payout/request", authenticateToken, CreateBrokerPayoutReques
 brokerRouter.post("/target-customers", authenticateToken, CreateTargetCustomer);
 brokerRouter.post("/target-customers/referralCustomer", CreateReferralTargetCustomer);
 brokerRouter.get("/target-customers", authenticateToken, GetTargetCustomers);
+brokerRouter.get("/target-customers-contract", authenticateToken, GetAllCustomerContract);
 brokerRouter.get("/target-customers/getdetails", GetTargetCustomersDetails);
 brokerRouter.get("/target-customers/stats", authenticateToken, GetTargetCustomerStats);
 brokerRouter.get("/target-customers/:id", authenticateToken, GetTargetCustomerById);
@@ -99,6 +104,7 @@ brokerRouter.put("/target-customers/:id", authenticateToken, UpdateTargetCustome
 brokerRouter.delete("/target-customers/:id", authenticateToken, DeleteTargetCustomer);
 
 brokerRouter.get("/brokers", authenticateToken, GetAllBrokers);
+brokerRouter.get("/brokers-contract", authenticateToken, GetAllBrokerContract);
 brokerRouter.get("/owncontracts", authenticateToken, GetBrokerOwnContract);
 brokerRouter.post("/target-customers/signup", customerSignupEasyGoldToken);
 

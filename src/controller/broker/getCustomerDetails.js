@@ -5,9 +5,23 @@ const GetCustomerDetails = async (req, res) => {
     const { orderId, orderType } = req.body;
     const { user } = req.user;
 
+    if (
+      orderId === undefined ||
+      orderId === null ||
+      !String(orderId).trim() ||
+      !orderType
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "orderId and orderType are required",
+      });
+    }
+
+    const normalizedOrderId = String(orderId).trim();
+
     let commission_data = await db.BrokerCommissionHistory.findOne({
       where: {
-        order_id: orderId,
+        order_id: normalizedOrderId,
         order_type: orderType,
         user_id: user.ID,
         is_deleted: false,

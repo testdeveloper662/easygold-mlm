@@ -17,7 +17,7 @@ const BrokerCommissionHistory = sequelize.define(
       allowNull: false,
     },
     order_id: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.STRING(255),
       allowNull: false,
     },
     order_type: {
@@ -74,6 +74,14 @@ const BrokerCommissionHistory = sequelize.define(
     is_deleted: {
       type: Sequelize.BOOLEAN,
       default: false,
+    },
+    commission_type: {
+      type: Sequelize.STRING(255),
+      allowNull: true,
+    },
+    notes: {
+      type: Sequelize.TEXT,
+      allowNull: true,
     }
   },
   {

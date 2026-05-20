@@ -391,6 +391,7 @@ const GetDashboardData = async (req, res) => {
       order_id: commission.order_id,
       order_type: commission.order_type,
       order_amount: commission.order_amount,
+      commission_type: commission.commission_type,
       commission_amount: commission.commission_amount,
       is_seller: commission.is_seller,
       createdAt: commission.createdAt,

@@ -1,6 +1,10 @@
 const db = require("../../models");
 const { Op } = require("sequelize");
 
+const isNumericOrderId = (value) => {
+  return !isNaN(Number(value));
+};
+
 const GetBrokerCommissionHistory = async (req, res) => {
   try {
     const { id } = req.params;
@@ -167,22 +171,45 @@ const GetBrokerCommissionHistory = async (req, res) => {
 
     // 2) Order details by order_type → fetch from respective tables
     const myStoreOrderIds = history
-      .filter((h) => h.order_type === "my_store")
-      .map((h) => h.order_id);
+      .filter(
+        (h) =>
+          h.order_type === "my_store" &&
+          isNumericOrderId(h.order_id)
+      )
+      .map((h) => Number(h.order_id));
     const apiOrderIds = history
-      .filter((h) => h.order_type === "api")
-      .map((h) => h.order_id);
+      .filter(
+        (h) =>
+          h.order_type === "api" &&
+          isNumericOrderId(h.order_id)
+      )
+      .map((h) => Number(h.order_id));
     const lpOrderIds = history
-      .filter((h) => h.order_type === "landing_page" || h.order_type === "lp_order")
-      .map((h) => h.order_id);
+      .filter(
+        (h) =>
+          (h.order_type === "landing_page" ||
+            h.order_type === "lp_order") &&
+          isNumericOrderId(h.order_id)
+      )
+      .map((h) => Number(h.order_id));
 
     const goldPuracheIds = history
-      .filter((h) => (h.order_type || "").toLowerCase() === "gold_purchase")
-      .map((h) => h.order_id);
+      .filter(
+        (h) =>
+          (h.order_type || "").toLowerCase() ===
+          "gold_purchase" &&
+          isNumericOrderId(h.order_id)
+      )
+      .map((h) => Number(h.order_id));
 
     const goldPuracheSellOrdersIds = history
-      .filter((h) => h.order_type === "gold_purchase_sell_orders")
-      .map((h) => h.order_id);
+      .filter(
+        (h) =>
+          h.order_type ===
+          "gold_purchase_sell_orders" &&
+          isNumericOrderId(h.order_id)
+      )
+      .map((h) => Number(h.order_id));
 
     let myStoreOrderMap = {};
     if (myStoreOrderIds.length) {

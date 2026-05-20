@@ -54,9 +54,11 @@ const CaptureOrder = async (req, res) => {
 
     console.log(b2bAddress, "b2bAddress");
 
+    const normalizedOrderId = String(orderId).trim();
+
     const existingCommission = await db.BrokerCommissionHistory.findOne({
       where: {
-        order_id: orderId,
+        order_id: normalizedOrderId,
         order_type: orderType,
       },
     });
@@ -799,6 +801,7 @@ const CaptureOrder = async (req, res) => {
         commission_amount: commissionAmount,
         tree,
         is_seller: isSeller,
+        commission_type: "system"
       };
 
 

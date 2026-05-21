@@ -50,8 +50,8 @@ const CaptureOrder = async (req, res) => {
       });
     }
 
-    const { orderId, orderType, b2bCommissionAmount, b2bEmail, selected_payment_method, b2bName } = req.body;
-    let { b2bAddress } = req.body;
+    const { orderId, orderType, b2bCommissionAmount, selected_payment_method, b2bAddress, b2bName } = req.body;
+    let { b2bEmail } = req.body;
 
     console.log(b2bAddress, "b2bAddress");
 
@@ -141,9 +141,8 @@ const CaptureOrder = async (req, res) => {
           .json({ success: false, message: "Order not found" });
       }
 
-      b2bAddress = productOrder.user?.user_email;
-      console.log(b2bAddress, "b2bAddress after setting");
-      
+      b2bEmail = productOrder.user?.user_email;
+      console.log(b2bEmail, "b2bEmail extracted for Dealer Purchasing");
       console.log(` [CAPTURE ORDER] Dealer Purchasing order type detected.`);
     } else if (isGoldPriceFixing) {
       console.log(` [CAPTURE ORDER] Gold Price Fixing order type detected.`);

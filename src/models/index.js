@@ -30,6 +30,8 @@ const AdminContracts = require("./adminContracts");
 const TargetCustomerReferralLogs = require("./targetCustomerReferralLogs");
 const MarketingMaterial = require("./marketingMaterial");
 const ProductOrder = require("./productOrder");
+const ShippingOption = require("./shippingOption");
+const Order = require("./orders");
 
 const db = {};
 
@@ -66,6 +68,8 @@ db.AdminContracts = AdminContracts;
 db.TargetCustomerReferralLogs = TargetCustomerReferralLogs;
 db.MarketingMaterial = MarketingMaterial;
 db.ProductOrder = ProductOrder;
+db.Order = Order;
+db.ShippingOption = ShippingOption;
 
 // Relationships
 db.TargetCustomers.belongsTo(db.Brokers, {
@@ -137,6 +141,26 @@ db.ProductOrder.belongsTo(db.Users, {
 db.Users.hasMany(db.ProductOrder, {
   foreignKey: "user_id",
   as: "product_orders",
+});
+
+db.Order.belongsTo(db.Users, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+db.Users.hasMany(db.Order, {
+  foreignKey: "user_id",
+  as: "orders",
+});
+
+db.Order.hasMany(db.ShippingOption, {
+  foreignKey: "order_id",
+  as: "shipping_options",
+});
+
+db.ShippingOption.belongsTo(db.Order, {
+  foreignKey: "order_id",
+  as: "order",
 });
 
 

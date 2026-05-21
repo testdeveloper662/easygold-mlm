@@ -145,6 +145,28 @@ const CaptureOrder = async (req, res) => {
       console.log(b2bEmail, "b2bEmail extracted for Dealer Purchasing");
       console.log(` [CAPTURE ORDER] Dealer Purchasing order type detected.`);
     } else if (isGoldPriceFixing) {
+      const order = await db.Order.findOne({
+        where: { id: orderId },
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name"],
+          },
+          {
+            model: db.ShippingOption,
+            as: "shipping_options",
+          },
+        ],
+      });
+
+      if (!order) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Order not found" });
+      }
+      b2bEmail = order.user?.user_email;
+      console.log(b2bEmail, "b2bEmail extracted for Gold Price Fixing");
       console.log(` [CAPTURE ORDER] Gold Price Fixing order type detected.`);
     } else {
       return res.status(400).json({

@@ -29,6 +29,7 @@ const TaxCountry = require("./taxCountry");
 const AdminContracts = require("./adminContracts");
 const TargetCustomerReferralLogs = require("./targetCustomerReferralLogs");
 const MarketingMaterial = require("./marketingMaterial");
+const ProductOrder = require("./productOrder");
 
 const db = {};
 
@@ -64,6 +65,7 @@ db.TaxCountry = TaxCountry;
 db.AdminContracts = AdminContracts;
 db.TargetCustomerReferralLogs = TargetCustomerReferralLogs;
 db.MarketingMaterial = MarketingMaterial;
+db.ProductOrder = ProductOrder;
 
 // Relationships
 db.TargetCustomers.belongsTo(db.Brokers, {
@@ -125,6 +127,16 @@ db.BrokerCommissionHistory.belongsTo(db.TargetCustomerReferralLogs, {
 db.TargetCustomerReferralLogs.hasMany(db.BrokerCommissionHistory, {
   foreignKey: "target_customer_log_id",
   as: "commissions",
+});
+
+db.ProductOrder.belongsTo(db.Users, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+db.Users.hasMany(db.ProductOrder, {
+  foreignKey: "user_id",
+  as: "product_orders",
 });
 
 

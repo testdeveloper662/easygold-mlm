@@ -250,38 +250,89 @@ const GetOrderDetails = async (req, res) => {
       });
 
       userId = order?.user_id;
+    } else if (orderType === "goldprice_fixing") {
+      order = await db.Order.findOne({ where: { id: orderId } });
+      orderPivots = await db.PriceFixation.findAll({
+        where: { order_id: orderId },
+      });
+      userId = order?.user_id;
+    } else if (orderType === "dealer_purchasing") {
+      order = await db.ProductOrder.findOne({ where: { id: orderId } });
+      orderPivots = await db.ProductOrderPivot.findAll({
+        where: { order_id: orderId },
+      });
+      userId = order?.user_id;
     }
 
-    // Collect product IDs
-    const productIds = orderPivots.map((pivot) => pivot.product_id);
+    if (orderType !== "goldprice_fixing") {
 
-    // Fetch all product details
-    const productsData = await db.Product.findAll({
-      where: { id: productIds },
-    });
+      // Collect product IDs
+      const productIds = orderPivots.map((pivot) => pivot.product_id);
 
-    // Combine product + pivot info
-    const products = orderPivots.map((pivot) => {
-      const product = productsData.find((p) => p.id === pivot.product_id);
-      return {
-        ...product?.dataValues,
-        quantity: pivot.quantity || 1,
-        price: pivot.price || product?.dataValues?.price || 0,
+      // Fetch all product details
+      const productsData = await db.Product.findAll({
+        where: { id: productIds },
+      });
+
+      // Combine product + pivot info
+      const products = orderPivots.map((pivot) => {
+        const product = productsData.find((p) => p.id === pivot.product_id);
+        return {
+          ...product?.dataValues,
+          quantity: pivot.quantity || 1,
+          price: pivot.price || product?.dataValues?.price || 0,
+        };
+      });
+
+      // Build order details object from shipping meta
+      const orderDetails = {
+        order_id: normalizedOrderId,
+        order_type: orderType,
       };
-    });
 
-    // Build order details object from shipping meta
-    const orderDetails = {
-      order_id: normalizedOrderId,
-      order_type: orderType,
-    };
+      orderShippingMeta.forEach((o) => {
+        const { meta_key, meta_value } = o.dataValues;
+        orderDetails[meta_key] = meta_value;
+      });
 
-    orderShippingMeta.forEach((o) => {
-      const { meta_key, meta_value } = o.dataValues;
-      orderDetails[meta_key] = meta_value;
-    });
+      // Get partner details
+      let partner = {};
+      const partnerData = await db.Users.findOne({
+        where: { ID: userId },
+      });
 
-    // Get partner details
+      const partnerMeta = await db.UsersMeta.findAll({
+        where: { user_id: userId },
+      });
+
+      partner = {
+        display_name: partnerData?.display_name || "-",
+        user_nicename: partnerData?.user_nicename || "-",
+        user_street_no: "",
+        user_street: "",
+        user_location: "",
+        user_country: "",
+      };
+
+      partnerMeta.forEach((u) => {
+        const { meta_key, meta_value } = u.dataValues;
+        if (meta_key === "u_street_no") partner.user_street_no = meta_value;
+        else if (meta_key === "u_street") partner.user_street = meta_value;
+        else if (meta_key === "u_location") partner.user_location = meta_value;
+        else if (meta_key === "u_country") partner.user_country = meta_value;
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          products,
+          partner,
+          orderDetails,
+        },
+      });
+    }
+
+    // Partner
     let partner = {};
     const partnerData = await db.Users.findOne({
       where: { ID: userId },
@@ -308,12 +359,28 @@ const GetOrderDetails = async (req, res) => {
       else if (meta_key === "u_country") partner.user_country = meta_value;
     });
 
+    const formattedOrderPivots = orderPivots.map((item) => ({
+      id: item.id,
+      user_id: item.user_id,
+      fine_metal: item.fine_metal,
+      discount: item.discount,
+      current_compensation: item.current_compensation,
+      quote: item.quote,
+      price_fixation_g: item.price_fixation_g,
+      order_id: item.order_id,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+    }));
+
     return res.status(200).json({
       success: true,
       data: {
-        products,
+        products: formattedOrderPivots,
+        orderDetails: {
+          order_id: normalizedOrderId,
+          order_type: orderType,
+        },
         partner,
-        orderDetails,
       },
     });
   } catch (error) {

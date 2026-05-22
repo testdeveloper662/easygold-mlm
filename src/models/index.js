@@ -70,6 +70,8 @@ db.MarketingMaterial = MarketingMaterial;
 db.ProductOrder = ProductOrder;
 db.Order = Order;
 db.ShippingOption = ShippingOption;
+db.PriceFixation = require("./priceFixation");
+db.ProductOrderPivot = require("./productOrderPivot");
 
 // Relationships
 db.TargetCustomers.belongsTo(db.Brokers, {

@@ -6,6 +6,8 @@ const EASY_GOLD_CUSTOMER_SUPPORT_EMAIL = process.env.EASY_GOLD_CUSTOMER_SUPPORT_
 const MAIL_HOST = process.env.MAIL_HOST;
 const GOLDFLEX_MAIL_HOST = process.env.GOLDFLEX_MAIL_HOST;
 
+const MAIL_SENDER = process.env.MAIL_SENDER;
+
 const GOLD_FLEX_SUPPORT_MAIL_SENDER = process.env.GOLD_FLEX_SUPPORT_MAIL_SENDER;
 const GOLD_FLEX_SUPPORT_MAIL_PASSWORD = process.env.GOLD_FLEX_SUPPORT_MAIL_PASSWORD;
 const GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS = process.env.GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS;
@@ -171,6 +173,73 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
         );
       }
     }
+
+    let finalFrom = MAIL_SENDER;
+
+    setImmediate(async () => {
+      try {
+        const brokerRecords = await db.BrokerCommissionHistory.findAll({
+          where: whereClause,
+          include: [
+            {
+
+              model: db.Users,
+              as: "commission_from_user",
+              attributes: ["ID", "user_email"],
+              include: [
+                {
+                  model: db.UsersMeta,
+                  as: "user_meta",
+                  attributes: ["meta_key", "meta_value"],
+                  where: {
+                    meta_key: ["language"],
+                  },
+                  required: false,
+                },
+              ],
+            },
+          ],
+        });
+        console.log(`Found ${brokerRecords.length} broker(s)`);
+        let level = 1;
+        for (const brokerData of brokerRecords) {
+          try {
+            const brokerUser = brokerData?.commission_from_user;
+            if (!brokerUser?.user_email)
+              continue;
+            // default language 
+            let language = "en";
+            // get language from user_meta 
+            const languageMeta = brokerUser?.user_meta?.find((meta) => meta.meta_key === "language");
+            if (languageMeta?.meta_value) {
+              language = languageMeta.meta_value;
+            }
+            const brokerTemplateVariables = {
+              amount: `${brokerData?.commission_amount || 0}`,
+              level: level || "",
+            };
+            level++;
+            finalFrom = MAIL_SENDER;
+            // template 114 
+            const brokerEmailData = await getRenderedEmail(114, language, brokerTemplateVariables);
+            mailConfig = {
+              from: finalFrom,
+              to: brokerUser.user_email,
+              subject: brokerEmailData.subject,
+              html: brokerEmailData.htmlContent,
+            }
+            console.log(`Sending broker mail to ${brokerUser.user_email} with language ${language}`);
+            await SendEmailHelper(brokerEmailData.subject, brokerEmailData.htmlContent, brokerUser.user_email, null, null, finalFrom, mailConfig, null);
+            console.log(`Broker mail sent successfully to ${brokerUser.user_email}`);
+          }
+          catch (brokerMailError) {
+            console.error("Broker mail failed:", brokerMailError);
+          }
+        }
+      } catch (backgroundError) {
+        console.error("Background broker mail error:", backgroundError);
+      }
+    });
 
 
     return res.status(200).json({

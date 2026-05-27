@@ -51,9 +51,9 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
               ]
             }
           },
-          {
-            is_payment_done: true,
-          },
+          // {
+          //   is_payment_done: true,
+          // },
           // {
           //   selected_payment_method: 1,
           //   is_payment_done: true,

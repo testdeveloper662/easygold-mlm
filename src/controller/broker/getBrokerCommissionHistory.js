@@ -32,11 +32,11 @@ const GetBrokerCommissionHistory = async (req, res) => {
     if (isSellerFilter === true) {
       whereClause = {
         user_id: id,
+        is_seller: true,
         is_deleted: false,
         [Op.or]: [
           // Method 1 → seller, not declined
           {
-            is_seller: true,
             selected_payment_method: [1, 3, 4, 5],
             choose_payment_option: [1, 2],
             is_payment_declined: false,
@@ -52,7 +52,6 @@ const GetBrokerCommissionHistory = async (req, res) => {
             }
           },
           {
-            is_seller: false,
             is_payment_done: true,
           },
           // {
@@ -86,10 +85,9 @@ const GetBrokerCommissionHistory = async (req, res) => {
         [Op.or]: [
           // Seller logic
           {
-            // is_seller: true,
+            is_seller: true,
             [Op.or]: [
               {
-                is_seller: true,
                 selected_payment_method: [1, 3, 4, 5],
                 choose_payment_option: [1, 2],
                 is_payment_declined: false,
@@ -118,7 +116,6 @@ const GetBrokerCommissionHistory = async (req, res) => {
               //   },
               // },
               {
-                is_seller: false,
                 is_payment_done: true,
               },
               // {

@@ -91,11 +91,16 @@ const MyStoreOrder = sequelize.define(
       defaultValue: 0,
       comment: "0=red,1=green",
     },
+    choose_payment_option: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+      comment: "1 - option-1, 2 - option-2, 3 - option-3, 4 - option-4",
+    },
     selected_payment_method: {
       type: Sequelize.INTEGER,
       allowNull: false,
       defaultValue: 1,
-      comment: "1 - bank, 2 - crypto",
+      comment: "1 - bank, 2 - crypto, 3 - cash, 4 - card, 5 - FLIZPay",
     },
     created_at: {
       type: Sequelize.DATE,

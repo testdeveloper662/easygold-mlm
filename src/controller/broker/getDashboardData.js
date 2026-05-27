@@ -164,7 +164,8 @@ const GetDashboardData = async (req, res) => {
           is_seller: true,
           [Op.or]: [
             {
-              selected_payment_method: 1,
+              selected_payment_method: [1, 3, 4, 5],
+              choose_payment_option: [1, 2],
               is_payment_declined: false,
               order_type: {
                 [Op.notIn]: [
@@ -176,47 +177,6 @@ const GetDashboardData = async (req, res) => {
                   "dealer_purchasing_diamond"
                 ]
               },
-            }, // seller + method 1 = always show
-            // {
-            //   selected_payment_method: 1,
-            //   is_payment_done: true,
-            //   order_type: {
-            //     [Op.in]: [
-            //       "gold_purchase_sell_orders",
-            //       "gold_purchase"
-            //     ]
-            //   },
-            // },
-            {
-              [Op.and]: [
-                { selected_payment_method: 2 }, // seller + method 2 only if payment done
-                { is_payment_done: true },
-              ],
-            },
-            {
-              order_type: { [Op.in]: GOLD_ORDER_TYPES },
-              is_payment_done: true,
-            },
-            {
-              [Op.and]: [
-                { selected_payment_method: [3, 4] }, // seller + method 2 only if payment done
-                { is_payment_declined: false },
-              ],
-            },
-          ],
-        },
-
-        // 👉 Non-Seller Logic
-        {
-          is_seller: false,
-          [Op.or]: [
-            {
-              order_type: { [Op.in]: GOLD_ORDER_TYPES },
-              is_payment_done: true,
-            },
-            {
-              selected_payment_method: { [Op.in]: [1, 2, 3, 4] },
-              is_payment_done: true
             },
           ],
         },
@@ -259,7 +219,8 @@ const GetDashboardData = async (req, res) => {
         // 🔹 Seller + payment method 1 (always count)
         {
           is_seller: true,
-          selected_payment_method: 1,
+          selected_payment_method: [1, 3, 4, 5],
+          choose_payment_option: [1, 2],
           is_payment_declined: false,
           order_type: {
             [Op.notIn]: [
@@ -272,32 +233,6 @@ const GetDashboardData = async (req, res) => {
             ]
           }
         },
-        // {
-        //   selected_payment_method: 1,
-        //   is_payment_done: true,
-        //   order_type: {
-        //     [Op.in]: [
-        //       "gold_purchase_sell_orders",
-        //       "gold_purchase"
-        //     ]
-        //   },
-        // },
-        {
-          is_seller: true,
-          selected_payment_method: { [Op.in]: [3, 4] },
-          is_payment_declined: false,
-        },
-        {
-          order_type: { [Op.in]: GOLD_ORDER_TYPES },
-          is_payment_done: true,
-        },
-
-        // // 🔹 Non-seller + payment method 2 + payment done
-        // {
-        //   is_seller: false,
-        //   selected_payment_method: 2,
-        //   is_payment_done: true,
-        // },
       ],
     };
 

@@ -819,8 +819,10 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Safe Value Is NaN: ${isNaN(safeCommissionAmount)}`);
 
       console.log(`order?.selected_payment_method: ${order?.selected_payment_method}`);
+      console.log(`order?.choose_payment_option: ${order?.choose_payment_option}`);
 
       let selected_payment = order?.selected_payment_method || selected_payment_method;
+      let choose_payment_option = order?.choose_payment_option || 1;
 
       let commissionHistoryOrderType = orderType;
 
@@ -849,7 +851,8 @@ const CaptureOrder = async (req, res) => {
         commission_amount: commissionAmount,
         tree,
         is_seller: isSeller,
-        selected_payment_method: selected_payment_method || 1,
+        selected_payment_method: selected_payment || 1,
+        choose_payment_option: choose_payment_option || 1,
         target_customer_log_id: targetCustomerLogFound
           ? targetCustomerLogFound.id
           : customerInfo

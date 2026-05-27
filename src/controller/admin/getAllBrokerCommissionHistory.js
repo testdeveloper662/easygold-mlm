@@ -161,6 +161,7 @@ LIMIT :limit OFFSET :offset
         bch.is_seller,
         bch.is_payment_done,
         bch.is_payment_declined,
+        bch.choose_payment_option,
         bch.selected_payment_method,
         bch.tree,
         bch.notes,
@@ -203,6 +204,8 @@ LIMIT :limit OFFSET :offset
             broker_commissions: [],
             tree: record.tree,
             commission_type: record.commission_type,
+            choose_payment_option: record.choose_payment_option,
+            selected_payment_method: record.selected_payment_method,
 
             payment_type:
               record.selected_payment_method === 1
@@ -213,7 +216,9 @@ LIMIT :limit OFFSET :offset
                     ? "Cash"
                     : record.selected_payment_method === 4
                       ? "Card"
-                      : null,
+                      : record.selected_payment_method === 5
+                        ? "FLIZPay"
+                        : null,
           };
         }
 

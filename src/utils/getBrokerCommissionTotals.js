@@ -35,7 +35,10 @@ async function getBrokerCommissionTotals(broker) {
         "api",
         "landing_page",
         "gold_purchase",
-        "gold_purchase_sell_orders"
+        "gold_purchase_sell_orders",
+        "goldprice_fixing",
+        "dealer_purchasing",
+        "dealer_purchasing_diamond"
     ];
 
     // 🔹 Map lowercase DB types → wallet keys
@@ -51,7 +54,7 @@ async function getBrokerCommissionTotals(broker) {
 
         // ✅ Handle B2B commissions
         if (B2B_TYPES.includes(orderType)) {
-            if (row.is_seller) return; // skip seller B2B
+            if (row.is_seller && orderType !== "goldprice_fixing" && orderType !== "dealer_purchasing" && orderType !== "dealer_purchasing_diamond") return; // skip seller B2B
             totals.B2B_DASHBOARD += roundToTwoDecimalPlaces(amount);
             return;
         }

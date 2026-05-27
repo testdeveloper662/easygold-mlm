@@ -172,7 +172,8 @@ const GetDashboardData = async (req, res) => {
                   "gold_purchase_sell_orders",
                   "gold_purchase",
                   "goldprice_fixing",
-                  "dealer_purchasing"
+                  "dealer_purchasing",
+                  "dealer_purchasing_diamond"
                 ]
               },
             }, // seller + method 1 = always show
@@ -182,9 +183,7 @@ const GetDashboardData = async (req, res) => {
               order_type: {
                 [Op.in]: [
                   "gold_purchase_sell_orders",
-                  "gold_purchase",
-                  "goldprice_fixing",
-                  "dealer_purchasing"
+                  "gold_purchase"
                 ]
               },
             },
@@ -268,7 +267,8 @@ const GetDashboardData = async (req, res) => {
               "gold_purchase_sell_orders",
               "gold_purchase",
               "goldprice_fixing",
-              "dealer_purchasing"
+              "dealer_purchasing",
+              "dealer_purchasing_diamond"
             ]
           }
         },
@@ -278,9 +278,7 @@ const GetDashboardData = async (req, res) => {
           order_type: {
             [Op.in]: [
               "gold_purchase_sell_orders",
-              "gold_purchase",
-              "goldprice_fixing",
-              "dealer_purchasing"
+              "gold_purchase"
             ]
           },
         },

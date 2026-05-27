@@ -83,6 +83,7 @@ const CaptureOrder = async (req, res) => {
     const isGoldPurchase = orderType == 'gold_purchase';
     const isGoldPurchaseSell = orderType == 'gold_purchase_sell_orders';
     const isDealerPurchasing = orderType == 'dealer_purchasing';
+    const isDealerPurchasingDiamond = orderType == 'dealer_purchasing_diamond';
     const isGoldPriceFixing = orderType == 'goldprice_fixing';
 
     console.log(` [CAPTURE ORDER] Request received - orderId: ${orderId}, orderType: ${orderType}`);
@@ -144,6 +145,27 @@ const CaptureOrder = async (req, res) => {
       b2bEmail = productOrder.user?.user_email;
       console.log(b2bEmail, "b2bEmail extracted for Dealer Purchasing");
       console.log(` [CAPTURE ORDER] Dealer Purchasing order type detected.`);
+    } else if (isDealerPurchasingDiamond) {
+      let productOrder = await db.ProductOrderDiamond.findOne({
+        where: { id: orderId },
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name"],
+          },
+        ],
+      });
+      if (!productOrder) {
+        return res
+
+          .status(404)
+          .json({ success: false, message: "Order not found" });
+      }
+
+      b2bEmail = productOrder.user?.user_email;
+      console.log(b2bEmail, "b2bEmail extracted for Dealer Purchasing");
+      console.log(` [CAPTURE ORDER] Dealer Purchasing order type detected.`);
     } else if (isGoldPriceFixing) {
       const order = await db.Order.findOne({
         where: { id: orderId },
@@ -177,7 +199,7 @@ const CaptureOrder = async (req, res) => {
 
     let order = null;
 
-    if (!isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isGoldPriceFixing && !isDealerPurchasing) {
+    if (!isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isGoldPriceFixing && !isDealerPurchasing && !isDealerPurchasingDiamond) {
       // Step 2: Get the order
       order = await OrderModel.findOne({ where: { id: orderId } });
       if (!order)
@@ -193,7 +215,7 @@ const CaptureOrder = async (req, res) => {
 
     let totalB2BAmount = 0;
 
-    if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isGoldPriceFixing && !isDealerPurchasing) {
+    if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isGoldPriceFixing && !isDealerPurchasing && !isDealerPurchasingDiamond) {
       // Step 3: Get the pivot info
       orderPivots = await PivotModel.findAll({
         where: { order_id: orderId },
@@ -424,7 +446,7 @@ const CaptureOrder = async (req, res) => {
     let targetCustomerLogFound = null;
     let customerInfo = null;
 
-    if (isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing) {
+    if (isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing || isDealerPurchasingDiamond) {
       // For Gold Flex, get broker using b2bEmail
       broker = await db.Brokers.findOne({
         include: [
@@ -578,6 +600,7 @@ const CaptureOrder = async (req, res) => {
       easygoldtoken: "Easygold Token",
       primeinvest: "Prime Invest",
       dealer_purchasing: "Dealer Purchasing",
+      dealer_purchasing_diamond: "Dealer Purchasing",
       goldprice_fixing: "Gold Price Fixation"
     };
 
@@ -586,7 +609,7 @@ const CaptureOrder = async (req, res) => {
       console.error(`❌ [CAPTURE ORDER] Invalid orderType: ${orderType}`);
       return res.status(400).json({
         success: false,
-        message: `Invalid orderType: ${orderType}. Must be one of: landing_page, my_store, api, gold_purchase, gold_purchase_sell_orders, goldflex, easygoldtoken, primeinvest, dealer_purchasing, goldprice_fixing`,
+        message: `Invalid orderType: ${orderType}. Must be one of: landing_page, my_store, api, gold_purchase, gold_purchase_sell_orders, goldflex, easygoldtoken, primeinvest, dealer_purchasing, dealer_purchasing_diamond, goldprice_fixing`,
       });
     }
 
@@ -708,10 +731,10 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Commission Percent (type): ${typeof commissionPercent}`);
 
       // Calculate commission amount with detailed logging
-      const rawCalculation = (isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
+      const rawCalculation = (isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
       console.log(` [CAPTURE ORDER] Calculation Steps:`);
       console.log(`   - Step 1: (${commissionPercent} / 100) = ${commissionPercent / 100}`);
-      console.log(`   - Step 2: ${commissionPercent / 100} * ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);
+      console.log(`   - Step 2: ${commissionPercent / 100} * ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);
       console.log(`   - Step 3: ${rawCalculation}.toFixed(2) = ${rawCalculation.toFixed(2)}`);
 
       const commissionAmount = parseFloat(rawCalculation.toFixed(2));
@@ -760,7 +783,7 @@ const CaptureOrder = async (req, res) => {
       console.log(`   - Order Type: ${orderType} (type: ${typeof orderType})`);
       console.log(`   - Commission Percent: ${commissionPercent} (type: ${typeof commissionPercent})`);
       console.log(`   - Commission Amount (raw): ${commissionAmount} (type: ${typeof commissionAmount})`);
-      if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isGoldPriceFixing && !isDealerPurchasing) {
+      if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isGoldPriceFixing && !isDealerPurchasing && !isDealerPurchasingDiamond) {
         console.log(`   - Profit Amount: ${totalProfitAmount} (type: ${typeof totalProfitAmount})`);
         // console.log(`   - Order Amount: ${orderPivot.price * orderPivot.quantity} (type: ${typeof (orderPivot.price * orderPivot.quantity)})`);
       }
@@ -817,7 +840,7 @@ const CaptureOrder = async (req, res) => {
         order_id: orderId,
         order_type: orderType,
         order_amount:
-          isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing
+          isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing
             ? parseFloat(Number(b2bCommissionAmount).toFixed(2))
             : isGoldPurchase || isGoldPurchaseSell
               ? parseFloat(order.confirmed_price.toFixed(2))
@@ -841,7 +864,7 @@ const CaptureOrder = async (req, res) => {
         order_id: orderId,
         order_type: orderType,
         order_amount:
-          isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing
+          isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing
             ? parseFloat(Number(b2bCommissionAmount).toFixed(2))
             : isGoldPurchase || isGoldPurchaseSell
               ? parseFloat(order.confirmed_price.toFixed(2))
@@ -968,7 +991,7 @@ const CaptureOrder = async (req, res) => {
     }
 
     const finalProfitAmount =
-      isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing
+      isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing
         ? parseFloat(totalCommissionAmount.toFixed(2)) // ✅ 132
         : isGoldPurchase || isGoldPurchaseSell
           ? b2bCommissionAmount
@@ -991,7 +1014,7 @@ const CaptureOrder = async (req, res) => {
     console.log(`✅ [CAPTURE ORDER] Service Type: ${serviceType}`);
     console.log(`✅ [CAPTURE ORDER] Total Brokers: ${activeLevels.length}`);
     console.log(`✅ [CAPTURE ORDER] Tree Structure: ${tree}`);
-    if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isDealerPurchasing && !isGoldPriceFixing) {
+    if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isDealerPurchasing && !isDealerPurchasingDiamond && !isGoldPriceFixing) {
       console.log(`✅ [CAPTURE ORDER] Total Profit Amount: €${totalProfitAmount}`);
       console.log(`✅ [CAPTURE ORDER] Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
     }
@@ -1007,10 +1030,10 @@ const CaptureOrder = async (req, res) => {
       success: true,
       message: "Commission distribution stored successfully",
       data: {
-        totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
+        totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
         // totalProfitAmount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
         totalProfitAmount:
-          isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing
+          isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing
             ? parseFloat(totalCommissionAmount.toFixed(2))
             : isGoldPurchase || isGoldPurchaseSell
               ? b2bCommissionAmount

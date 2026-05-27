@@ -230,11 +230,16 @@ const GetOrderDetails = async (req, res) => {
       orderPivots = await db.ProductOrderPivot.findAll({
         where: { order_id: orderId },
       });
+    } else if (orderType === "dealer_purchasing_diamond") {
+      order = await db.ProductOrderDiamond.findOne({ where: { id: orderId } });
+      orderPivots = await db.ProductOrderPivotDiamond.findAll({
+        where: { order_id: orderId },
+      });
     }
 
     userId = order?.user_id;
 
-    if (orderType !== "goldprice_fixing") {
+    if (orderType !== "goldprice_fixing" && orderType !== "dealer_purchasing_diamond") {
       // Products
       const productIds = orderPivots.map((p) => p.product_id);
       const productsData = await db.Product.findAll({
@@ -260,6 +265,132 @@ const GetOrderDetails = async (req, res) => {
         const { meta_key, meta_value } = o.dataValues;
         orderDetails[meta_key] = meta_value;
       });
+
+      // Partner
+      const partnerData = await db.Users.findOne({
+        where: { ID: userId },
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          products,
+          orderDetails,
+          partner: {
+            name: partnerData?.display_name || "-",
+            email: partnerData?.user_email || "-",
+          },
+        },
+      });
+    } else if (orderType === "dealer_purchasing_diamond") {
+      // For diamond orders, we will return the pivot details as products don't exist in the traditional sense
+      const productIds = orderPivots.map((p) => p.product_id);
+
+      // Separate by type
+      const normalProductIds = orderPivots
+        .filter((p) => p.product_type === "product")
+        .map((p) => p.product_id);
+
+      const diamondIds = orderPivots
+        .filter((p) => p.product_type === "diamond")
+        .map((p) => p.product_id);
+
+      const gemstoneIds = orderPivots
+        .filter((p) => p.product_type === "gemstone")
+        .map((p) => p.product_id);
+
+      // Fetch all data
+      const [productsData, diamondsData, gemstonesData] = await Promise.all([
+        db.Product.findAll({
+          where: { id: normalProductIds },
+        }),
+
+        db.Diamonds.findAll({
+          where: { id: diamondIds },
+        }),
+
+        db.Gemstones.findAll({
+          where: { id: gemstoneIds },
+        }),
+      ]);
+
+      // Merge data
+      const products = orderPivots.map((pivot) => {
+        let product = null;
+        let type = pivot.product_type || "product";
+
+        if (type === "diamond") {
+          product = diamondsData.find(
+            (p) => Number(p.id) === Number(pivot.product_id)
+          );
+
+          return {
+            product_type: "diamond",
+            title: `${product?.shape || ""} ${product?.carats || ""}ct ${product?.color || ""
+              } ${product?.clarity || ""}`,
+
+            image: product?.image,
+            video: product?.video,
+            pdf: product?.pdf,
+
+            stock_id: product?.stock_id,
+            certificate_id: product?.certificate_id,
+            shape: product?.shape,
+            carat: product?.carats,
+            color: product?.color,
+            clarity: product?.clarity,
+            cut_grade: product?.cut_grade,
+            polish: product?.polish,
+            symmetry: product?.symmetry,
+            depth: product?.depth,
+            width: product?.width,
+            length: product?.length,
+
+            quantity: pivot.quantity || 1,
+            price: pivot.price || product?.price || 0,
+          };
+        }
+
+        if (type === "gemstone") {
+          product = gemstonesData.find(
+            (p) => Number(p.id) === Number(pivot.product_id)
+          );
+
+          return {
+            product_type: "gemstone",
+            title: `${product?.gemType || ""} ${product?.carats || ""}ct`,
+
+            image: product?.image,
+            video: product?.video,
+            pdf: product?.pdf,
+
+            stock_id: product?.stock_id,
+            certificate_id: product?.certificate_id,
+            shape: product?.shape,
+            carat: product?.carats,
+            color: product?.color,
+            clarity: product?.clarity,
+            cut: product?.cut,
+
+            quantity: pivot.quantity || 1,
+            price: pivot.price || product?.price || 0,
+          };
+        }
+
+        // normal product
+        product = productsData.find(
+          (p) => Number(p.id) === Number(pivot.product_id)
+        );
+
+        return {
+          ...(product?.dataValues || {}),
+          product_type: "product",
+          quantity: pivot.quantity || 1,
+          price: pivot.price || product?.price || 0,
+        };
+      });
+
+      console.log(products, "products");
 
       // Partner
       const partnerData = await db.Users.findOne({

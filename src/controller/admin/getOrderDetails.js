@@ -262,6 +262,13 @@ const GetOrderDetails = async (req, res) => {
         where: { order_id: orderId },
       });
       userId = order?.user_id;
+    } else if (orderType === "dealer_purchasing_diamond") {
+      order = await db.ProductOrderDiamond.findOne({ where: { id: orderId } });
+      orderPivots = await db.ProductOrderPivot.findAll({ where: { id: orderId } });
+      orderPivots = await db.ProductOrderPivot.findAll({
+        where: { order_id: orderId },
+      });
+      userId = order?.user_id;
     }
 
     if (orderType !== "goldprice_fixing") {

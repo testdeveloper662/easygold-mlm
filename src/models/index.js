@@ -32,6 +32,10 @@ const MarketingMaterial = require("./marketingMaterial");
 const ProductOrder = require("./productOrder");
 const ShippingOption = require("./shippingOption");
 const Order = require("./orders");
+const ProductOrderDiamond = require("./productOrderDiamond");
+const ProductOrderPivotDiamond = require("./productOrderDiamondPivot");
+const Diamonds = require("./diamonds");
+const Gemstones = require("./gemStones");
 
 const db = {};
 
@@ -68,6 +72,10 @@ db.AdminContracts = AdminContracts;
 db.TargetCustomerReferralLogs = TargetCustomerReferralLogs;
 db.MarketingMaterial = MarketingMaterial;
 db.ProductOrder = ProductOrder;
+db.ProductOrderDiamond = ProductOrderDiamond;
+db.Diamond = Diamonds;
+db.Gemstones = Gemstones;
+db.ProductOrderPivotDiamond = ProductOrderPivotDiamond;
 db.Order = Order;
 db.ShippingOption = ShippingOption;
 db.PriceFixation = require("./priceFixation");

@@ -8,7 +8,19 @@ const getMarketingMaterials = async (req, res) => {
         const limit = parseInt(req.query.limit) || 12;
         const offset = (page - 1) * limit;
 
+        const { type } = req.query;
+
+        const whereClause = {};
+        if (type) {
+            if (type === "document") {
+                whereClause.type = { [db.Sequelize.Op.in]: ["pdf", "document"] };
+            } else {
+                whereClause.type = type;
+            }
+        }
+
         const { count, rows: materials } = await db.MarketingMaterial.findAndCountAll({
+            where: whereClause,
             order: [["createdAt", "DESC"]],
             limit,
             offset,

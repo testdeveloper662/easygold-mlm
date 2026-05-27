@@ -262,7 +262,9 @@ const GetDashboardData = async (req, res) => {
             [Op.notIn]: [
               ...GOLD_ORDER_TYPES,
               "gold_purchase_sell_orders",
-              "gold_purchase"
+              "gold_purchase",
+              "goldprice_fixing",
+              "dealer_purchasing"
             ]
           }
         },
@@ -272,7 +274,9 @@ const GetDashboardData = async (req, res) => {
           order_type: {
             [Op.in]: [
               "gold_purchase_sell_orders",
-              "gold_purchase"
+              "gold_purchase",
+              "goldprice_fixing",
+              "dealer_purchasing"
             ]
           },
         },

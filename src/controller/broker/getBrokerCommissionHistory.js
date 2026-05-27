@@ -43,7 +43,9 @@ const GetBrokerCommissionHistory = async (req, res) => {
               [Op.notIn]: [
                 ...GOLD_ORDER_TYPES,
                 "gold_purchase_sell_orders",
-                "gold_purchase"
+                "gold_purchase",
+                "goldprice_fixing",
+                "dealer_purchasing"
               ]
             }
           },
@@ -53,7 +55,9 @@ const GetBrokerCommissionHistory = async (req, res) => {
             order_type: {
               [Op.in]: [
                 "gold_purchase_sell_orders",
-                "gold_purchase"
+                "gold_purchase",
+                "goldprice_fixing",
+                "dealer_purchasing"
               ]
             },
           },
@@ -84,7 +88,9 @@ const GetBrokerCommissionHistory = async (req, res) => {
                   [Op.notIn]: [
                     ...GOLD_ORDER_TYPES,
                     "gold_purchase_sell_orders",
-                    "gold_purchase"
+                    "gold_purchase",
+                    "goldprice_fixing",
+                    "dealer_purchasing"
                   ]
                 },
               }, // seller + method 1 (always show)
@@ -94,7 +100,9 @@ const GetBrokerCommissionHistory = async (req, res) => {
                 order_type: {
                   [Op.in]: [
                     "gold_purchase_sell_orders",
-                    "gold_purchase"
+                    "gold_purchase",
+                    "goldprice_fixing",
+                    "dealer_purchasing"
                   ]
                 },
               },

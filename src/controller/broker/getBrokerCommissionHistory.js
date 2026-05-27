@@ -51,6 +51,9 @@ const GetBrokerCommissionHistory = async (req, res) => {
               ]
             }
           },
+          {
+            is_payment_done: true,
+          },
           // {
           //   selected_payment_method: 1,
           //   is_payment_done: true,
@@ -112,10 +115,9 @@ const GetBrokerCommissionHistory = async (req, res) => {
               //     ]
               //   },
               // },
-              // {
-              //   order_type: { [Op.in]: GOLD_ORDER_TYPES },
-              //   is_payment_done: true,
-              // },
+              {
+                is_payment_done: true,
+              },
               // {
               //   [Op.and]: [
               //     { selected_payment_method: 2 },

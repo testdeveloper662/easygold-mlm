@@ -177,16 +177,16 @@ const GetDashboardData = async (req, res) => {
                 ]
               },
             }, // seller + method 1 = always show
-            {
-              selected_payment_method: 1,
-              is_payment_done: true,
-              order_type: {
-                [Op.in]: [
-                  "gold_purchase_sell_orders",
-                  "gold_purchase"
-                ]
-              },
-            },
+            // {
+            //   selected_payment_method: 1,
+            //   is_payment_done: true,
+            //   order_type: {
+            //     [Op.in]: [
+            //       "gold_purchase_sell_orders",
+            //       "gold_purchase"
+            //     ]
+            //   },
+            // },
             {
               [Op.and]: [
                 { selected_payment_method: 2 }, // seller + method 2 only if payment done
@@ -272,16 +272,16 @@ const GetDashboardData = async (req, res) => {
             ]
           }
         },
-        {
-          selected_payment_method: 1,
-          is_payment_done: true,
-          order_type: {
-            [Op.in]: [
-              "gold_purchase_sell_orders",
-              "gold_purchase"
-            ]
-          },
-        },
+        // {
+        //   selected_payment_method: 1,
+        //   is_payment_done: true,
+        //   order_type: {
+        //     [Op.in]: [
+        //       "gold_purchase_sell_orders",
+        //       "gold_purchase"
+        //     ]
+        //   },
+        // },
         {
           is_seller: true,
           selected_payment_method: { [Op.in]: [3, 4] },

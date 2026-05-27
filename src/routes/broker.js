@@ -53,6 +53,7 @@ const GetMarketingMaterialsForBroker = require("../controller/broker/getMarketin
 const GetBrokerUplineNetworkById = require("../controller/broker/getBrokerUplineNetworkById");
 const GetAllCustomerContract = require("../controller/broker/getAllCustomerContract");
 const GetAllBrokerContract = require("../controller/broker/getAllBrokerContract");
+const GetBrokerDirectCommissionHistory = require("../controller/broker/getBrokerDirectCommissionHistory");
 
 brokerRouter.post(
   "/register",
@@ -75,6 +76,7 @@ brokerRouter.get("/checkvalidvat", CheckVatnumberValid);
 brokerRouter.get("/network/:broker_id", authenticateToken, GetBrokerNetworkById);
 brokerRouter.get("/uplinenetwork/:broker_id", authenticateToken, GetBrokerUplineNetworkById);
 brokerRouter.get("/commissions/:id", authenticateToken, GetBrokerCommissionHistory);
+brokerRouter.get("/direct-commissions/:id", authenticateToken, GetBrokerDirectCommissionHistory);
 brokerRouter.post("/order/detail", authenticateToken, GetOrderDetails);
 brokerRouter.post("/customer/detail", authenticateToken, GetCustomerDetails);
 brokerRouter.post("/logo-image", authenticateToken, upload.single("logo"), UploadLogoImage);

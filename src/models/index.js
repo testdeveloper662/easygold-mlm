@@ -173,5 +173,15 @@ db.ShippingOption.belongsTo(db.Order, {
   as: "order",
 });
 
+db.ProductOrderDiamond.belongsTo(db.Users, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+db.Users.hasMany(db.ProductOrderDiamond, {
+  foreignKey: "user_id",
+  as: "diamond_orders",
+});
+
 
 module.exports = db;

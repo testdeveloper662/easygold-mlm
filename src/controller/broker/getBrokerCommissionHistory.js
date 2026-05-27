@@ -346,7 +346,9 @@ const GetBrokerCommissionHistory = async (req, res) => {
                 ? "Cash"
                 : json.selected_payment_method === 4
                   ? "Card"
-                  : null,
+                  : json.selected_payment_method === 5
+                    ? "FLIZPay"
+                    : null,
       };
     });
 

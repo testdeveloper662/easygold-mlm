@@ -34,7 +34,7 @@ const GetBrokerCommissionHistory = async (req, res) => {
         user_id: id,
         is_seller: true,
         is_deleted: false,
-        [Op.or]: [
+        [Op.and]: [
           // Method 1 → seller, not declined
           {
             selected_payment_method: [1, 3, 4, 5],
@@ -86,7 +86,7 @@ const GetBrokerCommissionHistory = async (req, res) => {
           // Seller logic
           {
             is_seller: true,
-            [Op.or]: [
+            [Op.and]: [
               {
                 selected_payment_method: [1, 3, 4, 5],
                 choose_payment_option: [1, 2],

@@ -264,14 +264,11 @@ const GetOrderDetails = async (req, res) => {
       userId = order?.user_id;
     } else if (orderType === "dealer_purchasing_diamond") {
       order = await db.ProductOrderDiamond.findOne({ where: { id: orderId } });
-      orderPivots = await db.ProductOrderPivot.findAll({ where: { id: orderId } });
-      orderPivots = await db.ProductOrderPivot.findAll({
-        where: { order_id: orderId },
-      });
+      orderPivots = await db.ProductOrderPivotDiamond.findAll({ where: { order_id: orderId } });
       userId = order?.user_id;
     }
 
-    if (orderType !== "goldprice_fixing") {
+    if (orderType !== "goldprice_fixing" && orderType !== "dealer_purchasing_diamond") {
 
       // Collect product IDs
       const productIds = orderPivots.map((pivot) => pivot.product_id);
@@ -335,6 +332,127 @@ const GetOrderDetails = async (req, res) => {
           products,
           partner,
           orderDetails,
+        },
+      });
+    } else if (orderType === "dealer_purchasing_diamond") {
+      // For diamond orders, we will return the pivot details as products don't exist in the traditional sense
+      const diamondIds = orderPivots
+        .filter((p) => p.product_type === "diamond")
+        .map((p) => p.product_id);
+
+      const gemstoneIds = orderPivots
+        .filter((p) => p.product_type === "gemstone")
+        .map((p) => p.product_id);
+
+      const diamondsData = await db.Diamonds.findAll({
+        where: { id: diamondIds },
+      });
+
+      // Fetch all data
+      const gemstonesData = await db.Gemstones.findAll({
+        where: { id: gemstoneIds },
+      });
+
+      // Merge data
+      const products = orderPivots.map((pivot) => {
+        let product = null;
+        let type = pivot.product_type || "product";
+
+        if (type === "diamond") {
+          product = diamondsData.find(
+            (p) => Number(p.id) === Number(pivot.product_id)
+          );
+
+          return {
+            product_type: "diamond",
+            title: `${product?.shape || ""} ${product?.carats || ""}ct ${product?.color || ""
+              } ${product?.clarity || ""}`,
+
+            image: product?.image,
+            video: product?.video,
+            pdf: product?.pdf,
+
+            stock_id: product?.stock_id,
+            certificate_id: product?.certificate_id,
+            shape: product?.shape,
+            carat: product?.carats,
+            color: product?.color,
+            clarity: product?.clarity,
+            cut_grade: product?.cut_grade,
+            polish: product?.polish,
+            symmetry: product?.symmetry,
+            depth: product?.depth,
+            width: product?.width,
+            length: product?.length,
+
+            quantity: pivot.quantity || 1,
+            price: pivot.price || product?.price || 0,
+          };
+        }
+
+        if (type === "gemstone") {
+          product = gemstonesData.find(
+            (p) => Number(p.id) === Number(pivot.product_id)
+          );
+
+          return {
+            product_type: "gemstone",
+            title: `${product?.gemType || ""} ${product?.carats || ""}ct`,
+
+            image: product?.image,
+            video: product?.video,
+            pdf: product?.pdf,
+
+            stock_id: product?.stock_id,
+            certificate_id: product?.certificate_id,
+            shape: product?.shape,
+            carat: product?.carats,
+            color: product?.color,
+            clarity: product?.clarity,
+            cut: product?.cut,
+
+            quantity: pivot.quantity || 1,
+            price: pivot.price || product?.price || 0,
+          };
+        }
+      });
+
+      // Partner
+      let partner = {};
+      const partnerData = await db.Users.findOne({
+        where: { ID: userId },
+      });
+
+      const partnerMeta = await db.UsersMeta.findAll({
+        where: { user_id: userId },
+      });
+
+      partner = {
+        display_name: partnerData?.display_name || "-",
+        user_nicename: partnerData?.user_nicename || "-",
+        user_street_no: "",
+        user_street: "",
+        user_location: "",
+        user_country: "",
+      };
+
+      partnerMeta.forEach((u) => {
+        const { meta_key, meta_value } = u.dataValues;
+        if (meta_key === "u_street_no") partner.user_street_no = meta_value;
+        else if (meta_key === "u_street") partner.user_street = meta_value;
+        else if (meta_key === "u_location") partner.user_location = meta_value;
+        else if (meta_key === "u_country") partner.user_country = meta_value;
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          products,
+          orderDetails: {
+            order_id: normalizedOrderId,
+            order_type: orderType,
+          },
+          partner,
         },
       });
     }

@@ -239,6 +239,10 @@ const GetOrderDetails = async (req, res) => {
 
     userId = order?.user_id;
 
+    console.log("Order:", order);
+    console.log("Order Shipping Meta:", orderShippingMeta);
+    console.log("Order Pivots:", orderPivots);
+
     if (orderType !== "goldprice_fixing" && orderType !== "dealer_purchasing_diamond") {
       // Products
       const productIds = orderPivots.map((p) => p.product_id);
@@ -283,14 +287,6 @@ const GetOrderDetails = async (req, res) => {
         },
       });
     } else if (orderType === "dealer_purchasing_diamond") {
-      // For diamond orders, we will return the pivot details as products don't exist in the traditional sense
-      const productIds = orderPivots.map((p) => p.product_id);
-
-      // Separate by type
-      const normalProductIds = orderPivots
-        .filter((p) => p.product_type === "product")
-        .map((p) => p.product_id);
-
       const diamondIds = orderPivots
         .filter((p) => p.product_type === "diamond")
         .map((p) => p.product_id);
@@ -299,20 +295,14 @@ const GetOrderDetails = async (req, res) => {
         .filter((p) => p.product_type === "gemstone")
         .map((p) => p.product_id);
 
+      const diamondsData = await db.Diamonds.findAll({
+        where: { id: diamondIds },
+      });
+
       // Fetch all data
-      const [productsData, diamondsData, gemstonesData] = await Promise.all([
-        db.Product.findAll({
-          where: { id: normalProductIds },
-        }),
-
-        db.Diamonds.findAll({
-          where: { id: diamondIds },
-        }),
-
-        db.Gemstones.findAll({
-          where: { id: gemstoneIds },
-        }),
-      ]);
+      const gemstonesData = await db.Gemstones.findAll({
+        where: { id: gemstoneIds },
+      });
 
       // Merge data
       const products = orderPivots.map((pivot) => {
@@ -376,36 +366,44 @@ const GetOrderDetails = async (req, res) => {
             price: pivot.price || product?.price || 0,
           };
         }
-
-        // normal product
-        product = productsData.find(
-          (p) => Number(p.id) === Number(pivot.product_id)
-        );
-
-        return {
-          ...(product?.dataValues || {}),
-          product_type: "product",
-          quantity: pivot.quantity || 1,
-          price: pivot.price || product?.price || 0,
-        };
       });
 
-      console.log(products, "products");
-
       // Partner
+      let partner = {};
       const partnerData = await db.Users.findOne({
         where: { ID: userId },
+      });
+
+      const partnerMeta = await db.UsersMeta.findAll({
+        where: { user_id: userId },
+      });
+
+      partner = {
+        display_name: partnerData?.display_name || "-",
+        user_nicename: partnerData?.user_nicename || "-",
+        user_street_no: "",
+        user_street: "",
+        user_location: "",
+        user_country: "",
+      };
+
+      partnerMeta.forEach((u) => {
+        const { meta_key, meta_value } = u.dataValues;
+        if (meta_key === "u_street_no") partner.user_street_no = meta_value;
+        else if (meta_key === "u_street") partner.user_street = meta_value;
+        else if (meta_key === "u_location") partner.user_location = meta_value;
+        else if (meta_key === "u_country") partner.user_country = meta_value;
       });
 
       return res.status(200).json({
         success: true,
         data: {
           products,
-          orderDetails,
-          partner: {
-            name: partnerData?.display_name || "-",
-            email: partnerData?.user_email || "-",
+          orderDetails: {
+            order_id: normalizedOrderId,
+            order_type: orderType,
           },
+          partner,
         },
       });
     }

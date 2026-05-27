@@ -5,7 +5,6 @@ const GetBrokerBankDetails = async (req, res) => {
     try {
         const user = req?.user?.user;
         const broker_id = user?.broker_id;
-        console.log("==========user = ", user);
 
         if (!broker_id) {
             return res.status(400).json({

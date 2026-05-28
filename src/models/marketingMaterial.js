@@ -12,11 +12,19 @@ const MarketingMaterial = sequelize.define(
       type: Sequelize.STRING(255),
       allowNull: false,
     },
+    german_title: {
+      type: Sequelize.STRING(255),
+      allowNull: false,
+    },
     type: {
       type: Sequelize.ENUM("image", "banner", "video", "pdf", "document", "qrcode", "landing_page"),
       allowNull: false,
     },
     description: {
+      type: Sequelize.TEXT,
+      allowNull: true,
+    },
+    german_description: {
       type: Sequelize.TEXT,
       allowNull: true,
     },
@@ -27,6 +35,10 @@ const MarketingMaterial = sequelize.define(
     },
     asset_url: {
       type: Sequelize.TEXT("long"),
+      allowNull: true,
+    },
+    german_youtube_url: {
+      type: Sequelize.TEXT,
       allowNull: true,
     },
     youtube_url: {

@@ -4,7 +4,7 @@ const path = require("path");
 
 const createMarketingMaterial = async (req, res) => {
     try {
-        const { title, type, category, youtube_url, width, height, description } = req.body;
+        const { title, german_title, type, category, youtube_url, german_youtube_url, width, height, description, german_description } = req.body;
         let asset_url = null;
 
         if (req.file) {
@@ -13,11 +13,14 @@ const createMarketingMaterial = async (req, res) => {
 
         const material = await db.MarketingMaterial.create({
             title,
+            german_title,
             type,
             category,
             asset_url,
             youtube_url,
+            german_youtube_url,
             description,
+            german_description,
             width: width ? parseInt(width) : null,
             height: height ? parseInt(height) : null,
             is_active: true,

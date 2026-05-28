@@ -5,7 +5,7 @@ const path = require("path");
 const updateMarketingMaterial = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, category, youtube_url, width, height, is_active, description } = req.body;
+        const { title, german_title, category, youtube_url, german_youtube_url, width, height, is_active, description, german_description } = req.body;
 
         const material = await db.MarketingMaterial.findByPk(id);
         if (!material) {
@@ -26,13 +26,16 @@ const updateMarketingMaterial = async (req, res) => {
 
         await material.update({
             title,
+            german_title,
             category,
             youtube_url,
+            german_youtube_url,
             width: width ? parseInt(width) : material.width,
             height: height ? parseInt(height) : material.height,
             is_active: is_active !== undefined ? is_active === 'true' || is_active === true : material.is_active,
             asset_url,
             description: description !== undefined ? description : material.description,
+            german_description: german_description !== undefined ? german_description : material.german_description,
         });
 
         return res.status(200).json({

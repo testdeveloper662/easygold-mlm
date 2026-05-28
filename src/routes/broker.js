@@ -54,6 +54,7 @@ const GetBrokerUplineNetworkById = require("../controller/broker/getBrokerUpline
 const GetAllCustomerContract = require("../controller/broker/getAllCustomerContract");
 const GetAllBrokerContract = require("../controller/broker/getAllBrokerContract");
 const GetBrokerDirectCommissionHistory = require("../controller/broker/getBrokerDirectCommissionHistory");
+const GetBrokerLinkDetails = require("../controller/broker/getBrokerLinkDetails");
 
 brokerRouter.post(
   "/register",
@@ -82,6 +83,7 @@ brokerRouter.post("/customer/detail", authenticateToken, GetCustomerDetails);
 brokerRouter.post("/logo-image", authenticateToken, upload.single("logo"), UploadLogoImage);
 brokerRouter.post("/profile-image", authenticateToken, upload.single("profile"), UploadProfileImage);
 
+brokerRouter.get("/getbrokerlinks", GetBrokerLinkDetails);
 brokerRouter.get("/getuserurls", authenticateToken, GetUserUrls);
 brokerRouter.post("/affiliate-banners", authenticateToken, upload.single("backgroundImage"), CreateAffiliateBanner);
 brokerRouter.get("/affiliate-banners", authenticateToken, GetAffiliateBanner);

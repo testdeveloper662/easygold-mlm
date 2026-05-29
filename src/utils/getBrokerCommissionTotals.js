@@ -85,7 +85,7 @@ async function getBrokerCommissionTotals(broker) {
 
         // ✅ Handle B2B commissions
         if (B2B_TYPES.includes(orderType)) {
-            if (row.is_seller && orderType !== "goldprice_fixing" && orderType !== "dealer_purchasing" && orderType !== "dealer_purchasing_diamond" && orderType !== "gold_purchase" && orderType !== "gold_purchase_sell_orders") return; // skip seller B2B
+            if (row.is_seller && orderType !== "goldprice_fixing" && orderType !== "dealer_purchasing" && orderType !== "dealer_purchasing_diamond" && orderType !== "gold_purchase" && orderType !== "gold_purchase_sell_orders" && row.selected_payment_method !== 2) return; // skip seller B2B
             totals.B2B_DASHBOARD += roundToTwoDecimalPlaces(amount);
             return;
         }

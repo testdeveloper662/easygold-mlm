@@ -55,7 +55,7 @@ async function getBrokerCommissionTotals(broker) {
                 },
             ],
         },
-        attributes: ["commission_amount", "order_type", "is_seller"],
+        attributes: ["commission_amount", "order_type", "is_seller", "selected_payment_method"],
         raw: true,
     });
 

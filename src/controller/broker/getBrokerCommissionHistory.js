@@ -134,20 +134,19 @@ const GetBrokerCommissionHistory = async (req, res) => {
           },
 
           // Non Seller logic
-          // {
-          //   is_seller: false,
-          //   [Op.or]: [
-          //     // {
-          //     //   order_type: { [Op.in]: GOLD_ORDER_TYPES },
-          //     //   is_payment_done: true,
-          //     // },
-          //     {
-          //       selected_payment_method: { [Op.in]: [1, 3, 4, 5] },
-          //       choose_payment_option: [1, 2],
-          //       is_payment_done: true
-          //     },
-          //   ],
-          // },
+          {
+            is_seller: false,
+            [Op.or]: [
+              {
+                is_payment_done: true,
+              },
+              // {
+              //   selected_payment_method: { [Op.in]: [1, 3, 4, 5] },
+              //   choose_payment_option: [1, 2],
+              //   is_payment_done: true
+              // },
+            ],
+          },
         ],
       };
     }

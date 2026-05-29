@@ -144,15 +144,6 @@ const GetDashboardData = async (req, res) => {
       brokerLevelMap[broker.id] = calculateBrokerLevel(broker, allBrokers);
     });
 
-    // Get all commission history for current broker
-    // const whereClause = {
-    //   user_id: user.ID,
-    //   [db.Sequelize.Op.or]: [
-    //     { is_seller: true },
-    //     { [db.Sequelize.Op.and]: [{ is_seller: false }, { is_payment_done: true }] },
-    //   ],
-    // };
-
     const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken", "primeinvest"];
 
     const whereClause = {
@@ -201,9 +192,37 @@ const GetDashboardData = async (req, res) => {
     const endOfMonth = new Date(currentYear, currentDate.getMonth() + 1, 0);
     endOfMonth.setHours(23, 59, 59, 999);
 
+    const allCommissionWhereClause = {
+      user_id: user.ID,
+      is_deleted: false,
+      [Op.or]: [
+        // 👉 Seller Logic
+        {
+          is_seller: true,
+          [Op.or]: [
+            {
+              selected_payment_method: [1, 2, 3, 4, 5],
+              choose_payment_option: [1, 2, 3, 4],
+              is_payment_declined: false,
+            },
+          ],
+        },
+
+        // 👉 Non-Seller Logic
+        {
+          is_seller: false,
+          [Op.or]: [
+            {
+              is_payment_done: true,
+            },
+          ],
+        },
+      ],
+    };
+
 
     const currentMonthWhereClause = {
-      ...whereClause,
+      ...allCommissionWhereClause,
       createdAt: {
         [db.Sequelize.Op.between]: [startOfMonth, endOfMonth],
       },
@@ -342,7 +361,16 @@ const GetDashboardData = async (req, res) => {
     // Group commissions by their position in the commission tree (distribution level)
 
     const commissionByLevel = {};
-    allCommissions.forEach(commission => {
+
+    let brokerAllCommission = await db.BrokerCommissionHistory.findAll({
+      where: allCommissionWhereClause,
+      order: [["createdAt", "DESC"]],
+      raw: true,
+    });
+
+    console.log(brokerAllCommission, "brokerAllCommission");
+
+    brokerAllCommission.forEach(commission => {
       if (!commission.tree) return;
 
       let level = 1; // Default to level 1

@@ -43,8 +43,31 @@ const getMarketingMaterialsForBroker = async (req, res) => {
       ...m.toJSON(),
       recommend_code: broker.user.mystorekey,
       asset_url: m.asset_url ? `${process.env.NODE_URL}${m.asset_url}` : null,
-      youtube_url: m.type !== "video" ? (m.youtube_url ? `${m.youtube_url}${broker.user.mystorekey}` : null) : (m.youtube_url ? `${m.youtube_url}` : null),
-      german_youtube_url: m.type !== "video" ? (m.german_youtube_url ? `${m.german_youtube_url}${broker.user.mystorekey}` : null) : (m.german_youtube_url ? `${m.german_youtube_url}` : null),
+      youtube_url:
+        m.youtube_url
+          ? (
+            m.type !== "video"
+              ? (
+                m.youtube_url.endsWith("/")
+                  ? `${m.youtube_url}${broker.user.mystorekey}`
+                  : `${m.youtube_url}/${broker.user.mystorekey}`
+              )
+              : m.youtube_url
+          )
+          : null,
+
+      german_youtube_url:
+        m.german_youtube_url
+          ? (
+            m.type !== "video"
+              ? (
+                m.german_youtube_url.endsWith("/")
+                  ? `${m.german_youtube_url}${broker.user.mystorekey}`
+                  : `${m.german_youtube_url}/${broker.user.mystorekey}`
+              )
+              : m.german_youtube_url
+          )
+          : null,
     }));
 
     return res.status(200).json({

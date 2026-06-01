@@ -137,6 +137,7 @@ const GetOrderDetails = async (req, res) => {
       if (!order) {
         return res.status(404).json({
           success: false,
+          ordernotfound: true,
           message: "Order not found",
         });
       }
@@ -239,9 +240,13 @@ const GetOrderDetails = async (req, res) => {
 
     userId = order?.user_id;
 
-    console.log("Order:", order);
-    console.log("Order Shipping Meta:", orderShippingMeta);
-    console.log("Order Pivots:", orderPivots);
+    // ✅ ADD THIS HERE
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order details not found",
+      });
+    }
 
     if (orderType !== "goldprice_fixing" && orderType !== "dealer_purchasing_diamond") {
       // Products

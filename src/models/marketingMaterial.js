@@ -17,7 +17,7 @@ const MarketingMaterial = sequelize.define(
       allowNull: false,
     },
     type: {
-      type: Sequelize.ENUM("image", "banner", "video", "pdf", "document", "qrcode", "landing_page"),
+      type: Sequelize.ENUM("image", "banner", "video", "pdf", "document", "qrcode", "landing_page", "goldbuying_page", "silverpurchase_page", "platinumpurchase_page", "palladiumpurchase_page", "preciousmetalsale_page", "cointrade_page", "jewelryappraisal_page", "consultingexpertise_page", "previousmetaldealers_page", "selfservice_page"),
       allowNull: false,
     },
     description: {

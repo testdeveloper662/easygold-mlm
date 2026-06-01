@@ -63,7 +63,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         }
 
         const validEnums = ["EASYGOLD_TOKEN", "PRIMEINVEST", "GOLDFLEX", "B2B_DASHBOARD"];
-        if (!validEnums.includes(payout_for)) {
+        if (!validEnums?.includes(payout_for)) {
             return res.status(400).json({
                 success: false,
                 message: `payout_for must be one of: ${validEnums.join(", ")}`,
@@ -146,27 +146,39 @@ const CreateBrokerPayoutRequest = async (req, res) => {
 
         const outputFileName = `payout_${paylodForMailPDF.payout_request_id}.pdf`;
 
+        let relativeInvoicePath = null;
+
         const pdfResult = await generatePDF(
             paylodForMailPDF,
-            language.includes("de") ? "payout_template_de.html" : "payout_template_en.html",
+            language?.includes("de")
+                ? "payout_template_de.html"
+                : "payout_template_en.html",
             "payouts",
             outputFileName
         );
 
-        let relativeInvoicePath = pdfResult.filePath.split("uploads")[1];
-        relativeInvoicePath = relativeInvoicePath.replace("\\uploads", "");
-        relativeInvoicePath = relativeInvoicePath.replace(/\\/g, "/");
+        // ✅ CHECK PDF SUCCESS FIRST
+        if (pdfResult?.success && pdfResult?.filePath) {
 
-        if (!relativeInvoicePath.startsWith("/")) {
-            relativeInvoicePath = "/" + relativeInvoicePath;
-        }
+            relativeInvoicePath = pdfResult.filePath.split("uploads")[1];
 
-        console.log("relativeInvoicePath:", relativeInvoicePath);
+            relativeInvoicePath = relativeInvoicePath.replace("\\uploads", "");
+            relativeInvoicePath = relativeInvoicePath.replace(/\\/g, "/");
 
-        if (pdfResult.success) {
+            if (!relativeInvoicePath.startsWith("/")) {
+                relativeInvoicePath = "/" + relativeInvoicePath;
+            }
+
+            console.log("relativeInvoicePath:", relativeInvoicePath);
+
             await newRequest.update({
                 invoice: relativeInvoicePath
             });
+
+        } else {
+
+            console.error("PDF generation failed:", pdfResult);
+
         }
         const templateVariables = {
             invoice_number: newRequest?.id || formattedPayoutRequestId,
@@ -198,7 +210,10 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             );
         }
 
-        const attachmentPath = pdfResult?.success ? pdfResult.filePath : null;
+        const attachmentPath =
+            pdfResult?.success && pdfResult?.filePath
+                ? pdfResult.filePath
+                : null;
         const cc = user_email;
         await SendEmailHelper(emailData.subject, updatedHtmlContent, process.env.EASY_GOLD_SUPPORT_EMAIL, attachmentPath, cc);
 

@@ -37,6 +37,26 @@ async function generatePDF(data, templateName, outputfolder, outputFileName) {
             timeout: 0,
         });
 
+        await page.waitForNetworkIdle({
+            idleTime: 1000,
+            timeout: 30000,
+        });
+
+        await page.evaluate(async () => {
+            const selectors = Array.from(document.images);
+
+            await Promise.all(
+                selectors.map((img) => {
+                    if (img.complete) return;
+
+                    return new Promise((resolve) => {
+                        img.onload = resolve;
+                        img.onerror = resolve;
+                    });
+                })
+            );
+        });
+
         const outputDir = path.join(
             __dirname,
             "..",

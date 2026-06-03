@@ -799,6 +799,7 @@ const runBrokerRegisterBackground = async ({
   u_street_no,
   address,
   city,
+  country,
   postalCode,
   languageForApi,
   ip,
@@ -828,7 +829,7 @@ const runBrokerRegisterBackground = async ({
       raw: true
     });
 
-    const addressParts = [u_street_no, address, city, postalCode]
+    const addressParts = [u_street_no, address, city, postalCode, country]
       .map(v => v?.toString().trim())                                          // remove spaces
       .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
 
@@ -921,7 +922,7 @@ const runBrokerRegisterBackground = async ({
 
     const partnerInfo = partnerInfoParts.join(", ");
 
-    const brokerInfoParts = [username, formattedAddress, phone, vatId, taxNumber, website]
+    const brokerInfoParts = [username, vatId, taxNumber, formattedAddress, phone, website]
       .map(v => v?.toString().trim())                                          // remove spaces
       .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
 
@@ -1421,6 +1422,7 @@ const BrokerRegistration = async (req, res) => {
         u_street_no,
         address,
         city,
+        country,
         postalCode,
         languageForApi,
         ip,

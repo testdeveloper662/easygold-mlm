@@ -114,6 +114,10 @@ const Users = sequelize.define(
       defaultValue: 0,
       comment: "0=landing_page off, 1=on",
     },
+    deleted_at: {
+      type: Sequelize.DATE,
+      allowNull: true,
+    },
   },
   {
     tableName: "6LWUP_users",

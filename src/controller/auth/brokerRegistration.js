@@ -1012,6 +1012,7 @@ const runBrokerRegisterBackground = async ({
       binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
       partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
       uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
+      ncnda_doc: `uploads/agreements/${partnerDocsData.ncnda_doc}`,
     });
 
     const invitation = await db.BrokerInvitations.findOne({

@@ -53,6 +53,9 @@ const GetBrokerOwnContract = async (req, res) => {
             uk_company_sales_platform_doc: broker.uk_company_sales_platform_doc
                 ? `${process.env.NODE_URL}${broker.uk_company_sales_platform_doc}`
                 : null,
+            ncnda_doc: broker.ncnda_doc
+                ? `${process.env.NODE_URL}${broker.ncnda_doc}`
+                : null,
         };
 
         return res.status(200).json({

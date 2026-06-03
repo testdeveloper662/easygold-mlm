@@ -25,7 +25,8 @@ const generatePartnerPDF = async (data) => {
             "hartmann_benz_gmbh_white-label_service_doc",
             "binding_loi_doc",
             "partner_tax_billing_doc",
-            "uk_company_sales_platform_doc"
+            "uk_company_sales_platform_doc",
+            "ncnda_doc",
         ];
 
         const contracts = await db.AdminContracts.findAll({

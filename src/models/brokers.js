@@ -90,6 +90,10 @@ const Brokers = sequelize.define(
       type: Sequelize.TEXT("long"),
       allowNull: true
     },
+    ncnda_doc: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true
+    }
   },
   {
     timestamps: true,

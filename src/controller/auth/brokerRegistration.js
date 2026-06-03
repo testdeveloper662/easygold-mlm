@@ -1142,10 +1142,16 @@ const runBrokerRegisterBackground = async ({
 
     console.log(`Broker Registeration Process Completed Successfully for -> ${fullName} ${email}`);
 
-    await db.Users.update({
-      ID: apiResponse.data?.data?.user_id,
-      deleted_at: null,
-    });
+    await db.Users.update(
+      {
+        deleted_at: null,
+      },
+      {
+        where: {
+          ID: apiResponse.data?.data?.user_id,
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in BrokerRegistration:", error);
   }
@@ -1420,10 +1426,16 @@ const BrokerRegistration = async (req, res) => {
       });
     }
 
-    await db.Users.update({
-      ID: apiResponse.data?.data?.user_id,
-      deleted_at: new Date(),
-    });
+    await db.Users.update(
+      {
+        deleted_at: new Date(),
+      },
+      {
+        where: {
+          ID: apiResponse.data?.data?.user_id,
+        },
+      }
+    );
 
     setImmediate(async () => {
       await runBrokerRegisterBackground({

@@ -1141,6 +1141,11 @@ const runBrokerRegisterBackground = async ({
     await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, null, null, from = null);
 
     console.log(`Broker Registeration Process Completed Successfully for -> ${fullName} ${email}`);
+
+    await db.Users.update({
+      ID: apiResponse.data?.data?.user_id,
+      deleted_at: null,
+    });
   } catch (error) {
     console.error("Error in BrokerRegistration:", error);
   }
@@ -1414,6 +1419,11 @@ const BrokerRegistration = async (req, res) => {
         message: apiResponse.data?.message || "Registration failed at external API",
       });
     }
+
+    await db.Users.update({
+      ID: apiResponse.data?.data?.user_id,
+      deleted_at: new Date(),
+    });
 
     setImmediate(async () => {
       await runBrokerRegisterBackground({

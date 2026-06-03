@@ -104,9 +104,53 @@ const GetBrokerNetwork = async (req, res) => {
       user_id: user?.ID,
       is_deleted: false,
       [Op.or]: [
-        { is_seller: true },
+        // 👉 Seller Logic
         {
-          [Op.and]: [{ is_seller: false }, { is_payment_done: true }],
+          is_seller: true,
+          [Op.or]: [
+            {
+              selected_payment_method: [1, 2, 3, 4, 5],
+              choose_payment_option: [1, 2, 3, 4],
+              is_payment_declined: false,
+              order_type: {
+                [Op.notIn]: [
+                  "gold_purchase_sell_orders",
+                  "gold_purchase",
+                  "goldprice_fixing",
+                  "dealer_purchasing",
+                  "dealer_purchasing_diamond",
+                  "goldflex",
+                  "easygoldtoken",
+                  "primeinvest",
+                ],
+              },
+            },
+            {
+              order_type: {
+                [Op.in]: [
+                  "gold_purchase_sell_orders",
+                  "gold_purchase",
+                  "goldprice_fixing",
+                  "dealer_purchasing",
+                  "dealer_purchasing_diamond",
+                  "goldflex",
+                  "easygoldtoken",
+                  "primeinvest",
+                ],
+              },
+              is_payment_done: true,
+            }
+          ],
+        },
+
+        // 👉 Non-Seller Logic
+        {
+          is_seller: false,
+          [Op.or]: [
+            {
+              is_payment_done: true,
+            },
+          ],
         },
       ],
     };

@@ -32,6 +32,10 @@ const GetDashboardData = async (req, res) => {
     const { user } = req.user;
     const { filterType, from, to } = req.query;
 
+    const page = parseInt(req.query.page || 1);
+    const limit = 5;
+    const offset = (page - 1) * limit;
+
     if (!user || !user.ID) {
       return res.status(400).json({
         success: false,
@@ -174,12 +178,6 @@ const GetDashboardData = async (req, res) => {
       ],
     };
 
-    const allCommissions = await db.BrokerCommissionHistory.findAll({
-      where: whereClause,
-      order: [["createdAt", "DESC"]],
-      raw: true,
-    });
-
     // Get current month for filtering
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
@@ -204,7 +202,34 @@ const GetDashboardData = async (req, res) => {
               selected_payment_method: [1, 2, 3, 4, 5],
               choose_payment_option: [1, 2, 3, 4],
               is_payment_declined: false,
+              order_type: {
+                [Op.notIn]: [
+                  "gold_purchase_sell_orders",
+                  "gold_purchase",
+                  "goldprice_fixing",
+                  "dealer_purchasing",
+                  "dealer_purchasing_diamond",
+                  "goldflex",
+                  "easygoldtoken",
+                  "primeinvest",
+                ],
+              },
             },
+            {
+              order_type: {
+                [Op.in]: [
+                  "gold_purchase_sell_orders",
+                  "gold_purchase",
+                  "goldprice_fixing",
+                  "dealer_purchasing",
+                  "dealer_purchasing_diamond",
+                  "goldflex",
+                  "easygoldtoken",
+                  "primeinvest",
+                ],
+              },
+              is_payment_done: true,
+            }
           ],
         },
 
@@ -219,6 +244,38 @@ const GetDashboardData = async (req, res) => {
         },
       ],
     };
+
+    const recentOrdersWhereClause = {
+      ...allCommissionWhereClause,
+      createdAt: {
+        [Op.between]: [startDate, endDate],
+      },
+    };
+
+    const recentOrdersResult =
+      await db.BrokerCommissionHistory.findAndCountAll({
+        where: recentOrdersWhereClause,
+        attributes: [
+          "id",
+          "order_id",
+          "order_type",
+          "order_amount",
+          "commission_type",
+          "commission_amount",
+          "is_seller",
+          "is_payment_done",
+          "choose_payment_option",
+          "selected_payment_method",
+          "createdAt",
+          "order_type",
+        ],
+        order: [["createdAt", "DESC"]],
+        limit,
+        offset,
+        raw: true,
+      });
+
+    const totalRecentOrders = recentOrdersResult.count;
 
 
     const currentMonthWhereClause = {
@@ -345,17 +402,98 @@ const GetDashboardData = async (req, res) => {
       });
     }
 
-    // 4. Recent Orders - Latest 4-5 entries from commissions
-    const recentOrders = allCommissions.filter(c => new Date(c.createdAt) >= startDate && new Date(c.createdAt) <= endDate).slice(0, RECENT_ORDERS_LIMIT).map(commission => ({
-      id: commission.id,
-      order_id: commission.order_id,
-      order_type: commission.order_type,
-      order_amount: commission.order_amount,
-      commission_type: commission.commission_type,
-      commission_amount: commission.commission_amount,
-      is_seller: commission.is_seller,
-      createdAt: commission.createdAt,
-    }));
+
+    // Filter orders
+    // const filteredRecentOrders = allCommissions
+    //   .filter(
+    //     c =>
+    //       new Date(c.createdAt) >= startDate &&
+    //       new Date(c.createdAt) <= endDate
+    //   )
+    //   .map(commission => ({
+    //     id: commission.id,
+    //     order_id: commission.order_id,
+    //     order_type: commission.order_type,
+    //     order_amount: commission.order_amount,
+    //     commission_type: commission.commission_type,
+    //     commission_amount: commission.commission_amount,
+    //     is_seller: commission.is_seller,
+    //     createdAt: commission.createdAt,
+    //   }));
+
+    // // Total count
+    // const totalRecentOrders = filteredRecentOrders.length;
+
+    // // Paginated records
+    // const recentOrders = filteredRecentOrders.slice(
+    //   offset,
+    //   offset + limit
+    // );
+
+    const WALLET_EXCLUDED_ORDER_TYPES = [
+      "gold_purchase_sell_orders",
+      "gold_purchase",
+      "goldprice_fixing",
+      "dealer_purchasing",
+      "dealer_purchasing_diamond",
+      "goldflex",
+      "easygoldtoken",
+      "primeinvest",
+    ];
+
+    const recentOrders = recentOrdersResult.rows.map(commission => {
+
+      let transaction_source = "system";
+
+      console.log("Commission Record:", {
+        id: commission.id,
+        order_id: commission.order_id,
+        order_type: commission.order_type,
+        order_amount: commission.order_amount,
+        commission_type: commission.commission_type,
+        commission_amount: commission.commission_amount,
+        is_seller: commission.is_seller,
+        is_payment_done: commission.is_payment_done,
+        choose_payment_option: commission.choose_payment_option,
+        selected_payment_method: commission.selected_payment_method,
+        createdAt: commission.createdAt,
+      });
+
+      // Wallet Logic
+      if (
+        (
+          commission.is_seller == 0 &&
+          commission.is_payment_done == 1
+        ) ||
+
+        (
+          commission.is_seller == 1 &&
+          [1, 2].includes(Number(commission.choose_payment_option)) &&
+          Number(commission.selected_payment_method) == 2
+        ) ||
+
+        (
+          commission.is_seller == 1 &&
+          WALLET_EXCLUDED_ORDER_TYPES.includes(commission.order_type)
+        )
+      ) {
+        transaction_source = "wallet";
+      } else {
+        transaction_source = "payout";
+      }
+
+      return {
+        id: commission.id,
+        order_id: commission.order_id,
+        order_type: commission.order_type,
+        order_amount: commission.order_amount,
+        commission_type: commission.commission_type,
+        commission_amount: commission.commission_amount,
+        is_seller: commission.is_seller,
+        createdAt: commission.createdAt,
+        transaction_source,
+      };
+    });
 
     // 5. Commission Summary by Level
     // Group commissions by their position in the commission tree (distribution level)
@@ -367,8 +505,6 @@ const GetDashboardData = async (req, res) => {
       order: [["createdAt", "DESC"]],
       raw: true,
     });
-
-    console.log(brokerAllCommission, "brokerAllCommission");
 
     brokerAllCommission.forEach(commission => {
       if (!commission.tree) return;
@@ -535,7 +671,15 @@ const GetDashboardData = async (req, res) => {
           total: totalSubBrokers,
           by_level: subBrokersByLevelFormatted,
         },
-        recent_orders: recentOrders,
+        recent_orders: {
+          records: recentOrders,
+          pagination: {
+            total_records: totalRecentOrders,
+            current_page: page,
+            total_pages: Math.ceil(totalRecentOrders / limit),
+            per_page: limit,
+          },
+        },
         commission_summary_by_level: commissionSummaryByLevel,
         monthly_growth_chart: monthlyGrowthChart,
         untermaklervertrag_doc: currentBroker.untermaklervertrag_doc ? `${process.env.NODE_URL}${currentBroker.untermaklervertrag_doc}` : null,

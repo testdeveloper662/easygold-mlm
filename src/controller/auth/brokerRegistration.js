@@ -934,6 +934,7 @@ const runBrokerRegisterBackground = async ({
       b2b_address: formattedAddress,
       b2b_location: city,
       b2b_company: company,
+      b2b_email: email,
       b2b_signature: `<img src="${process.env.PUBLIC_URL}${userSign?.meta_value}" style="width:150px;height:100px;" />`,
       b2b_userid: apiResponse.data?.data?.user_id,
       parent_b2b_signature: `<img src="${process.env.PUBLIC_URL}${parentSignature}" style="width:150px;height:100px;" />`,

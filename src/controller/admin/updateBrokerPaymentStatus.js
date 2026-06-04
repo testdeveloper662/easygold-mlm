@@ -215,7 +215,7 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
               language = languageMeta.meta_value;
             }
             const brokerTemplateVariables = {
-              amount: `${brokerData?.commission_amount || 0}`,
+              amount: `${parseFloat(brokerData?.commission_amount).toFixed(2) || 0}`,
               level: level || "",
             };
             level++;

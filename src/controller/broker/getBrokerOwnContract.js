@@ -5,9 +5,13 @@ const GetBrokerOwnContract = async (req, res) => {
     try {
         const { user } = req.user;
 
+        const targetUserId = (user.role === "SUPER_ADMIN" && req.query.viewUserId)
+            ? parseInt(req.query.viewUserId)
+            : user.ID;
+
         const broker = await db.Brokers.findOne({
             where: {
-                user_id: user.ID,
+                user_id: targetUserId,
             },
             include: [
                 {

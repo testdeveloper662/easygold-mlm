@@ -2,16 +2,20 @@ const db = require("../../models");
 
 const getMarketingMaterialsForBroker = async (req, res) => {
   try {
-    const { page = 1, limit = 12, type } = req.query;
+    const { page = 1, limit = 12, type, viewUserId } = req.query;
 
     const { user } = req.user;
+
+    const targetUserId = (user.role === "SUPER_ADMIN" && viewUserId)
+      ? parseInt(viewUserId)
+      : user.ID;
 
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     const offset = (pageNumber - 1) * limitNumber;
 
     const broker = await db.Brokers.findOne({
-      where: { user_id: user.ID },
+      where: { user_id: targetUserId },
       attributes: ["id", "referral_code"],
       include: [
         {

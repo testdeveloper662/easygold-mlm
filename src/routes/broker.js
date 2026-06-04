@@ -17,6 +17,7 @@ const UploadProfileImage = require("../controller/user/uploadProfileImage");
 const AddUpdateBrokerBankDetails = require("../controller/broker/addUpdateBrokerBankDetails");
 const GetBrokerBankDetails = require("../controller/broker/getBrokerBankDetails");
 const CreateBrokerPayoutRequest = require("../controller/broker/createBrokerPayoutRequest");
+const GetBrokerPayoutRequests = require("../controller/broker/getBrokerPayoutRequests");
 const CreateTargetCustomer = require("../controller/broker/createTargetCustomer");
 const GetTargetCustomers = require("../controller/broker/getTargetCustomers");
 const GetTargetCustomerById = require("../controller/broker/getTargetCustomerById");
@@ -94,6 +95,7 @@ brokerRouter.delete("/affiliate-banners/:id", authenticateToken, DeleteAffiliate
 brokerRouter.post("/bank/detail", authenticateToken, AddUpdateBrokerBankDetails);
 brokerRouter.get("/bank/detail", authenticateToken, GetBrokerBankDetails);
 brokerRouter.post("/payout/request", authenticateToken, CreateBrokerPayoutRequest);
+brokerRouter.get("/payout/requests", authenticateToken, GetBrokerPayoutRequests);
 
 // Target Customers Routes
 brokerRouter.post("/target-customers", authenticateToken, CreateTargetCustomer);

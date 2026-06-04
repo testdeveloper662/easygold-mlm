@@ -30,7 +30,7 @@ const calculateBrokerLevel = (broker, allBrokers) => {
 const GetDashboardData = async (req, res) => {
   try {
     const { user } = req.user;
-    const { filterType, from, to } = req.query;
+    const { filterType, from, to, viewUserId } = req.query;
 
     const page = parseInt(req.query.page || 1);
     const limit = 5;
@@ -42,6 +42,10 @@ const GetDashboardData = async (req, res) => {
         message: "User information is missing from request",
       });
     }
+
+    const targetUserId = (user.role === "SUPER_ADMIN" && viewUserId)
+      ? parseInt(viewUserId)
+      : user.ID;
 
     let startDate, endDate;
     const now = new Date();
@@ -121,7 +125,7 @@ const GetDashboardData = async (req, res) => {
 
     // Find current broker
     const currentBroker = await db.Brokers.findOne({
-      where: { user_id: user.ID },
+      where: { user_id: targetUserId },
     });
 
     if (!currentBroker) {
@@ -151,7 +155,7 @@ const GetDashboardData = async (req, res) => {
     const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken", "primeinvest"];
 
     const whereClause = {
-      user_id: user.ID,
+      user_id: targetUserId,
       is_deleted: false,
       [Op.or]: [
         // 👉 Seller Logic
@@ -191,7 +195,7 @@ const GetDashboardData = async (req, res) => {
     endOfMonth.setHours(23, 59, 59, 999);
 
     const allCommissionWhereClause = {
-      user_id: user.ID,
+      user_id: targetUserId,
       is_deleted: false,
       [Op.or]: [
         // 👉 Seller Logic
@@ -286,7 +290,7 @@ const GetDashboardData = async (req, res) => {
     };
 
     const directCommissionWhere = {
-      user_id: user.ID,
+      user_id: targetUserId,
       is_deleted: false,
       createdAt: {
         [Op.between]: [startOfMonth, endOfMonth],
@@ -519,7 +523,7 @@ const GetDashboardData = async (req, res) => {
         // Find the position of current broker in the tree
         const currentBrokerInTree = brokerIds.findIndex(brokerId => {
           const broker = allBrokers.find(b => b.id === brokerId);
-          return broker && broker.user_id === user.ID;
+          return broker && broker.user_id === targetUserId;
         });
 
         // Level is position + 1 (0 = seller/level 1, 1 = first parent/level 2, etc.)
@@ -599,7 +603,7 @@ const GetDashboardData = async (req, res) => {
         const brokerIds = commission.tree.split("->").map(id => parseInt(id));
         const currentBrokerInTree = brokerIds.findIndex(brokerId => {
           const broker = allBrokers.find(b => b.id === brokerId);
-          return broker && broker.user_id === user.ID;
+          return broker && broker.user_id === targetUserId;
         });
         level = currentBrokerInTree >= 0 ? currentBrokerInTree + 1 : 1;
       }

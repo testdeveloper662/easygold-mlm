@@ -4,9 +4,13 @@ const GetTargetCustomerStats = async (req, res) => {
   try {
     const { user } = req.user;
 
+    const targetUserId = (user.role === "SUPER_ADMIN" && req.query.viewUserId)
+      ? parseInt(req.query.viewUserId)
+      : user.ID;
+
     // Get broker details
     const broker = await db.Brokers.findOne({
-      where: { user_id: user.ID },
+      where: { user_id: targetUserId },
     });
 
     if (!broker) {

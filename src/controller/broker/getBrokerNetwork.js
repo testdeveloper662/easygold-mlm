@@ -70,9 +70,13 @@ const GetBrokerNetwork = async (req, res) => {
       });
     }
 
+    const targetUserId = (user.role === "SUPER_ADMIN" && req.query.viewUserId)
+      ? parseInt(req.query.viewUserId)
+      : user.ID;
+
     // Find current broker
     const currentBroker = await db.Brokers.findOne({
-      where: { user_id: user.ID },
+      where: { user_id: targetUserId },
       include: [
         {
           model: db.Users,
@@ -101,7 +105,7 @@ const GetBrokerNetwork = async (req, res) => {
     });
 
     const whereClause = {
-      user_id: user?.ID,
+      user_id: targetUserId,
       is_deleted: false,
       [Op.or]: [
         // 👉 Seller Logic

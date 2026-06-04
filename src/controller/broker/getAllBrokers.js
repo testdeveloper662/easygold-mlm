@@ -6,21 +6,28 @@ const GetAllBrokers = async (req, res) => {
     try {
         const { user } = req.user;
 
-        // Only SUPER_ADMIN can access
-        if (user.role == "SUPER_ADMIN") {
-            return res.status(400).json({
-                success: false,
-                message: "Access not allowed",
-            });
-        }
-
         const { page = 1, limit = 10, search = "" } = req.query;
         const offset = (page - 1) * limit;
 
         console.log(search, "search term in get all brokers");
 
+        let broker_id;
+        if (user.role === "SUPER_ADMIN" && req.query.viewUserId) {
+            const targetBroker = await db.Brokers.findOne({
+                where: { user_id: parseInt(req.query.viewUserId) },
+                attributes: ["id"],
+            });
+            broker_id = targetBroker?.id;
+        } else {
+            broker_id = user.broker_id;
+        }
+
+        if (!broker_id) {
+            return res.status(400).json({ success: false, message: "Broker not found." });
+        }
+
         const whereClause = {
-            parent_id: user.broker_id,
+            parent_id: broker_id,
         };
 
         if (search) {

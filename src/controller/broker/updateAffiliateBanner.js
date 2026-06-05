@@ -36,7 +36,7 @@ const UpdateAffiliateBanner = async (req, res) => {
             });
         }
 
-        const { name, url, product_selected, qrPosition, qrSize } = req.body;
+        const { name, german_name, url, product_selected, qrPosition, qrSize } = req.body;
 
         // 🚫 Duplicate check when both changed
         // if (product_selected && url &&
@@ -78,6 +78,7 @@ const UpdateAffiliateBanner = async (req, res) => {
         // Update banner
         await affiliateBanner.update({
             name: name ?? affiliateBanner.name,
+            german_name: german_name ?? affiliateBanner.german_name,
             product_selected: product_selected ?? affiliateBanner.product_selected,
             url: url ?? affiliateBanner.url,
             qrPosition: qrPosition ?? affiliateBanner.qrPosition,

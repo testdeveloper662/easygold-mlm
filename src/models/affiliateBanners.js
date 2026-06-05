@@ -18,8 +18,12 @@ const AffiliateBanners = sequelize.define(
       onDelete: "CASCADE",
     },
     name: {
-      type: Sequelize.STRING(255),
+      type: Sequelize.TEXT,
       allowNull: false,
+    },
+    german_name: {
+      type: Sequelize.TEXT,
+      allowNull: true,
     },
     backgroundImage: {
       type: Sequelize.TEXT("long"),

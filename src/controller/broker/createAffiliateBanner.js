@@ -40,7 +40,7 @@ const CreateAffiliateBanner = async (req, res) => {
             );
         }
 
-        const { name, product_selected, url, qrPosition, qrSize } = req.body;
+        const { name, german_name, product_selected, url, qrPosition, qrSize } = req.body;
 
         // Validate required fields
         if (!product_selected || !url) {
@@ -61,6 +61,7 @@ const CreateAffiliateBanner = async (req, res) => {
         const affiliateBanner = await db.AffiliateBanners.create({
             broker_id: broker.id,
             name,
+            german_name,
             product_selected,
             url,
             qrPosition,

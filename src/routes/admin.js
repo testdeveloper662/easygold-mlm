@@ -130,11 +130,11 @@ adminRouter.put("/admin-contracts/:id", authenticateToken, upload.fields([
 
 // Marketing Materials Routes
 adminRouter.get("/marketing-materials", authenticateToken, getMarketingMaterials);
-adminRouter.post("/marketing-materials", authenticateToken, upload.fields([
+adminRouter.post("/marketing-materials", authenticateToken, marketingUpload.fields([
     { name: "asset", maxCount: 1 },
     { name: "german_asset", maxCount: 1 },
 ]), createMarketingMaterial);
-adminRouter.put("/marketing-materials/:id", authenticateToken, upload.fields([
+adminRouter.put("/marketing-materials/:id", authenticateToken, marketingUpload.fields([
     { name: "asset", maxCount: 1 },
     { name: "german_asset", maxCount: 1 },
 ]), updateMarketingMaterial);

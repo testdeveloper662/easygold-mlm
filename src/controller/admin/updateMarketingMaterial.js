@@ -48,6 +48,19 @@ const updateMarketingMaterial = async (req, res) => {
 
             german_asset_url =
                 `uploads/marketing/${req.files.german_asset[0].filename}`;
+        } else if (req.body.clear_german_asset === "true") {
+            if (material.german_asset_url) {
+                const oldPath = path.join(
+                    __dirname,
+                    "../../../public",
+                    material.german_asset_url
+                );
+
+                if (fs.existsSync(oldPath)) {
+                    fs.unlinkSync(oldPath);
+                }
+            }
+            german_asset_url = null;
         }
 
         await material.update({

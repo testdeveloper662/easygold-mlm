@@ -47,6 +47,7 @@ const getMarketingMaterialsForBroker = async (req, res) => {
       ...m.toJSON(),
       recommend_code: broker.user.mystorekey,
       asset_url: m.asset_url ? `${process.env.NODE_URL}${m.asset_url}` : null,
+      german_asset_url: m.german_asset_url ? `${process.env.NODE_URL}${m.german_asset_url}` : null,
       youtube_url:
         m.youtube_url
           ? (

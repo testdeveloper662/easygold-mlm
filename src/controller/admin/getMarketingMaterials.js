@@ -29,6 +29,7 @@ const getMarketingMaterials = async (req, res) => {
         const materialsWithFullUrl = materials.map((m) => ({
             ...m.toJSON(),
             asset_url: m.asset_url ? `${process.env.NODE_URL}${m.asset_url}` : null,
+            german_asset_url: m.german_asset_url ? `${process.env.NODE_URL}${m.german_asset_url}` : null,
         }));
 
         return res.status(200).json({

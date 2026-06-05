@@ -18,6 +18,13 @@ const deleteMarketingMaterial = async (req, res) => {
       }
     }
 
+    if (material.german_asset_url) {
+      const filePath = path.join(__dirname, "../../../public", material.german_asset_url);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
     await material.destroy();
 
     return res.status(200).json({

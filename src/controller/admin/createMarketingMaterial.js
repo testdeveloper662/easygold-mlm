@@ -6,9 +6,14 @@ const createMarketingMaterial = async (req, res) => {
     try {
         const { title, german_title, type, category, youtube_url, german_youtube_url, width, height, description, german_description } = req.body;
         let asset_url = null;
+        let german_asset_url = null;
 
-        if (req.file) {
-            asset_url = `uploads/marketing/${req.file.filename}`;
+        if (req.files?.asset?.[0]) {
+            asset_url = `uploads/marketing/${req.files.asset[0].filename}`;
+        }
+
+        if (req.files?.german_asset?.[0]) {
+            german_asset_url = `uploads/marketing/${req.files.german_asset[0].filename}`;
         }
 
         const material = await db.MarketingMaterial.create({
@@ -17,6 +22,7 @@ const createMarketingMaterial = async (req, res) => {
             type,
             category,
             asset_url,
+            german_asset_url,
             youtube_url,
             german_youtube_url,
             description,

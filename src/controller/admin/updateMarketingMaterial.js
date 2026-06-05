@@ -13,15 +13,41 @@ const updateMarketingMaterial = async (req, res) => {
         }
 
         let asset_url = material.asset_url;
-        if (req.file) {
-            // Delete old file if exists
+        let german_asset_url = material.german_asset_url;
+        if (req.files?.asset?.[0]) {
+
             if (material.asset_url) {
-                const oldPath = path.join(__dirname, "../../../public", material.asset_url);
+                const oldPath = path.join(
+                    __dirname,
+                    "../../../public",
+                    material.asset_url
+                );
+
                 if (fs.existsSync(oldPath)) {
                     fs.unlinkSync(oldPath);
                 }
             }
-            asset_url = `uploads/marketing/${req.file.filename}`;
+
+            asset_url = `uploads/marketing/${req.files.asset[0].filename}`;
+        }
+
+        // German file
+        if (req.files?.german_asset?.[0]) {
+
+            if (material.german_asset_url) {
+                const oldPath = path.join(
+                    __dirname,
+                    "../../../public",
+                    material.german_asset_url
+                );
+
+                if (fs.existsSync(oldPath)) {
+                    fs.unlinkSync(oldPath);
+                }
+            }
+
+            german_asset_url =
+                `uploads/marketing/${req.files.german_asset[0].filename}`;
         }
 
         await material.update({
@@ -34,6 +60,7 @@ const updateMarketingMaterial = async (req, res) => {
             height: height ? parseInt(height) : material.height,
             is_active: is_active !== undefined ? is_active === 'true' || is_active === true : material.is_active,
             asset_url,
+            german_asset_url,
             description: description !== undefined ? description : material.description,
             german_description: german_description !== undefined ? german_description : material.german_description,
         });

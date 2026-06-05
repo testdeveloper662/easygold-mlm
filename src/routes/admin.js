@@ -130,8 +130,14 @@ adminRouter.put("/admin-contracts/:id", authenticateToken, upload.fields([
 
 // Marketing Materials Routes
 adminRouter.get("/marketing-materials", authenticateToken, getMarketingMaterials);
-adminRouter.post("/marketing-materials", authenticateToken, marketingUpload.single("asset"), createMarketingMaterial);
-adminRouter.put("/marketing-materials/:id", authenticateToken, marketingUpload.single("asset"), updateMarketingMaterial);
+adminRouter.post("/marketing-materials", authenticateToken, upload.fields([
+    { name: "asset", maxCount: 1 },
+    { name: "german_asset", maxCount: 1 },
+]), createMarketingMaterial);
+adminRouter.put("/marketing-materials/:id", authenticateToken, upload.fields([
+    { name: "asset", maxCount: 1 },
+    { name: "german_asset", maxCount: 1 },
+]), updateMarketingMaterial);
 adminRouter.delete("/marketing-materials/:id", authenticateToken, deleteMarketingMaterial);
 
 module.exports = adminRouter;

@@ -37,6 +37,10 @@ const MarketingMaterial = sequelize.define(
       type: Sequelize.TEXT("long"),
       allowNull: true,
     },
+    german_asset_url: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true,
+    },
     german_youtube_url: {
       type: Sequelize.TEXT,
       allowNull: true,

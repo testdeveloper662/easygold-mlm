@@ -37,7 +37,17 @@ const GetUserUrls = async (req, res) => {
             primeinvesturl: `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/primeinvest`,
             easygoldurl: `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/easygold`,
             landing_page: user?.landing_page,
-            landing_pageurl: `${process.env.EASY_GOLD_URL}/landingpage/${user?.mystorekey}`
+            landing_pageurl: `${process.env.EASY_GOLD_URL}/landingpage/${user?.mystorekey}`,
+            goldbuying_page: `${process.env.EASY_GOLD_URL}/Goldankauf/${user?.mystorekey}`,
+            silverpurchase_page: `${process.env.EASY_GOLD_URL}/Silberankauf/${user?.mystorekey}`,
+            platinumpurchase_page: `${process.env.EASY_GOLD_URL}/Platinankauf/${user?.mystorekey}`,
+            palladiumpurchase_page: `${process.env.EASY_GOLD_URL}/Palladiumankauf/${user?.mystorekey}`,
+            preciousmetalsale_page: `${process.env.EASY_GOLD_URL}/Edelmetallverkauf/${user?.mystorekey}`,
+            cointrade_page: `${process.env.EASY_GOLD_URL}/Muenzhandel/${user?.mystorekey}`,
+            jewelryappraisal_page: `${process.env.EASY_GOLD_URL}/schmuckbewertung/${user?.mystorekey}`,
+            consultingexpertise_page: `${process.env.EASY_GOLD_URL}/BeratungUndExpertise/${user?.mystorekey}`,
+            previousmetaldealers_page: `${process.env.EASY_GOLD_URL}/zoomLanding/${user?.mystorekey}`,
+            selfservice_page: `${process.env.EASY_GOLD_URL}/mystore/${user?.mystorekey}`,
         };
 
         return res.status(200).json({

@@ -163,6 +163,16 @@ const Login = async (req, res) => {
     let easyGoldReferralCode = Buffer.from(String(broker?.referral_code), "utf-8").toString("base64")
 
     userData.landing_pageurl = landing_pageurl;
+    userData.goldbuying_page = `${process.env.EASY_GOLD_URL}/Goldankauf/${user?.mystorekey}`;
+    userData.silverpurchase_page = `${process.env.EASY_GOLD_URL}/Silberankauf/${user?.mystorekey}`;
+    userData.platinumpurchase_page = `${process.env.EASY_GOLD_URL}/Platinankauf/${user?.mystorekey}`;
+    userData.palladiumpurchase_page = `${process.env.EASY_GOLD_URL}/Palladiumankauf/${user?.mystorekey}`;
+    userData.preciousmetalsale_page = `${process.env.EASY_GOLD_URL}/Edelmetallverkauf/${user?.mystorekey}`;
+    userData.cointrade_page = `${process.env.EASY_GOLD_URL}/Muenzhandel/${user?.mystorekey}`;
+    userData.jewelryappraisal_page = `${process.env.EASY_GOLD_URL}/schmuckbewertung/${user?.mystorekey}`;
+    userData.consultingexpertise_page = `${process.env.EASY_GOLD_URL}/BeratungUndExpertise/${user?.mystorekey}`;
+    userData.previousmetaldealers_page = `${process.env.EASY_GOLD_URL}/zoomLanding/${user?.mystorekey}`;
+    userData.selfservice_page = `${process.env.EASY_GOLD_URL}/mystore/${user?.mystorekey}`;
     userData.landing_page = landing_page;
     userData.goldflexurl = `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/goldflex`;
     userData.easygoldurl = `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/easygold`;

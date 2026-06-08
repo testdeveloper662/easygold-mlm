@@ -50,12 +50,12 @@ const CreateAffiliateBanner = async (req, res) => {
             });
         }
 
-        if (broker.user?.landing_page == 0 && product_selected == "Landingpage") {
-            return res.status(400).json({
-                success: false,
-                message: "Your landing page not activate yet, Please activate first on B2B dashboard.",
-            });
-        }
+        // if (broker.user?.landing_page == 0 && product_selected == "Landingpage") {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: "Your landing page not activate yet, Please activate first on B2B dashboard.",
+        //     });
+        // }
 
         // Create affiliate banner
         const affiliateBanner = await db.AffiliateBanners.create({

@@ -34,7 +34,7 @@ const AffiliateBanners = sequelize.define(
       allowNull: true,
     },
     product_selected: {
-      type: Sequelize.ENUM("Landingpage", "easygold Token", "Primeinvest", "Custom"),
+      type: Sequelize.ENUM("Landingpage", "easygold Token", "Primeinvest", "Custom", "goldbuying_page", "silverpurchase_page", "platinumpurchase_page", "palladiumpurchase_page", "preciousmetalsale_page", "cointrade_page", "jewelryappraisal_page", "consultingexpertise_page", "previousmetaldealers_page", "selfservice_page"),
       allowNull: true,
     },
     qrPosition: {

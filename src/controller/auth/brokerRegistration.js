@@ -816,7 +816,8 @@ const runBrokerRegisterBackground = async ({
   email,
   mobile,
   company,
-  newReferralCode
+  newReferralCode,
+  banks,
 }) => {
 
   try {
@@ -1212,7 +1213,8 @@ const BrokerRegistration = async (req, res) => {
       beneficialOwners,
       beneficialOwnersDetails,
       monthlyVolume,
-      investigationProceedings
+      investigationProceedings,
+      banks,
     } = req.body;
 
     if (
@@ -1358,6 +1360,7 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_country_origin", u_country_origin);
     form.append("u_recipient_country", u_recipient_country);
     form.append("selectedDate", new Date().toISOString().split("T")[0]);
+    form.append("banks", JSON.stringify(banks));
 
     form.append("business_activity_check", business_activity_check);
     form.append("business_activity_other", business_activity_other || "");
@@ -1461,7 +1464,8 @@ const BrokerRegistration = async (req, res) => {
         email,
         mobile,
         company,
-        newReferralCode
+        newReferralCode,
+        banks,
       });
     });
 

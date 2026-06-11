@@ -90,6 +90,7 @@ const GetAllBrokers = async (req, res) => {
             "u_iban",
             "u_bic",
             "u_bank_address",
+            "banks",
           ],
         },
       },
@@ -158,6 +159,7 @@ const GetAllBrokers = async (req, res) => {
         iban: m.u_iban || null,
         bic: m.u_bic || null,
         bank_address: m.u_bank_address || null,
+        banks: m.banks ? (() => { try { return JSON.parse(m.banks); } catch { return null; } })() : null,
 
         // Document URLs
         trade_register: tradeRegisterUrl,

@@ -1195,11 +1195,11 @@ const BrokerRegistration = async (req, res) => {
       u_export_import,
       u_country_origin,
       u_recipient_country,
-      accountHolderName,
-      iban,
-      bic,
-      bankName,
-      bankAddress,
+      // accountHolderName,
+      // iban,
+      // bic,
+      // bankName,
+      // bankAddress,
       idExpiryDate,
       veriff_session_id,
       lang,
@@ -1215,6 +1215,10 @@ const BrokerRegistration = async (req, res) => {
       monthlyVolume,
       investigationProceedings,
       banks,
+      taxJurisdiction,
+      legalStatus,
+      taxNumberLabel,
+      vatIdLabel,
     } = req.body;
 
     if (
@@ -1230,17 +1234,12 @@ const BrokerRegistration = async (req, res) => {
       !mobile ||
       !username ||
       !password ||
-      !accountHolderName ||
-      !iban ||
-      !bic ||
-      !bankName ||
-      !bankAddress ||
       !idExpiryDate
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Missing required fields: referralCode, fullName, company, contactPerson, postalCode, city, country, email, phone, mobile, username, password, accountHolderName, iban, bic, bankName, bankAddress, idExpiryDate",
+          "Missing required fields: referralCode, fullName, company, contactPerson, postalCode, city, country, email, phone, mobile, username, password, idExpiryDate",
       });
     }
     console.log("111111111111111111111111");
@@ -1348,11 +1347,6 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_password", password);
     form.append("u_web_site", website);
     form.append("u_account_owner", fullName);
-    form.append("u_account_holder", accountHolderName);
-    form.append("u_bank", bankName);
-    form.append("u_iban", iban);
-    form.append("u_bic", bic);
-    form.append("u_bank_address", bankAddress || "");
     form.append("u_i_or_we", "I");
     form.append("u_describe_business", u_describe_business || "");
     form.append("u_business_purpose", u_business_purpose || "");
@@ -1361,6 +1355,10 @@ const BrokerRegistration = async (req, res) => {
     form.append("u_recipient_country", u_recipient_country);
     form.append("selectedDate", new Date().toISOString().split("T")[0]);
     form.append("banks", JSON.stringify(banks));
+    form.append("taxJurisdiction", taxJurisdiction || "");
+    form.append("legalStatus", legalStatus || "");
+    form.append("taxNumberLabel", taxNumberLabel || "");
+    form.append("vatIdLabel", vatIdLabel || "");
 
     form.append("business_activity_check", business_activity_check);
     form.append("business_activity_other", business_activity_other || "");

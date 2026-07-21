@@ -266,6 +266,20 @@ const GetOrderDetails = async (req, res) => {
       order = await db.ProductOrderDiamond.findOne({ where: { id: orderId } });
       orderPivots = await db.ProductOrderPivotDiamond.findAll({ where: { order_id: orderId } });
       userId = order?.user_id;
+    } else if (orderType === "diamond_gemstone") {
+      orderShippingMeta = await db.DiamondOrderShippingOptions.findAll({
+        where: { diamond_order_id: normalizedOrderId },
+      });
+
+      orderPivots = await db.DiamondOrderPivot.findAll({
+        where: { order_id: normalizedOrderId },
+      });
+
+      order = await db.DiamondOrder.findOne({
+        where: { id: normalizedOrderId },
+      });
+
+      userId = order?.user_id;
     }
 
     // ✅ ADD THIS HERE
@@ -277,7 +291,7 @@ const GetOrderDetails = async (req, res) => {
       });
     }
 
-    if (orderType !== "goldprice_fixing" && orderType !== "dealer_purchasing_diamond") {
+    if (orderType !== "goldprice_fixing" && orderType !== "dealer_purchasing_diamond" && orderType !== "diamond_gemstone") {
 
       // Collect product IDs
       const productIds = orderPivots.map((pivot) => pivot.product_id);
@@ -343,7 +357,7 @@ const GetOrderDetails = async (req, res) => {
           orderDetails,
         },
       });
-    } else if (orderType === "dealer_purchasing_diamond") {
+    } else if (orderType === "dealer_purchasing_diamond" || orderType === "diamond_gemstone") {
       // For diamond orders, we will return the pivot details as products don't exist in the traditional sense
       const diamondIds = orderPivots
         .filter((p) => p.product_type === "diamond")
@@ -453,14 +467,27 @@ const GetOrderDetails = async (req, res) => {
         else if (meta_key === "u_country") partner.user_country = meta_value;
       });
 
+      // Build order details object from shipping meta (present for diamond_gemstone orders)
+      const orderDetails = {
+        order_id: normalizedOrderId,
+        order_type: orderType,
+      };
+
+      orderShippingMeta.forEach((o) => {
+        const { meta_key, meta_value } = o.dataValues;
+        orderDetails[meta_key] = meta_value;
+      });
+
+      // Diamond orders keep the delivery type on the order row, not in shipping meta
+      if (orderType === "diamond_gemstone" && orderDetails.Home_Delivery === undefined) {
+        orderDetails.Home_Delivery = String(order.delivery_types ?? 0);
+      }
+
       return res.status(200).json({
         success: true,
         data: {
           products,
-          orderDetails: {
-            order_id: normalizedOrderId,
-            order_type: orderType,
-          },
+          orderDetails,
           partner,
         },
       });

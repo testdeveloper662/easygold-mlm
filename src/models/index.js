@@ -36,6 +36,9 @@ const ProductOrderDiamond = require("./productOrderDiamond");
 const ProductOrderPivotDiamond = require("./productOrderDiamondPivot");
 const Diamonds = require("./diamonds");
 const Gemstones = require("./gemStones");
+const DiamondOrder = require("./diamondOrder");
+const DiamondOrderPivot = require("./diamondOrderPivot");
+const DiamondOrderShippingOptions = require("./diamondOrderShippingOption");
 
 const db = {};
 
@@ -76,6 +79,9 @@ db.ProductOrderDiamond = ProductOrderDiamond;
 db.Diamonds = Diamonds;
 db.Gemstones = Gemstones;
 db.ProductOrderPivotDiamond = ProductOrderPivotDiamond;
+db.DiamondOrder = DiamondOrder;
+db.DiamondOrderPivot = DiamondOrderPivot;
+db.DiamondOrderShippingOptions = DiamondOrderShippingOptions;
 db.Order = Order;
 db.ShippingOption = ShippingOption;
 db.PriceFixation = require("./priceFixation");
@@ -108,6 +114,11 @@ db.LpOrders.hasOne(db.Brokers, {
   as: "user_broker",
 });
 db.MyStoreOrder.hasOne(db.Brokers, {
+  foreignKey: "user_id",
+  sourceKey: "user_id",
+  as: "user_broker",
+});
+db.DiamondOrder.hasOne(db.Brokers, {
   foreignKey: "user_id",
   sourceKey: "user_id",
   as: "user_broker",

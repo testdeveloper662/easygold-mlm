@@ -88,6 +88,12 @@ const BrokerCommissionHistory = sequelize.define(
     notes: {
       type: Sequelize.TEXT,
       allowNull: true,
+    },
+    product_type: {
+      type: Sequelize.STRING(50),
+      allowNull: false,
+      defaultValue: "product",
+      comment: "product, diamond or gemstone",
     }
   },
   {

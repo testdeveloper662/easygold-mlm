@@ -289,6 +289,24 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
       }, {});
     }
 
+    // Diamond gemstone page source lookup
+    const diamondGemstoneOrderIds = history
+      .filter((h) => h.order_type === "diamond_gemstone" && isNumericOrderId(h.order_id))
+      .map((h) => Number(h.order_id));
+
+    let diamondOrderPageMap = {};
+    if (diamondGemstoneOrderIds.length) {
+      const diamondOrders = await db.DiamondOrder.findAll({
+        where: { id: { [Op.in]: diamondGemstoneOrderIds } },
+        attributes: ["id", "order_type"],
+        raw: true,
+      });
+      diamondOrderPageMap = diamondOrders.reduce((acc, o) => {
+        acc[o.id] = o.order_type; // 0=landing page, 1=mystore, 2=self service
+        return acc;
+      }, {});
+    }
+
     // Collect user_ids from fetched orders to resolve user_login
     const orderUserIds = new Set();
     Object.values(myStoreOrderMap).forEach((o) => o?.user_id && orderUserIds.add(o.user_id));
@@ -339,6 +357,9 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
         seller_username: sellerInfo.user_login || null,
         user_login: relatedUserLogin,
         order_details,
+        diamond_page_source: json.order_type === "diamond_gemstone"
+          ? (diamondOrderPageMap[Number(json.order_id)] ?? null)
+          : undefined,
         payment_type:
           json.selected_payment_method === 1
             ? "Bank Transfer"

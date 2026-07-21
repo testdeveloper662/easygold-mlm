@@ -57,28 +57,24 @@ const CaptureOrder = async (req, res) => {
 
     const normalizedOrderId = String(orderId).trim();
 
-    const isDiamondGemstone = orderType == 'diamond_gemstone';
+    const existingCommission = await db.BrokerCommissionHistory.findOne({
+      where: {
+        order_id: normalizedOrderId,
+        order_type: orderType,
+      },
+    });
 
-    if (!isDiamondGemstone) {
-      const existingCommission = await db.BrokerCommissionHistory.findOne({
-        where: {
-          order_id: normalizedOrderId,
-          order_type: orderType,
+    if (existingCommission) {
+      console.log(` [CAPTURE ORDER] ⚠️ Commission already exists for Order ID: ${orderId}, Type: ${orderType}`);
+
+      return res.status(200).json({
+        success: true,
+        message: "Commission already calculated for this order",
+        data: {
+          orderId,
+          orderType,
         },
       });
-
-      if (existingCommission) {
-        console.log(` [CAPTURE ORDER] ⚠️ Commission already exists for Order ID: ${orderId}, Type: ${orderType}`);
-
-        return res.status(200).json({
-          success: true,
-          message: "Commission already calculated for this order",
-          data: {
-            orderId,
-            orderType,
-          },
-        });
-      }
     }
 
     const isGoldFlex = orderType == 'goldflex';
@@ -106,7 +102,7 @@ const CaptureOrder = async (req, res) => {
       });
     }
 
-    // Step 1:
+    // Step 1: 
     let OrderModel, PivotModel;
 
     if (orderType === "landing_page") {
@@ -118,10 +114,6 @@ const CaptureOrder = async (req, res) => {
     } else if (orderType === "api") {
       OrderModel = db.MyStoreOrder;
       PivotModel = db.MyStoreOrderPivots;
-    } else if (isDiamondGemstone) {
-      OrderModel = db.DiamondOrder;
-      PivotModel = db.DiamondOrderPivot;
-      console.log(` [CAPTURE ORDER] Diamond & Gemstone order type detected.`);
     } else if (isGoldPurchase) {
       OrderModel = db.GoldPurchaseOrder;
     } else if (isGoldPurchaseSell) {
@@ -217,46 +209,235 @@ const CaptureOrder = async (req, res) => {
     }
 
     let orderPivots = [];
+    let totalProfitAmount = 0;
+    let totalOrderAmount = 0;
+    let totalCommissionPercent = 0;
+
+    let totalB2BAmount = 0;
 
     if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isGoldPriceFixing && !isDealerPurchasing && !isDealerPurchasingDiamond) {
       // Step 3: Get the pivot info
       orderPivots = await PivotModel.findAll({
         where: { order_id: orderId },
       });
+      // if (!orderPivot)
+      //   return res
+      //     .status(404)
+      //     .json({ success: false, message: "Order pivot not found" });
+
+      // // Step 4: Calculate total commission % and total profit (€)
+      // console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
+      // console.log(`   - Price: €${orderPivot.price}`);
+      // console.log(`   - B2B Price: €${orderPivot.b2b_price}`);
+      // console.log(`   - Quantity: ${orderPivot.quantity}`);
+
+      // totalCommissionPercent =
+      //   (orderPivot.price / orderPivot.b2b_price - 1) * 100;
+      // totalProfitAmount = (orderPivot.price - orderPivot.b2b_price) * orderPivot.quantity;
+
+      // console.log(` [CAPTURE ORDER] Profit Calculation:`);
+      // console.log(`   - Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
+      // console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
+      // console.log(`   - Formula: (${orderPivot.price} - ${orderPivot.b2b_price}) * ${orderPivot.quantity} = ${totalProfitAmount}`);
+
+      // if (totalProfitAmount <= 0) {
+      //   console.error(` [CAPTURE ORDER] WARNING: Total Profit Amount is ${totalProfitAmount}. Commission will be 0!`);
+      //   console.error(` [CAPTURE ORDER] Check if price (${orderPivot.price}) > b2b_price (${orderPivot.b2b_price})`);
+      // }
 
       console.log(orderPivots, "orderPivots");
-    }
 
-    // Diamond & Gemstone orders can mix both product types in a single order.
-    // Every other order type is treated as a single "product" group (unchanged behavior).
-    const resolveProductType = (pivot) =>
-      isDiamondGemstone ? (pivot.product_type || "diamond") : "product";
+      // for (const pivot of orderPivots) {
+      //   const productTotal = pivot.price * pivot.quantity;
+      //   const productProfit = (pivot.price - pivot.b2b_price) * pivot.quantity;
 
-    let productTypesToProcess = ["product"];
+      //   console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
+      //   console.log(`   - Price: €${pivot.price}`);
+      //   console.log(`   - B2B Price: €${pivot.b2b_price}`);
+      //   console.log(`   - Quantity: ${pivot.quantity}`);
 
-    if (isDiamondGemstone) {
-      const productTypesInOrder = [...new Set(orderPivots.map(resolveProductType))];
+      //   totalOrderAmount += productTotal;
+      //   totalProfitAmount += productProfit;
+      // }
 
-      const alreadyProcessed = await db.BrokerCommissionHistory.findAll({
-        where: { order_id: normalizedOrderId, order_type: orderType },
-        attributes: ["product_type"],
-      });
-      const alreadyProcessedTypes = new Set(alreadyProcessed.map((row) => row.product_type));
+      let netB2B = 0;
+      let netPrice = 0;
 
-      productTypesToProcess = productTypesInOrder.filter((pt) => !alreadyProcessedTypes.has(pt));
-
-      console.log(` [CAPTURE ORDER] Diamond & Gemstone product types in order: [${productTypesInOrder.join(", ")}], already processed: [${[...alreadyProcessedTypes].join(", ")}], to process: [${productTypesToProcess.join(", ")}]`);
-
-      if (productTypesToProcess.length === 0) {
-        console.log(` [CAPTURE ORDER] ⚠️ Commission already exists for all product types in Order ID: ${orderId}, Type: ${orderType}`);
-        return res.status(200).json({
-          success: true,
-          message: "Commission already calculated for this order",
-          data: {
-            orderId,
-            orderType,
-          },
+      for (const pivot of orderPivots) {
+        const product = await db.Product.findOne({
+          where: { id: pivot.product_id },
+          attributes: ["VAT", "material"],
         });
+
+        // 1️⃣ Get product VAT
+        let vatFromProduct = 0;
+        let vatFromCountry = 0;
+
+        // Product VAT (ignore Differenzbesteuert)
+        if (product?.VAT && product.VAT !== "Differenzbesteuert") {
+          vatFromProduct = parseFloat(product.VAT.replace("%", "")) || 0;
+        }
+
+        let shipping;
+
+        if (orderType === "landing_page") {
+          // Country VAT
+          shipping = await db.LpOrderShippingOptions.findOne({
+            where: { lp_order_id: orderId, meta_key: "s_country" }
+          });
+        } else {
+          // Country VAT
+          shipping = await db.MyStoreOrderShippingOptions.findOne({
+            where: { my_store_order_id: orderId, meta_key: "s_country" }
+          });
+        }
+
+        if (shipping) {
+          const countryTax = await db.TaxCountry.findOne({
+            where: { Country_name: shipping.meta_value }
+          });
+          vatFromCountry = countryTax?.Tax || 0;
+        }
+
+        // ✅ Always use the higher VAT
+        const isGoldProduct = product?.material?.toLowerCase() === "gold";
+
+        // 4️⃣ Final VAT selection
+        let vatPercent;
+
+        if (isGoldProduct) {
+          // 🟡 GOLD → Use product VAT ONLY
+          vatPercent = vatFromProduct;
+        } else {
+          // 🔵 Others → Use higher VAT
+          vatPercent = Math.max(vatFromProduct, vatFromCountry);
+        }
+
+        console.log(`\n [CAPTURE ORDER] VAT Determination:`);
+        console.log(`Product ID: ${pivot.product_id}`);
+        console.log(`VAT from Product: ${vatFromProduct}%`);
+        console.log(`VAT from Country: ${vatFromCountry}%`);
+        console.log(`Applied VAT Percent: ${vatPercent}%`);
+
+        let brokerVatFromCountry = 0;
+
+        const brokerShipping = await db.UsersMeta.findOne({
+          where: { user_id: order?.user_id, meta_key: "u_country" }
+        });
+
+        if (brokerShipping) {
+          const countryTax = await db.TaxCountry.findOne({
+            where: { Country_name: brokerShipping.meta_value }
+          });
+          brokerVatFromCountry = countryTax?.Tax || 0;
+        }
+
+        // 4️⃣ Final VAT selection
+        let brokerVatPercent;
+
+        if (isGoldProduct) {
+          // 🟡 GOLD → Use product VAT ONLY
+          brokerVatPercent = vatFromProduct;
+        } else {
+          // 🔵 Others → Use higher VAT
+          brokerVatPercent = Math.max(vatFromProduct, brokerVatFromCountry);
+        }
+
+        console.log(`\n [CAPTURE ORDER] Broker VAT Determination:`);
+        console.log(`Product ID: ${pivot.product_id}`);
+        console.log(`VAT from Product: ${vatFromProduct}%`);
+        console.log(`VAT from Broker Country: ${brokerVatFromCountry}%`);
+        console.log(`Applied Broker VAT Percent: ${brokerVatPercent}%`);
+
+        const grossPrice = pivot.price;
+        const grossB2B = pivot.b2b_price;
+
+        // netPrice = getNetAmount(grossPrice, vatPercent);
+        // netB2B = getNetAmount(grossB2B, vatPercent);
+
+        // const productNetTotal = netPrice * pivot.quantity;
+        // const productProfit = (netPrice - netB2B) * pivot.quantity;
+
+        const isHomeDeliveryMode = order?.type === 1;
+
+        if (isHomeDeliveryMode) {
+          console.log(` [CAPTURE ORDER] Home Delivery Mode detected for Order ID: ${orderId}. Adjusting VAT calculations if necessary.`);
+          brokerVatPercent = vatPercent;
+        }
+
+
+        const b2bNetBase = getNetBaseFromGross(grossB2B, brokerVatPercent);
+        const sellNetBase = getNetBaseFromGross(grossPrice, vatPercent);
+
+        console.log(`\n [CAPTURE ORDER] Net Base Calculation:`);
+        console.log(`   - Gross Price: €${grossPrice}`);
+        console.log(`   - Gross B2B: €${grossB2B}`);
+        console.log(`   - VAT Percent: ${vatPercent}%`);
+        console.log(`   - Sell Net Base: €${sellNetBase}`);
+        console.log(`   - B2B Net Base: €${b2bNetBase}`);
+
+        const commissionNet = sellNetBase - b2bNetBase;   // VAT-FREE commission
+        const productProfit = commissionNet * pivot.quantity;
+
+        console.log(`\n [CAPTURE ORDER] Commission Calculation:`);
+        console.log(`   - Commission Net (per unit): €${commissionNet}`);
+        console.log(`   - Product Profit: €${productProfit}`);
+
+        const productNetTotal = sellNetBase * pivot.quantity;
+
+        console.log(`\n [CAPTURE ORDER] Product Total Calculation:`);
+        console.log(`   - Product Net Total: €${productNetTotal}`);
+
+        totalOrderAmount += productNetTotal;
+        totalProfitAmount += productProfit;
+        totalB2BAmount += b2bNetBase * pivot.quantity;
+
+        console.log(`\n [CAPTURE ORDER] Cumulative Totals So Far:`);
+        console.log(`   - Total Order Amount: €${totalOrderAmount.toFixed(2)}`);
+        console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
+
+
+        console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
+        console.log(`   - Price: €${pivot.price}`);
+        console.log(`   - B2B Price: €${pivot.b2b_price}`);
+        console.log(`   - Quantity: ${pivot.quantity}`);
+
+        console.log(`\n[VAT CALCULATION]`);
+        console.log(`Product ID: ${pivot.product_id}`);
+        console.log(`VAT: ${vatPercent}%`);
+        console.log(`Gross Price: ${grossPrice} → Net: ${netPrice}`);
+        console.log(`Gross B2B: ${grossB2B} → Net: ${netB2B}`);
+        console.log(`Net Total: ${productNetTotal}`);
+        console.log(`Profit: ${productProfit}`);
+
+        // totalOrderAmount += productNetTotal;
+        // totalProfitAmount += productProfit;
+
+        // totalB2BAmount += netB2B * pivot.quantity;
+      }
+
+      // Commission percent based on TOTAL values
+      // const totalB2BAmount = orderPivots.reduce(
+      //   (sum, p) => sum + (p.b2b_price * p.quantity),
+      //   0
+      // );
+
+      // Already calculated in loop using netB2B
+
+      const totalCommissionPercent =
+        totalB2BAmount > 0
+          ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
+          : 0;
+
+      console.log(` [CAPTURE ORDER] Profit Calculation:`);
+      console.log(`   - TOTAL Order Amount: €${totalOrderAmount.toFixed(2)}`);
+      console.log(`   - TOTAL B2B Amount: €${totalB2BAmount.toFixed(2)}`);
+      console.log(`   - TOTAL Profit Amount: €${totalProfitAmount.toFixed(2)}`);
+      console.log(`   - TOTAL Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
+      console.log(`   - Formula: (Total Order / Total B2B - 1) * 100`);
+
+      if (totalProfitAmount <= 0) {
+        console.error(` [CAPTURE ORDER] WARNING: Total Profit Amount is ${totalProfitAmount}. Commission will be 0!`);
       }
     }
 
@@ -420,8 +601,7 @@ const CaptureOrder = async (req, res) => {
       primeinvest: "Prime Invest",
       dealer_purchasing: "Dealer Purchasing",
       dealer_purchasing_diamond: "Dealer Purchasing",
-      goldprice_fixing: "Gold Price Fixation",
-      diamond_gemstone: "Diamond & Gemstone",
+      goldprice_fixing: "Gold Price Fixation"
     };
 
     const serviceType = orderTypeToServiceType[orderType];
@@ -429,7 +609,7 @@ const CaptureOrder = async (req, res) => {
       console.error(`❌ [CAPTURE ORDER] Invalid orderType: ${orderType}`);
       return res.status(400).json({
         success: false,
-        message: `Invalid orderType: ${orderType}. Must be one of: landing_page, my_store, api, gold_purchase, gold_purchase_sell_orders, goldflex, easygoldtoken, primeinvest, dealer_purchasing, dealer_purchasing_diamond, goldprice_fixing, diamond_gemstone`,
+        message: `Invalid orderType: ${orderType}. Must be one of: landing_page, my_store, api, gold_purchase, gold_purchase_sell_orders, goldflex, easygoldtoken, primeinvest, dealer_purchasing, dealer_purchasing_diamond, goldprice_fixing`,
       });
     }
 
@@ -529,408 +709,303 @@ const CaptureOrder = async (req, res) => {
     // Step 8: Build tree string (e.g., "1->2->3")
     const tree = activeLevels.map((b) => b.id).join("->");
 
-    // Step 9: Calculate and store each broker's commission — once per product-type group
-    // (only Diamond & Gemstone orders can have more than one group; every other
-    // order type has exactly one "product" group, so behavior there is unchanged)
-    const allRowsToInsert = [];
-    const allDistributions = [];
-    const groupSummaries = [];
+    // Step 9: Calculate and store each broker's commission
+    const distribution = [];
+    let rowsToInsert = [];
 
-    for (const productType of productTypesToProcess) {
-      const groupPivots = isDiamondGemstone
-        ? orderPivots.filter((pivot) => resolveProductType(pivot) === productType)
-        : orderPivots;
+    let totalCommissionAmount = 0;
 
-      console.log(`\n [CAPTURE ORDER] ========== Processing product_type group: "${productType}" (${groupPivots.length} pivot rows) ==========`);
+    console.log(` [CAPTURE ORDER] Starting commission distribution for ${activeLevels.length} brokers`);
 
-      let totalProfitAmount = 0;
-      let totalOrderAmount = 0;
-      let totalB2BAmount = 0;
-      let totalCommissionPercent = 0;
+    for (let i = 0; i < activeLevels.length; i++) {
+      const currentBroker = activeLevels[i];
+      const commissionPercent = normalizedPercents[i];
 
+      console.log(`\n [CAPTURE ORDER] ==========================================`);
+      console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation START`);
+      console.log(` [CAPTURE ORDER] ==========================================`);
+      console.log(` [CAPTURE ORDER] Input Values:`);
+      console.log(`   - Broker ID: ${currentBroker.id}`);
+      console.log(`   - User ID: ${currentBroker.user_id}`);
+      console.log(`   - Commission Percent (raw): ${commissionPercent}`);
+      console.log(`   - Commission Percent (type): ${typeof commissionPercent}`);
+
+      // Calculate commission amount with detailed logging
+      const rawCalculation = (isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing) ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
+      console.log(` [CAPTURE ORDER] Calculation Steps:`);
+      console.log(`   - Step 1: (${commissionPercent} / 100) = ${commissionPercent / 100}`);
+      console.log(`   - Step 2: ${commissionPercent / 100} * ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);
+      console.log(`   - Step 3: ${rawCalculation}.toFixed(2) = ${rawCalculation.toFixed(2)}`);
+
+      const commissionAmount = parseFloat(rawCalculation.toFixed(2));
+      totalCommissionAmount += commissionAmount;
+      console.log(`   - Step 4: parseFloat(${rawCalculation.toFixed(2)}) = ${commissionAmount}`);
+      console.log(` [CAPTURE ORDER] Final Commission Amount:`);
+      console.log(`   - Value: ${commissionAmount}`);
+      console.log(`   - Type: ${typeof commissionAmount}`);
+      console.log(`   - Is NaN: ${isNaN(commissionAmount)}`);
+      console.log(`   - Is Null: ${commissionAmount === null}`);
+      console.log(`   - Is Undefined: ${commissionAmount === undefined}`);
+
+      // const isSeller = i === 0;
+      const isSeller = i === 0;
+      console.log(` [CAPTURE ORDER] Additional Info:`);
+      console.log(`   - Is Seller: ${isSeller}`);
+
+      if (commissionAmount <= 0 || isNaN(commissionAmount)) {
+        console.error(` [CAPTURE ORDER] ⚠️ WARNING: Commission Amount is ${commissionAmount} for Level ${i + 1}!`);
+        console.error(` [CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ⚠️ Raw calculation result: ${rawCalculation}`);
+      }
+
+      console.log(targetCustomerLogFound, "targetCustomerLogFound");
+
+      distribution.push({
+        level: i + 1,
+        broker_id: currentBroker.id,
+        user_id: currentBroker.user_id,
+        commission_percent: commissionPercent,
+        commission_amount: commissionAmount,
+        is_seller: isSeller,
+        target_customer_log_id: targetCustomerLogFound !== null ? targetCustomerLogFound.id : customerInfo ? customerInfo.id : null,
+        is_send_bonus: targetCustomerLogFound !== null ? true : false
+      });
+
+      // ✅ Save in BrokerCommissionHistory with order_type and distribution timestamp
+      const distributionTimestamp = new Date();
+      console.log(`\n [CAPTURE ORDER] ==========================================`);
+      console.log(` [CAPTURE ORDER] Preparing Database Save`);
+      console.log(` [CAPTURE ORDER] ==========================================`);
+      console.log(` [CAPTURE ORDER] All Values Before Save:`);
+      console.log(`   - Broker ID: ${currentBroker.id} (type: ${typeof currentBroker.id})`);
+      console.log(`   - User ID: ${currentBroker.user_id} (type: ${typeof currentBroker.user_id})`);
+      console.log(`   - Order ID: ${orderId} (type: ${typeof orderId})`);
+      console.log(`   - Order Type: ${orderType} (type: ${typeof orderType})`);
+      console.log(`   - Commission Percent: ${commissionPercent} (type: ${typeof commissionPercent})`);
+      console.log(`   - Commission Amount (raw): ${commissionAmount} (type: ${typeof commissionAmount})`);
       if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isGoldPriceFixing && !isDealerPurchasing && !isDealerPurchasingDiamond) {
-        for (const pivot of groupPivots) {
-          if (isDiamondGemstone) {
-            // Diamonds/gemstones have no VAT scheme in this system (no VAT/material
-            // data on 6lwup_diamonds / 6lwup_gemstones) — treat the stored price/b2b_price
-            // as final amounts instead of running them through gross->net VAT conversion.
-            const grossPrice = pivot.price;
-            const grossB2B = pivot.b2b_price;
-            const productNetTotal = grossPrice * pivot.quantity;
-            const productProfit = (grossPrice - grossB2B) * pivot.quantity;
+        console.log(`   - Profit Amount: ${totalProfitAmount} (type: ${typeof totalProfitAmount})`);
+        // console.log(`   - Order Amount: ${orderPivot.price * orderPivot.quantity} (type: ${typeof (orderPivot.price * orderPivot.quantity)})`);
+      }
+      console.log(`   - Is Seller: ${isSeller} (type: ${typeof isSeller})`);
+      console.log(`   - Tree: ${tree} (type: ${typeof tree})`);
+      console.log(`   - Distribution Timestamp: ${distributionTimestamp.toISOString()}`);
 
-            console.log(`\n [CAPTURE ORDER] Diamond/Gemstone Pivot (no VAT deduction):`);
-            console.log(`   - Product ID: ${pivot.product_id}, Product Type: ${resolveProductType(pivot)}`);
-            console.log(`   - Price: €${grossPrice}, B2B Price: €${grossB2B}, Quantity: ${pivot.quantity}`);
-            console.log(`   - Order Total: €${productNetTotal}, Profit: €${productProfit}`);
+      // Validate commission_amount before saving
+      console.log(`\n [CAPTURE ORDER] Validation Checks:`);
+      console.log(`   - isNaN(commissionAmount): ${isNaN(commissionAmount)}`);
+      console.log(`   - commissionAmount < 0: ${commissionAmount < 0}`);
+      console.log(`   - commissionAmount === null: ${commissionAmount === null}`);
+      console.log(`   - commissionAmount === undefined: ${commissionAmount === undefined}`);
 
-            totalOrderAmount += productNetTotal;
-            totalProfitAmount += productProfit;
-            totalB2BAmount += grossB2B * pivot.quantity;
-            continue;
-          }
+      if (isNaN(commissionAmount) || commissionAmount < 0) {
+        console.error(` [CAPTURE ORDER] ❌ ERROR: Invalid commission_amount: ${commissionAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount}`);
+        console.error(` [CAPTURE ORDER] ❌ commissionPercent type: ${typeof commissionPercent}`);
+        console.error(` [CAPTURE ORDER] ❌ totalProfitAmount type: ${typeof isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : totalProfitAmount}`);
+      }
 
-          const product = await db.Product.findOne({
-            where: { id: pivot.product_id },
-            attributes: ["VAT", "material"],
-          });
+      // Calculate safe commission amount
+      const safeCommissionAmount = isNaN(commissionAmount) || commissionAmount < 0
+        ? 0.00
+        : parseFloat(commissionAmount.toFixed(2));
 
-          // 1️⃣ Get product VAT
-          let vatFromProduct = 0;
-          let vatFromCountry = 0;
+      console.log(`\n [CAPTURE ORDER] Safe Commission Amount Calculation:`);
+      console.log(`   - Input: ${commissionAmount}`);
+      console.log(`   - Is NaN: ${isNaN(commissionAmount)}`);
+      console.log(`   - Is < 0: ${commissionAmount < 0}`);
+      console.log(`   - Safe Value: ${safeCommissionAmount}`);
+      console.log(`   - Safe Value Type: ${typeof safeCommissionAmount}`);
+      console.log(`   - Safe Value Is NaN: ${isNaN(safeCommissionAmount)}`);
 
-          // Product VAT (ignore Differenzbesteuert)
-          if (product?.VAT && product.VAT !== "Differenzbesteuert") {
-            vatFromProduct = parseFloat(product.VAT.replace("%", "")) || 0;
-          }
+      console.log(`order?.selected_payment_method: ${order?.selected_payment_method}`);
+      console.log(`order?.choose_payment_option: ${order?.choose_payment_option}`);
 
-          let shipping;
+      let selected_payment = order?.selected_payment_method || selected_payment_method;
+      let choose_payment_option = order?.choose_payment_option || 1;
 
-          if (orderType === "landing_page") {
-            // Country VAT
-            shipping = await db.LpOrderShippingOptions.findOne({
-              where: { lp_order_id: orderId, meta_key: "s_country" }
-            });
-          } else if (isDiamondGemstone) {
-            // Country VAT
-            shipping = await db.DiamondOrderShippingOptions.findOne({
-              where: { diamond_order_id: orderId, meta_key: "s_country" }
-            });
-          } else {
-            // Country VAT
-            shipping = await db.MyStoreOrderShippingOptions.findOne({
-              where: { my_store_order_id: orderId, meta_key: "s_country" }
-            });
-          }
+      let commissionHistoryOrderType = orderType;
 
-          if (shipping) {
-            const countryTax = await db.TaxCountry.findOne({
-              where: { Country_name: shipping.meta_value }
-            });
-            vatFromCountry = countryTax?.Tax || 0;
-          }
-
-          // ✅ Always use the higher VAT
-          const isGoldProduct = product?.material?.toLowerCase() === "gold";
-
-          // 4️⃣ Final VAT selection
-          let vatPercent;
-
-          if (isGoldProduct) {
-            // 🟡 GOLD → Use product VAT ONLY
-            vatPercent = vatFromProduct;
-          } else {
-            // 🔵 Others → Use higher VAT
-            vatPercent = Math.max(vatFromProduct, vatFromCountry);
-          }
-
-          console.log(`\n [CAPTURE ORDER] VAT Determination:`);
-          console.log(`Product ID: ${pivot.product_id}`);
-          console.log(`VAT from Product: ${vatFromProduct}%`);
-          console.log(`VAT from Country: ${vatFromCountry}%`);
-          console.log(`Applied VAT Percent: ${vatPercent}%`);
-
-          let brokerVatFromCountry = 0;
-
-          const brokerShipping = await db.UsersMeta.findOne({
-            where: { user_id: order?.user_id, meta_key: "u_country" }
-          });
-
-          if (brokerShipping) {
-            const countryTax = await db.TaxCountry.findOne({
-              where: { Country_name: brokerShipping.meta_value }
-            });
-            brokerVatFromCountry = countryTax?.Tax || 0;
-          }
-
-          // 4️⃣ Final VAT selection
-          let brokerVatPercent;
-
-          if (isGoldProduct) {
-            // 🟡 GOLD → Use product VAT ONLY
-            brokerVatPercent = vatFromProduct;
-          } else {
-            // 🔵 Others → Use higher VAT
-            brokerVatPercent = Math.max(vatFromProduct, brokerVatFromCountry);
-          }
-
-          console.log(`\n [CAPTURE ORDER] Broker VAT Determination:`);
-          console.log(`Product ID: ${pivot.product_id}`);
-          console.log(`VAT from Product: ${vatFromProduct}%`);
-          console.log(`VAT from Broker Country: ${brokerVatFromCountry}%`);
-          console.log(`Applied Broker VAT Percent: ${brokerVatPercent}%`);
-
-          const grossPrice = pivot.price;
-          const grossB2B = pivot.b2b_price;
-
-          const isHomeDeliveryMode = isDiamondGemstone ? order?.delivery_types === 1 : order?.type === 1;
-
-          if (isHomeDeliveryMode) {
-            console.log(` [CAPTURE ORDER] Home Delivery Mode detected for Order ID: ${orderId}. Adjusting VAT calculations if necessary.`);
-            brokerVatPercent = vatPercent;
-          }
-
-
-          const b2bNetBase = getNetBaseFromGross(grossB2B, brokerVatPercent);
-          const sellNetBase = getNetBaseFromGross(grossPrice, vatPercent);
-
-          console.log(`\n [CAPTURE ORDER] Net Base Calculation:`);
-          console.log(`   - Gross Price: €${grossPrice}`);
-          console.log(`   - Gross B2B: €${grossB2B}`);
-          console.log(`   - VAT Percent: ${vatPercent}%`);
-          console.log(`   - Sell Net Base: €${sellNetBase}`);
-          console.log(`   - B2B Net Base: €${b2bNetBase}`);
-
-          const commissionNet = sellNetBase - b2bNetBase;   // VAT-FREE commission
-          const productProfit = commissionNet * pivot.quantity;
-
-          console.log(`\n [CAPTURE ORDER] Commission Calculation:`);
-          console.log(`   - Commission Net (per unit): €${commissionNet}`);
-          console.log(`   - Product Profit: €${productProfit}`);
-
-          const productNetTotal = sellNetBase * pivot.quantity;
-
-          console.log(`\n [CAPTURE ORDER] Product Total Calculation:`);
-          console.log(`   - Product Net Total: €${productNetTotal}`);
-
-          totalOrderAmount += productNetTotal;
-          totalProfitAmount += productProfit;
-          totalB2BAmount += b2bNetBase * pivot.quantity;
-
-          console.log(`\n [CAPTURE ORDER] Cumulative Totals So Far:`);
-          console.log(`   - Total Order Amount: €${totalOrderAmount.toFixed(2)}`);
-          console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
-
-          console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
-          console.log(`   - Product Type: ${productType}`);
-          console.log(`   - Price: €${pivot.price}`);
-          console.log(`   - B2B Price: €${pivot.b2b_price}`);
-          console.log(`   - Quantity: ${pivot.quantity}`);
-
-          console.log(`\n[VAT CALCULATION]`);
-          console.log(`Product ID: ${pivot.product_id}`);
-          console.log(`VAT: ${vatPercent}%`);
-          console.log(`Gross Price: ${grossPrice} → Net: ${sellNetBase}`);
-          console.log(`Gross B2B: ${grossB2B} → Net: ${b2bNetBase}`);
-          console.log(`Net Total: ${productNetTotal}`);
-          console.log(`Profit: ${productProfit}`);
+      if (orderType === "my_store") {
+        if (OrderModel?.is_self_service_order == 1) {
+          commissionHistoryOrderType = "my_store_self_service";
         }
-
-        totalCommissionPercent =
-          totalB2BAmount > 0
-            ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
-            : 0;
-
-        console.log(` [CAPTURE ORDER] Profit Calculation:`);
-        console.log(`   - TOTAL Order Amount: €${totalOrderAmount.toFixed(2)}`);
-        console.log(`   - TOTAL B2B Amount: €${totalB2BAmount.toFixed(2)}`);
-        console.log(`   - TOTAL Profit Amount: €${totalProfitAmount.toFixed(2)}`);
-        console.log(`   - TOTAL Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
-        console.log(`   - Formula: (Total Order / Total B2B - 1) * 100`);
-
-        if (totalProfitAmount <= 0) {
-          console.error(` [CAPTURE ORDER] WARNING: Total Profit Amount is ${totalProfitAmount}. Commission will be 0!`);
+      } else if (orderType === "api") {
+        if (OrderModel?.is_self_service_order == 1) {
+          commissionHistoryOrderType = "my_store_self_service_api";
         }
       }
 
-      const distribution = [];
-      let rowsToInsert = [];
-
-      let totalCommissionAmount = 0;
-
-      console.log(` [CAPTURE ORDER] Starting commission distribution for ${activeLevels.length} brokers (product_type: ${productType})`);
-
-      for (let i = 0; i < activeLevels.length; i++) {
-        const currentBroker = activeLevels[i];
-        const commissionPercent = normalizedPercents[i];
-
-        console.log(`\n [CAPTURE ORDER] ==========================================`);
-        console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation START (product_type: ${productType})`);
-        console.log(` [CAPTURE ORDER] ==========================================`);
-        console.log(` [CAPTURE ORDER] Input Values:`);
-        console.log(`   - Broker ID: ${currentBroker.id}`);
-        console.log(`   - User ID: ${currentBroker.user_id}`);
-        console.log(`   - Commission Percent (raw): ${commissionPercent}`);
-        console.log(`   - Commission Percent (type): ${typeof commissionPercent}`);
-
-        const isFlatCommissionFlow = isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing;
-        const rawCalculation = isFlatCommissionFlow ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
-
-        console.log(` [CAPTURE ORDER] Calculation Steps:`);
-        console.log(`   - Step 1: (${commissionPercent} / 100) = ${commissionPercent / 100}`);
-        console.log(`   - Step 2: ${commissionPercent / 100} * ${isFlatCommissionFlow ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);
-        console.log(`   - Step 3: ${rawCalculation}.toFixed(2) = ${rawCalculation.toFixed(2)}`);
-
-        const commissionAmount = parseFloat(rawCalculation.toFixed(2));
-        totalCommissionAmount += commissionAmount;
-
-        console.log(`   - Step 4: parseFloat(${rawCalculation.toFixed(2)}) = ${commissionAmount}`);
-        console.log(` [CAPTURE ORDER] Final Commission Amount:`);
-        console.log(`   - Value: ${commissionAmount}`);
-        console.log(`   - Type: ${typeof commissionAmount}`);
-        console.log(`   - Is NaN: ${isNaN(commissionAmount)}`);
-        console.log(`   - Is Null: ${commissionAmount === null}`);
-        console.log(`   - Is Undefined: ${commissionAmount === undefined}`);
-
-        const isSeller = i === 0;
-        console.log(` [CAPTURE ORDER] Additional Info:`);
-        console.log(`   - Is Seller: ${isSeller}`);
-
-        if (commissionAmount <= 0 || isNaN(commissionAmount)) {
-          console.error(` [CAPTURE ORDER] ⚠️ WARNING: Commission Amount is ${commissionAmount} for Level ${i + 1} (product_type: ${productType})!`);
-          console.error(` [CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${isFlatCommissionFlow ? b2bCommissionAmount : totalProfitAmount}`);
-          console.error(` [CAPTURE ORDER] ⚠️ Raw calculation result: ${rawCalculation}`);
-        }
-
-        console.log(targetCustomerLogFound, "targetCustomerLogFound");
-
-        distribution.push({
-          level: i + 1,
-          broker_id: currentBroker.id,
-          user_id: currentBroker.user_id,
-          commission_percent: commissionPercent,
-          commission_amount: commissionAmount,
-          is_seller: isSeller,
-          product_type: productType,
-          target_customer_log_id: targetCustomerLogFound !== null ? targetCustomerLogFound.id : customerInfo ? customerInfo.id : null,
-          is_send_bonus: targetCustomerLogFound !== null ? true : false
-        });
-
-        // ✅ Save in BrokerCommissionHistory with order_type and distribution timestamp
-        const distributionTimestamp = new Date();
-        console.log(`\n [CAPTURE ORDER] ==========================================`);
-        console.log(` [CAPTURE ORDER] Preparing Database Save`);
-        console.log(` [CAPTURE ORDER] ==========================================`);
-        console.log(` [CAPTURE ORDER] All Values Before Save:`);
-        console.log(`   - Broker ID: ${currentBroker.id} (type: ${typeof currentBroker.id})`);
-        console.log(`   - User ID: ${currentBroker.user_id} (type: ${typeof currentBroker.user_id})`);
-        console.log(`   - Order ID: ${orderId} (type: ${typeof orderId})`);
-        console.log(`   - Order Type: ${orderType} (type: ${typeof orderType})`);
-        console.log(`   - Product Type: ${productType}`);
-        console.log(`   - Commission Percent: ${commissionPercent} (type: ${typeof commissionPercent})`);
-        console.log(`   - Commission Amount (raw): ${commissionAmount} (type: ${typeof commissionAmount})`);
-        if (!isFlatCommissionFlow) {
-          console.log(`   - Profit Amount: ${totalProfitAmount} (type: ${typeof totalProfitAmount})`);
-        }
-        console.log(`   - Is Seller: ${isSeller} (type: ${typeof isSeller})`);
-        console.log(`   - Tree: ${tree} (type: ${typeof tree})`);
-        console.log(`   - Distribution Timestamp: ${distributionTimestamp.toISOString()}`);
-
-        // Validate commission_amount before saving
-        console.log(`\n [CAPTURE ORDER] Validation Checks:`);
-        console.log(`   - isNaN(commissionAmount): ${isNaN(commissionAmount)}`);
-        console.log(`   - commissionAmount < 0: ${commissionAmount < 0}`);
-        console.log(`   - commissionAmount === null: ${commissionAmount === null}`);
-        console.log(`   - commissionAmount === undefined: ${commissionAmount === undefined}`);
-
-        if (isNaN(commissionAmount) || commissionAmount < 0) {
-          console.error(` [CAPTURE ORDER] ❌ ERROR: Invalid commission_amount: ${commissionAmount}`);
-          console.error(` [CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${isFlatCommissionFlow ? b2bCommissionAmount : totalProfitAmount}`);
-          console.error(` [CAPTURE ORDER] ❌ commissionPercent type: ${typeof commissionPercent}`);
-        }
-
-        // Calculate safe commission amount
-        const safeCommissionAmount = isNaN(commissionAmount) || commissionAmount < 0
-          ? 0.00
-          : parseFloat(commissionAmount.toFixed(2));
-
-        console.log(`\n [CAPTURE ORDER] Safe Commission Amount Calculation:`);
-        console.log(`   - Input: ${commissionAmount}`);
-        console.log(`   - Is NaN: ${isNaN(commissionAmount)}`);
-        console.log(`   - Is < 0: ${commissionAmount < 0}`);
-        console.log(`   - Safe Value: ${safeCommissionAmount}`);
-        console.log(`   - Safe Value Type: ${typeof safeCommissionAmount}`);
-        console.log(`   - Safe Value Is NaN: ${isNaN(safeCommissionAmount)}`);
-
-        console.log(`order?.selected_payment_method: ${order?.selected_payment_method}`);
-        console.log(`order?.choose_payment_option: ${order?.choose_payment_option}`);
-
-        let selected_payment = order?.selected_payment_method || selected_payment_method;
-        let choose_payment_option = order?.choose_payment_option || 1;
-
-        const orderAmountForRow =
+      rowsToInsert.push({
+        broker_id: currentBroker.id,
+        user_id: currentBroker.user_id,
+        order_id: orderId,
+        order_type: orderType,
+        order_amount:
           isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing
             ? parseFloat(Number(b2bCommissionAmount).toFixed(2))
             : isGoldPurchase || isGoldPurchaseSell
               ? parseFloat(order.confirmed_price.toFixed(2))
-              : parseFloat(totalOrderAmount.toFixed(2));
-
-        rowsToInsert.push({
-          broker_id: currentBroker.id,
-          user_id: currentBroker.user_id,
-          order_id: orderId,
-          order_type: orderType,
-          product_type: productType,
-          order_amount: orderAmountForRow,
-          commission_percent: parseFloat(commissionPercent.toFixed(2)),
-          commission_amount: commissionAmount,
-          tree,
-          is_seller: isSeller,
-          selected_payment_method: selected_payment || 1,
-          choose_payment_option: choose_payment_option || 1,
-          target_customer_log_id: targetCustomerLogFound
-            ? targetCustomerLogFound.id
-            : customerInfo
-              ? customerInfo.id
-              : null,
-          is_send_bonus: targetCustomerLogFound ? true : false,
-        });
-
-        console.log(`\n [CAPTURE ORDER] Database Create Object (Preview):`);
-        console.log(`   - broker_id: ${currentBroker.id} (type: ${typeof currentBroker.id})`);
-        console.log(`   - user_id: ${currentBroker.user_id} (type: ${typeof currentBroker.user_id})`);
-        console.log(`   - order_id: ${orderId} (type: ${typeof orderId})`);
-        console.log(`   - order_type: ${orderType} (type: ${typeof orderType})`);
-        console.log(`   - product_type: ${productType}`);
-        console.log(`   - order_amount: ${orderAmountForRow} (type: ${typeof orderAmountForRow})`);
-        console.log(`   - commission_percent: ${commissionPercent} (type: ${typeof commissionPercent})`);
-        console.log(`   - commission_amount: ${commissionAmount} (type: ${typeof commissionAmount})`);
-        console.log(`   - commission_amount is null: ${commissionAmount === null}`);
-        console.log(`   - commission_amount is undefined: ${commissionAmount === undefined}`);
-        console.log(`   - commission_amount is NaN: ${isNaN(commissionAmount)}`);
-        console.log(`   - tree: ${tree} (type: ${typeof tree})`);
-        console.log(`   - is_seller: ${isSeller} (type: ${typeof isSeller})`);
-
-        console.log(`\n [CAPTURE ORDER] Attempting Database Create...`);
-        console.log(`   - This commission_percent and commission_amount will be shown in frontend via getAllBrokerCommissionHistory API\n`);
-        console.log(` [CAPTURE ORDER] ==========================================`);
-        console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation END (product_type: ${productType})`);
-        console.log(` [CAPTURE ORDER] ==========================================\n`);
-
-        if (!isEasyGoldToken && !isGoldFlex && !isPrimeInvest && i === 0) {
-          // ✅ Increment total commission in Brokers table
-          await db.Brokers.increment(
-            { total_commission_amount: commissionAmount },
-            { where: { id: currentBroker.id } }
-          );
-          console.log(` [CAPTURE ORDER] Updated total commission for broker ID: ${currentBroker.id} (product_type: ${productType})`);
-        }
-      }
-
-      const finalProfitAmount =
-        isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing
-          ? parseFloat(totalCommissionAmount.toFixed(2))
-          : isGoldPurchase || isGoldPurchaseSell
-            ? b2bCommissionAmount
-            : parseFloat(totalProfitAmount.toFixed(2));
-
-      rowsToInsert = rowsToInsert.map((row) => ({
-        ...row,
-        profit_amount: finalProfitAmount,
-      }));
-
-      allRowsToInsert.push(...rowsToInsert);
-      allDistributions.push(...distribution);
-      groupSummaries.push({
-        productType,
-        totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
-        totalProfitAmount: finalProfitAmount,
-        distribution,
+              : parseFloat(totalOrderAmount.toFixed(2)),
+        commission_percent: parseFloat(commissionPercent.toFixed(2)),
+        commission_amount: commissionAmount,
         tree,
+        is_seller: isSeller,
+        selected_payment_method: selected_payment || 1,
+        choose_payment_option: choose_payment_option || 1,
+        target_customer_log_id: targetCustomerLogFound
+          ? targetCustomerLogFound.id
+          : customerInfo
+            ? customerInfo.id
+            : null,
+        is_send_bonus: targetCustomerLogFound ? true : false,
       });
+
+      const tempCommissionData = {
+        broker_id: currentBroker.id,
+        user_id: currentBroker.user_id,
+        order_id: orderId,
+        order_type: orderType,
+        order_amount:
+          isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing
+            ? parseFloat(Number(b2bCommissionAmount).toFixed(2))
+            : isGoldPurchase || isGoldPurchaseSell
+              ? parseFloat(order.confirmed_price.toFixed(2))
+              : parseFloat(totalOrderAmount.toFixed(2)),
+        profit_amount: parseFloat(totalCommissionAmount.toFixed(2)), // running total (for debug only)
+        commission_percent: parseFloat(commissionPercent.toFixed(2)),
+        commission_amount: commissionAmount,
+        tree,
+        is_seller: isSeller,
+        commission_type: "system"
+      };
+
+
+      // Prepare data object for database
+      // const commissionData = {
+      //   broker_id: currentBroker.id,
+      //   user_id: currentBroker.user_id,
+      //   order_id: orderId,
+      //   order_type: commissionHistoryOrderType,
+      //   order_amount: isGoldFlex || isEasyGoldToken || isPrimeInvest ? parseFloat(Number(b2bCommissionAmount).toFixed(2)) : isGoldPurchase || isGoldPurchaseSell ? parseFloat((order.confirmed_price).toFixed(2)) : parseFloat(totalOrderAmount.toFixed(2)),
+      //   // profit_amount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+      //   profit_amount:
+      //     isGoldFlex || isEasyGoldToken || isPrimeInvest
+      //       ? parseFloat(totalCommissionAmount.toFixed(2)) // ✅ FIXED
+      //       : isGoldPurchase || isGoldPurchaseSell
+      //         ? b2bCommissionAmount
+      //         : parseFloat(totalProfitAmount.toFixed(2)),
+      //   commission_percent: parseFloat(commissionPercent.toFixed(2)),
+      //   commission_amount: safeCommissionAmount,
+      //   tree,
+      //   is_seller: isSeller,
+      //   selected_payment_method: selected_payment || 1, // default to 1 (bank) if not present
+      //   target_customer_log_id: targetCustomerLogFound ? targetCustomerLogFound.id : customerInfo ? customerInfo.id : null,
+      //   is_send_bonus: targetCustomerLogFound ? true : false,
+      // };
+
+      console.log(`\n [CAPTURE ORDER] Database Create Object (Preview):`);
+      console.log(`   - broker_id: ${tempCommissionData.broker_id} (type: ${typeof tempCommissionData.broker_id})`);
+      console.log(`   - user_id: ${tempCommissionData.user_id} (type: ${typeof tempCommissionData.user_id})`);
+      console.log(`   - order_id: ${tempCommissionData.order_id} (type: ${typeof tempCommissionData.order_id})`);
+      console.log(`   - order_type: ${tempCommissionData.order_type} (type: ${typeof tempCommissionData.order_type})`);
+      console.log(`   - order_amount: ${tempCommissionData.order_amount} (type: ${typeof tempCommissionData.order_amount})`);
+      console.log(`   - profit_amount: ${tempCommissionData.profit_amount} (type: ${typeof tempCommissionData.profit_amount})`);
+      console.log(`   - commission_percent: ${tempCommissionData.commission_percent} (type: ${typeof tempCommissionData.commission_percent})`);
+      console.log(`   - commission_amount: ${tempCommissionData.commission_amount} (type: ${typeof tempCommissionData.commission_amount})`);
+      console.log(`   - commission_amount is null: ${tempCommissionData.commission_amount === null}`);
+      console.log(`   - commission_amount is undefined: ${tempCommissionData.commission_amount === undefined}`);
+      console.log(`   - commission_amount is NaN: ${isNaN(tempCommissionData.commission_amount)}`);
+      console.log(`   - tree: ${tempCommissionData.tree} (type: ${typeof tempCommissionData.tree})`);
+      console.log(`   - is_seller: ${tempCommissionData.is_seller} (type: ${typeof tempCommissionData.is_seller})`);
+
+      // console.log(`\n [CAPTURE ORDER] Database Create Object:`);
+      // console.log(`   - broker_id: ${commissionData.broker_id} (type: ${typeof commissionData.broker_id})`);
+      // console.log(`   - user_id: ${commissionData.user_id} (type: ${typeof commissionData.user_id})`);
+      // console.log(`   - order_id: ${commissionData.order_id} (type: ${typeof commissionData.order_id})`);
+      // console.log(`   - order_type: ${commissionData.order_type} (type: ${typeof commissionData.order_type})`);
+      // console.log(`   - order_amount: ${commissionData.order_amount} (type: ${typeof commissionData.order_amount})`);
+      // console.log(`   - profit_amount: ${commissionData.profit_amount} (type: ${typeof commissionData.profit_amount})`);
+      // console.log(`   - commission_percent: ${commissionData.commission_percent} (type: ${typeof commissionData.commission_percent})`);
+      // console.log(`   - commission_amount: ${commissionData.commission_amount} (type: ${typeof commissionData.commission_amount})`);
+      // console.log(`   - commission_amount is null: ${commissionData.commission_amount === null}`);
+      // console.log(`   - commission_amount is undefined: ${commissionData.commission_amount === undefined}`);
+      // console.log(`   - commission_amount is NaN: ${isNaN(commissionData.commission_amount)}`);
+      // console.log(`   - tree: ${commissionData.tree} (type: ${typeof commissionData.tree})`);
+      // console.log(`   - is_seller: ${commissionData.is_seller} (type: ${typeof commissionData.is_seller})`);
+
+      console.log(`\n [CAPTURE ORDER] Attempting Database Create...`);
+
+      // let commissionRecord;
+      // try {
+      //   commissionRecord = await db.BrokerCommissionHistory.create(commissionData);
+      //   console.log(` [CAPTURE ORDER] ✅ Database create successful!`);
+      // } catch (createError) {
+      //   console.error(`\n [CAPTURE ORDER] ❌❌❌ DATABASE CREATE ERROR ❌❌❌`);
+      //   console.error(` [CAPTURE ORDER] Error Type: ${createError.name}`);
+      //   console.error(` [CAPTURE ORDER] Error Message: ${createError.message}`);
+      //   console.error(` [CAPTURE ORDER] Error Stack: ${createError.stack}`);
+      //   if (createError.errors && createError.errors.length > 0) {
+      //     console.error(` [CAPTURE ORDER] Validation Errors:`);
+      //     createError.errors.forEach((err, idx) => {
+      //       console.error(`   ${idx + 1}. Field: ${err.path}`);
+      //       console.error(`      Type: ${err.type}`);
+      //       console.error(`      Message: ${err.message}`);
+      //       console.error(`      Value: ${err.value}`);
+      //       console.error(`      Origin: ${err.origin}`);
+      //     });
+      //   }
+      //   console.error(` [CAPTURE ORDER] Commission Data that failed:`);
+      //   console.error(JSON.stringify(commissionData, null, 2));
+      //   console.error(` [CAPTURE ORDER] ❌❌❌ END ERROR ❌❌❌\n`);
+      //   throw createError; // Re-throw to stop execution
+      // }
+
+      // console.log(`\n [CAPTURE ORDER] ✅ Commission saved successfully!`);
+      // console.log(` [CAPTURE ORDER] Database Record Details:`);
+      // console.log(`   - Record ID: ${commissionRecord.id}`);
+      // console.log(`   - Commission Percent (DB): ${commissionRecord.commission_percent} (type: ${typeof commissionRecord.commission_percent})`);
+      // console.log(`   - Commission Amount (DB): ${commissionRecord.commission_amount} (type: ${typeof commissionRecord.commission_amount})`);
+      // console.log(`   - Commission Amount is null: ${commissionRecord.commission_amount === null}`);
+      // console.log(`   - Commission Amount is undefined: ${commissionRecord.commission_amount === undefined}`);
+      // console.log(`   - Commission Amount is NaN: ${isNaN(commissionRecord.commission_amount)}`);
+      // console.log(`   - Profit Amount (DB): ${commissionRecord.profit_amount} (type: ${typeof commissionRecord.profit_amount})`);
+      // console.log(`   - Order Amount (DB): ${commissionRecord.order_amount} (type: ${typeof commissionRecord.order_amount})`);
+      // console.log(`   - Created At (DB): ${commissionRecord.createdAt}`);
+      // console.log(` [CAPTURE ORDER] ==========================================`);
+      // console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation END`);
+      // console.log(` [CAPTURE ORDER] ==========================================\n`);
+
+      // // Verify saved values
+      // if (commissionRecord.commission_amount === null || commissionRecord.commission_amount === undefined) {
+      //   console.error(` [CAPTURE ORDER] ⚠️ WARNING: commission_amount is ${commissionRecord.commission_amount} in database!`);
+      //   console.error(` [CAPTURE ORDER] Check: commissionPercent=${commissionPercent}, totalProfitAmount=${totalProfitAmount}`);
+      // }
+      console.log(`   - This commission_percent and commission_amount will be shown in frontend via getAllBrokerCommissionHistory API\n`);
+
+      if (!isEasyGoldToken && !isGoldFlex && !isPrimeInvest && i === 0) {
+        // ✅ Increment total commission in Brokers table
+        await db.Brokers.increment(
+          { total_commission_amount: commissionAmount },
+          { where: { id: currentBroker.id } }
+        );
+        console.log(` [CAPTURE ORDER] Updated total commission for broker ID: ${currentBroker.id}`);
+      }
     }
 
-    await db.BrokerCommissionHistory.bulkCreate(allRowsToInsert);
+    const finalProfitAmount =
+      isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing
+        ? parseFloat(totalCommissionAmount.toFixed(2)) // ✅ 132
+        : isGoldPurchase || isGoldPurchaseSell
+          ? b2bCommissionAmount
+          : parseFloat(totalProfitAmount.toFixed(2));
+
+    rowsToInsert = rowsToInsert.map((row) => ({
+      ...row,
+      profit_amount: finalProfitAmount,
+    }));
+
+    await db.BrokerCommissionHistory.bulkCreate(rowsToInsert);
 
     const endTime = new Date();
     const duration = endTime - startTime;
@@ -940,30 +1015,34 @@ const CaptureOrder = async (req, res) => {
     console.log(`✅ [CAPTURE ORDER] Order ID: ${orderId}`);
     console.log(`✅ [CAPTURE ORDER] Order Type: ${orderType}`);
     console.log(`✅ [CAPTURE ORDER] Service Type: ${serviceType}`);
-    console.log(`✅ [CAPTURE ORDER] Product type groups processed: [${productTypesToProcess.join(", ")}]`);
-    console.log(`✅ [CAPTURE ORDER] Total Brokers per group: ${activeLevels.length}`);
+    console.log(`✅ [CAPTURE ORDER] Total Brokers: ${activeLevels.length}`);
     console.log(`✅ [CAPTURE ORDER] Tree Structure: ${tree}`);
+    if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isDealerPurchasing && !isDealerPurchasingDiamond && !isGoldPriceFixing) {
+      console.log(`✅ [CAPTURE ORDER] Total Profit Amount: €${totalProfitAmount}`);
+      console.log(`✅ [CAPTURE ORDER] Total Commission Percent: ${totalCommissionPercent.toFixed(2)}%`);
+    }
     console.log(`✅ [CAPTURE ORDER] Commission Distribution Summary:`);
-    allDistributions.forEach((dist) => {
-      console.log(`   [${dist.product_type}] Level ${dist.level}: Broker ${dist.broker_id} → ${dist.commission_percent}% (€${dist.commission_amount})`);
+    distribution.forEach((dist, idx) => {
+      console.log(`   Level ${idx + 1}: Broker ${dist.broker_id} → ${dist.commission_percent}% (€${dist.commission_amount})`);
     });
     console.log(`✅ [CAPTURE ORDER] END TIME: ${endTime.toISOString()}`);
     console.log(`✅ [CAPTURE ORDER] DURATION: ${duration}ms`);
     console.log(`✅ [CAPTURE ORDER] ==========================================\n`);
 
-    // Top-level fields mirror the first (and, for every order type other than
-    // diamond_gemstone, the only) group so existing consumers keep working unchanged.
-    const primarySummary = groupSummaries[0];
-
     return res.status(200).json({
       success: true,
       message: "Commission distribution stored successfully",
       data: {
-        totalCommissionPercent: primarySummary.totalCommissionPercent,
-        totalProfitAmount: primarySummary.totalProfitAmount,
-        distribution: allDistributions,
+        totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
+        // totalProfitAmount: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest ? b2bCommissionAmount : parseFloat(totalProfitAmount.toFixed(2)),
+        totalProfitAmount:
+          isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing
+            ? parseFloat(totalCommissionAmount.toFixed(2))
+            : isGoldPurchase || isGoldPurchaseSell
+              ? b2bCommissionAmount
+              : parseFloat(totalProfitAmount.toFixed(2)),
+        distribution,
         tree,
-        productTypeBreakdown: groupSummaries,
         timestamp: endTime.toISOString(),
         duration: `${duration}ms`,
       },

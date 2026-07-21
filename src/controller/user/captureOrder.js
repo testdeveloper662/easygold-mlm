@@ -550,17 +550,30 @@ const CaptureOrder = async (req, res) => {
 
       if (!isGoldPurchase && !isGoldPurchaseSell && !isGoldFlex && !isEasyGoldToken && !isPrimeInvest && !isGoldPriceFixing && !isDealerPurchasing && !isDealerPurchasingDiamond) {
         for (const pivot of groupPivots) {
-          let product;
-
           if (isDiamondGemstone) {
-            const gemModel = resolveProductType(pivot) === "gemstone" ? db.Gemstones : db.Diamonds;
-            product = await gemModel.findOne({ where: { id: pivot.product_id } });
-          } else {
-            product = await db.Product.findOne({
-              where: { id: pivot.product_id },
-              attributes: ["VAT", "material"],
-            });
+            // Diamonds/gemstones have no VAT scheme in this system (no VAT/material
+            // data on 6lwup_diamonds / 6lwup_gemstones) — treat the stored price/b2b_price
+            // as final amounts instead of running them through gross->net VAT conversion.
+            const grossPrice = pivot.price;
+            const grossB2B = pivot.b2b_price;
+            const productNetTotal = grossPrice * pivot.quantity;
+            const productProfit = (grossPrice - grossB2B) * pivot.quantity;
+
+            console.log(`\n [CAPTURE ORDER] Diamond/Gemstone Pivot (no VAT deduction):`);
+            console.log(`   - Product ID: ${pivot.product_id}, Product Type: ${resolveProductType(pivot)}`);
+            console.log(`   - Price: €${grossPrice}, B2B Price: €${grossB2B}, Quantity: ${pivot.quantity}`);
+            console.log(`   - Order Total: €${productNetTotal}, Profit: €${productProfit}`);
+
+            totalOrderAmount += productNetTotal;
+            totalProfitAmount += productProfit;
+            totalB2BAmount += grossB2B * pivot.quantity;
+            continue;
           }
+
+          const product = await db.Product.findOne({
+            where: { id: pivot.product_id },
+            attributes: ["VAT", "material"],
+          });
 
           // 1️⃣ Get product VAT
           let vatFromProduct = 0;

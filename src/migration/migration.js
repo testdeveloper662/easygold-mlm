@@ -4,6 +4,8 @@ const { sequelize } = require("../config/database");
 const {
   Users,
   Brokers,
+  Affiliates,
+  AffiliateInvitations,
   AdminFixedBrokerCommission,
   BrokerBankDetails,
   BrokerPayoutRequests,
@@ -19,6 +21,9 @@ async function createTable() {
   try {
     // await Users.sync({ alter: true });
     // await Brokers.sync({ alter: true });
+    await Affiliates.sync({ alter: true });
+    await AffiliateInvitations.sync({ alter: true });
+    // await AdminFixedBrokerCommission.sync({ alter: true });
     // await AdminFixedBrokerCommission.sync({ alter: true });
     // await BrokerBankDetails.sync({ alter: true });
     // await BrokerPayoutRequests.sync({ alter: true });

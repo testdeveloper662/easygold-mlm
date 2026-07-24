@@ -17,14 +17,31 @@ const GetAllBrokers = async (req, res) => {
     const { page = 1, limit = 10, search = "" } = req.query;
     const offset = (page - 1) * limit;
 
-    // ✅ WHERE with search
     const whereClause = {};
 
+    // Exclude users whose role is AFFILIATE
+    const affiliateMetas = await db.UsersMeta.findAll({
+      where: {
+        meta_key: "user_role",
+        meta_value: "AFFILIATE",
+      },
+      attributes: ["user_id"],
+    });
+
+    const affiliateUserIds = affiliateMetas.map((m) => m.user_id);
+    if (affiliateUserIds.length > 0) {
+      whereClause.user_id = { [Op.notIn]: affiliateUserIds };
+    }
+
     if (search) {
-      whereClause[Op.or] = [
-        { "$user.display_name$": { [Op.like]: `%${search}%` } },
-        { "$user.user_email$": { [Op.like]: `%${search}%` } },
-        { "$user.user_meta.meta_value$": { [Op.like]: `%${search}%` } },
+      whereClause[Op.and] = [
+        affiliateUserIds.length > 0 ? { user_id: { [Op.notIn]: affiliateUserIds } } : {},
+        {
+          [Op.or]: [
+            { "$user.display_name$": { [Op.like]: `%${search}%` } },
+            { "$user.user_email$": { [Op.like]: `%${search}%` } },
+          ],
+        },
       ];
     }
 

@@ -3,22 +3,22 @@ const { Op } = require("sequelize");
 
 const GetInvitations = async (req, res) => {
     try {
-        const { user } = req.user;
+        const userObj = req.user?.user || req.user || {};
 
-        const targetUserId = (user.role === "SUPER_ADMIN" && req.query.viewUserId)
+        const targetUserId = (userObj.role === "SUPER_ADMIN" && req.query.viewUserId)
             ? parseInt(req.query.viewUserId)
-            : user.ID;
+            : (userObj.ID || userObj.id);
 
-        // Get broker details
-        const broker = await db.Brokers.findOne({
-            where: { user_id: targetUserId },
-        });
-
-        if (!broker) {
-            return res.status(404).json({
-                success: false,
-                message: "Broker not found",
+        let broker = null;
+        if (targetUserId) {
+            broker = await db.Brokers.findOne({
+                where: { user_id: targetUserId },
             });
+            if (!broker && db.Affiliates) {
+                broker = await db.Affiliates.findOne({
+                    where: { user_id: targetUserId },
+                });
+            }
         }
 
         // Pagination params
@@ -27,25 +27,37 @@ const GetInvitations = async (req, res) => {
         const offset = (page - 1) * limit;
         const search = req.query.search || "";
 
-        // Build filter
-        const whereClause = {
-            invited_by: broker.id,
-        };
+        // Build filter: match any possible referrer ID variant
+        const invitedByIds = [];
+        if (targetUserId) invitedByIds.push(targetUserId);
+        if (userObj.ID) invitedByIds.push(userObj.ID);
+        if (userObj.broker_id) invitedByIds.push(userObj.broker_id);
+        if (broker && broker.id) invitedByIds.push(broker.id);
+
+        const uniqueInvitedByIds = [...new Set(invitedByIds.filter(Boolean))];
+
+        const whereClause = {};
+        if (userObj.role !== "SUPER_ADMIN" || req.query.viewUserId || uniqueInvitedByIds.length > 0) {
+            whereClause.invited_by = { [Op.in]: uniqueInvitedByIds };
+        }
 
         // Search by email only
         if (search) {
             whereClause.email = { [Op.like]: `%${search}%` };
         }
 
+        const invitationType = req.query.type || req.query.invitation_type;
+        const targetModel = (invitationType === "affiliate" && db.AffiliateInvitations) ? db.AffiliateInvitations : db.BrokerInvitations;
+
         // Get total count
-        const totalCount = await db.BrokerInvitations.count({
+        const totalCount = await targetModel.count({
             where: whereClause,
         });
 
-        // Get paginated list
-        const invitations = await db.BrokerInvitations.findAll({
+        // Get paginated list ordered by id DESC
+        const invitations = await targetModel.findAll({
             where: whereClause,
-            order: [["created_at", "DESC"]],
+            order: [["id", "DESC"]],
             limit,
             offset,
         });

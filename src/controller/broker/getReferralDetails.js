@@ -63,23 +63,58 @@ const GetReferralDetails = async (req, res) => {
         : `${process.env.NODE_URL}public/uploads/contracts/${contract.english_pdf_file}`
     }));
 
-    // 1️⃣ Find parent broker by referral_code
-    const parentBroker = await db.Brokers.findOne({
+    const cleanCode = (referralCode || "").trim().toUpperCase();
+    const adminCode = (process.env.ADMIN_REFERRAL_CODE || "ADMIN").trim().toUpperCase();
+
+    if (cleanCode === adminCode || cleanCode === "ADMIN" || cleanCode === "ADMINISTRATOR") {
+      return res.json({
+        success: true,
+        referral_code: referralCode,
+        referral_name: "System Admin",
+        total_children: 0,
+        limitReached: false,
+        language,
+        country,
+        contracts: formattedContracts,
+      });
+    }
+
+    // 1️⃣ Find parent broker/affiliate by referral_code
+    let parentBroker = await db.Brokers.findOne({
       where: { referral_code: referralCode },
       attributes: ["id", "user_id"],
       include: [
         {
           model: db.Users,
-          as: "user",            // ⚠️ must match association
+          as: "user",
           attributes: [],
           where: {
-            deleted_at: null,     // ✅ user not deleted
+            deleted_at: null,
           },
-          required: true,        // ✅ inner join
+          required: true,
         },
       ],
       raw: true,
     });
+
+    if (!parentBroker && db.Affiliates) {
+      parentBroker = await db.Affiliates.findOne({
+        where: { referral_code: referralCode },
+        attributes: ["id", "user_id"],
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: [],
+            where: {
+              deleted_at: null,
+            },
+            required: true,
+          },
+        ],
+        raw: true,
+      });
+    }
 
     if (!parentBroker) {
       return res.json({

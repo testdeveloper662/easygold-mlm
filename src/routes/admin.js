@@ -29,6 +29,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const RegisterBroker = require("../controller/admin/registerBroker");
+const RegisterAffiliate = require("../controller/admin/registerAffiliate");
 const GetFixedAffiliateCommissions = require("../controller/admin/getFixedAffiliateCommissions");
 const AdjustFixedAffiliateCommissions = require("../controller/admin/adjustFixedAffiliateCommissions");
 const GetFixedBrokerCommissions = require("../controller/admin/getFixedBrokerCommissions");
@@ -38,6 +39,7 @@ const AdjustVariableAffiliateCommissions = require("../controller/admin/adjustVa
 const GetVariableBrokerCommissions = require("../controller/admin/getVariableBrokerCommissions");
 const AdjustVariableBrokerCommissions = require("../controller/admin/adjustVariableBrokerCommissions");
 const GetAllBrokers = require("../controller/admin/getAllBrokers");
+const GetAllAffiliates = require("../controller/admin/getAllAffiliates");
 const GetAllBrokerCommissionHistory = require("../controller/admin/getAllBrokerCommissionHistory");
 const GetBrokersList = require("../controller/admin/getBrokersList");
 const UpdateBrokerPaymentStatus = require("../controller/admin/updateBrokerPaymentStatus");
@@ -82,6 +84,7 @@ const marketingUpload = multer({ storage: marketingStorage });
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
+adminRouter.post("/affiliate/referral", authenticateToken, RegisterAffiliate);
 
 adminRouter.get("/broker/fixed-commissions", authenticateToken, GetFixedBrokerCommissions);
 adminRouter.post("/broker/fixed-commissions", authenticateToken, AdjustFixedBrokerCommissions);
@@ -94,8 +97,9 @@ adminRouter.post("/affiliate/fixed-commissions", authenticateToken, AdjustFixedA
 adminRouter.get("/affiliate/variable-commissions", authenticateToken, GetVariableAffiliateCommissions);
 adminRouter.post("/affiliate/variable-commissions", authenticateToken, AdjustVariableAffiliateCommissions);
 
-// Brokers
+// Brokers & Affiliates
 adminRouter.get("/brokers", authenticateToken, GetAllBrokers);
+adminRouter.get("/affiliates", authenticateToken, GetAllAffiliates);
 adminRouter.get("/brokers-contract", authenticateToken, GetAllBrokerContract);
 adminRouter.get("/brokers/list", authenticateToken, GetBrokersList);
 adminRouter.get("/commission-history", authenticateToken, GetAllBrokerCommissionHistory);

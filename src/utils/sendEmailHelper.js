@@ -1,5 +1,7 @@
 require("dotenv").config();
 const nodemailer = require("nodemailer");
+const fs = require("fs");
+const path = require("path");
 
 // const transporter = nodemailer.createTransport({
 //     service: "gmail",
@@ -33,20 +35,48 @@ const SendEmailHelper = (subject, htmlContent, to, attachments = null, cc = null
                 html: htmlContent,
             };
 
-
-            // Attach file only if path exists
-            // normalize attachments to array
+            // Attach file only if path exists and is valid
             if (attachments) {
-
-                // if single string → convert to array
                 const attachmentArray = Array.isArray(attachments)
                     ? attachments
                     : [attachments];
 
-                mailOptions.attachments = attachmentArray.map(filePath => ({
-                    filename: filePath.split("/").pop(),
-                    path: filePath,
-                }));
+                const validAttachments = [];
+
+                for (const filePath of attachmentArray) {
+                    if (!filePath) continue;
+
+                    let resolvedPath = filePath;
+
+                    if (typeof filePath === "string" && (filePath.startsWith("http://") || filePath.startsWith("https://"))) {
+                        try {
+                            const urlObj = new URL(filePath);
+                            const localRelativePath = urlObj.pathname.startsWith("/") ? urlObj.pathname.substring(1) : urlObj.pathname;
+                            const diskPath = path.join(process.cwd(), localRelativePath);
+
+                            if (fs.existsSync(diskPath)) {
+                                resolvedPath = diskPath;
+                            } else {
+                                console.warn(`[SendEmailHelper] Attachment file not found on disk (${diskPath}), skipping attachment to prevent 404 error.`);
+                                continue;
+                            }
+                        } catch (e) {
+                            console.warn(`[SendEmailHelper] Error parsing attachment URL ${filePath}:`, e.message);
+                        }
+                    } else if (typeof filePath === "string" && !fs.existsSync(filePath)) {
+                        console.warn(`[SendEmailHelper] Local attachment file not found at ${filePath}, skipping.`);
+                        continue;
+                    }
+
+                    validAttachments.push({
+                        filename: typeof resolvedPath === "string" ? resolvedPath.split(/[\/\\]/).pop() : "attachment.pdf",
+                        path: resolvedPath,
+                    });
+                }
+
+                if (validAttachments.length > 0) {
+                    mailOptions.attachments = validAttachments;
+                }
             }
 
             if (cc) {
@@ -67,6 +97,6 @@ const SendEmailHelper = (subject, htmlContent, to, attachments = null, cc = null
     } catch (error) {
         console.log("error = ", error);
     }
-}
+};
 
 module.exports = SendEmailHelper;

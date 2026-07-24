@@ -39,6 +39,8 @@ const Gemstones = require("./gemStones");
 const DiamondOrder = require("./diamondOrder");
 const DiamondOrderPivot = require("./diamondOrderPivot");
 const DiamondOrderShippingOptions = require("./diamondOrderShippingOption");
+const Affiliates = require("./affiliates");
+const AffiliateInvitations = require("./affiliateInvitations");
 
 const db = {};
 
@@ -52,6 +54,8 @@ db.LpOrderCarts = LpOrderCarts;
 db.LpOrderPivots = LpOrderPivots;
 db.LpOrderShippingOptions = LpOrderShippingOptions;
 db.Brokers = Brokers;
+db.Affiliates = Affiliates;
+db.AffiliateInvitations = AffiliateInvitations;
 db.BrokerCommissionHistory = BrokerCommissionHistory;
 db.AdminFixedBrokerCommission = AdminFixedBrokerCommission;
 db.AdminFixedAffiliateCommission = AdminFixedAffiliateCommission;

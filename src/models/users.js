@@ -118,6 +118,15 @@ const Users = sequelize.define(
       type: Sequelize.DATE,
       allowNull: true,
     },
+    role_id: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+      references: {
+        model: "seeders",
+        key: "id",
+      },
+      onDelete: "SET NULL",
+    },
   },
   {
     tableName: "6LWUP_users",

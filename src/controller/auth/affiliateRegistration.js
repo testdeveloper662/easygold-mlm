@@ -98,17 +98,10 @@ const AffiliateRegistration = async (req, res) => {
       display_name: fullName,
       user_type: 0,
       user_status: 0,
+      role_id: 3,
     });
 
-    // Create Broker/Affiliate entry
-    const broker = await db.Brokers.create({
-      user_id: newUser.ID,
-      parent_id: isAdminParent ? null : parentBroker?.id || null,
-      referral_code: newReferralCode,
-      referred_by_code: empfehlercode,
-      children_count: 0,
-      total_commission_amount: 0,
-    });
+    // Create Affiliate entry (every Broker is an Affiliate, but not every Affiliate is a Broker)
 
     if (db.Affiliates) {
       try {

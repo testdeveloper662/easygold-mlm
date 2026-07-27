@@ -4,7 +4,10 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon index.js",
-    "migration": "node src/migration/migration.js"
+    "migration": "node src/migration/migration.js",
+    "dump-brokers": "node src/migration/dump_brokers_to_affiliates.js",
+    "seed": "node src/migration/seeder.js",
+    "migrate-roles": "node src/migration/add_roleid_in_user_table.js"
   },
   "keywords": [],
   "author": "",

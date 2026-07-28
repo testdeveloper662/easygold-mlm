@@ -97,7 +97,7 @@ const AffiliateRegistration = async (req, res) => {
       user_registered: createdAt,
       display_name: fullName,
       user_type: 0,
-      user_status: 0,
+      user_status: 2,
       role_id: 3,
     });
 

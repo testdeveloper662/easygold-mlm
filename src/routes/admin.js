@@ -48,6 +48,7 @@ const SendPaymentConfirmationEmail = require("../controller/admin/sendPaymentCon
 const SendPaymentDeclineEmail = require("../controller/admin/sendPaymentDeclineEmail");
 const GetBrokerPayoutRequests = require("../controller/admin/getBrokerPayoutRequests");
 const UpdateBrokerPayoutRequest = require("../controller/admin/updateBrokerPayoutRequest");
+const UpdateUserStatus = require("../controller/admin/updateUserStatus");
 const GetAllTargetCustomers = require("../controller/admin/getAllTargetCustomers");
 const GetTargetCustomersByBroker = require("../controller/admin/getTargetCustomersByBroker");
 const GetTargetCustomerStatsOverall = require("../controller/admin/getTargetCustomerStatsOverall");
@@ -100,6 +101,8 @@ adminRouter.post("/affiliate/variable-commissions", authenticateToken, AdjustVar
 // Brokers & Affiliates
 adminRouter.get("/brokers", authenticateToken, GetAllBrokers);
 adminRouter.get("/affiliates", authenticateToken, GetAllAffiliates);
+adminRouter.post("/broker/update-status", authenticateToken, UpdateUserStatus);
+adminRouter.post("/affiliate/update-status", authenticateToken, UpdateUserStatus);
 adminRouter.get("/brokers-contract", authenticateToken, GetAllBrokerContract);
 adminRouter.get("/brokers/list", authenticateToken, GetBrokersList);
 adminRouter.get("/commission-history", authenticateToken, GetAllBrokerCommissionHistory);

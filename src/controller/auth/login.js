@@ -62,7 +62,14 @@ const Login = async (req, res) => {
     }
 
     // Determine role
-    const userRole = user.user_type === 1 ? "SUPER_ADMIN" : "BROKER";
+    let userRole = "BROKER";
+    if (user.user_type === 1) {
+      userRole = "SUPER_ADMIN";
+    } else if (user.role_id === 3) {
+      userRole = "AFFILIATE";
+    } else if (user.role_id === 2) {
+      userRole = "BROKER";
+    }
 
     // ---------------------
     // ADMIN LOGIN LOGIC
@@ -84,23 +91,38 @@ const Login = async (req, res) => {
     }
 
     // ---------------------
-    // BROKER LOGIN LOGIC
+    // BROKER & AFFILIATE LOGIN LOGIC
     // ---------------------
 
     if (!referral_code || referral_code === null) {
       isNewUser = false;
     }
 
-    const broker = await db.Brokers.findOne({
-      where: {
-        user_id: user.ID,
-      },
-    });
+    let actor = null;
+    if (userRole === "BROKER") {
+      actor = await db.Brokers.findOne({
+        where: {
+          user_id: user.ID,
+        },
+      });
 
-    if (!broker) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Broker not found" });
+      if (!actor) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Broker not found" });
+      }
+    } else if (userRole === "AFFILIATE") {
+      actor = await db.Affiliates.findOne({
+        where: {
+          user_id: user.ID,
+        },
+      });
+
+      if (!actor) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Affiliate not found" });
+      }
     }
 
     const userVerified = await db.Users.findOne({
@@ -118,40 +140,53 @@ const Login = async (req, res) => {
     }
 
     if (isNewUser) {
-      const parentBroker = await db.Brokers.findOne({
+      // Find parent (can be Broker or Affiliate)
+      let parent = await db.Brokers.findOne({
         where: {
           referral_code: referral_code,
         },
       });
 
-      if (!parentBroker) {
+      if (!parent && db.Affiliates) {
+        parent = await db.Affiliates.findOne({
+          where: {
+            referral_code: referral_code,
+          },
+        });
+      }
+
+      if (!parent) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid referral code" });
       }
 
-      broker.referred_by_code = parentBroker.referral_code;
-      broker.parent_id = parentBroker.id || null;
-      await broker.save();
+      actor.referred_by_code = parent.referral_code;
+      actor.parent_id = parent.id || null;
+      await actor.save();
 
-      // increament count of parentBroker's children_count
-      parentBroker.children_count = (parentBroker.children_count || 0) + 1;
-      await parentBroker.save();
+      // increment count of parent's children_count
+      parent.children_count = (parent.children_count || 0) + 1;
+      await parent.save();
     } else {
-      if (!broker.referred_by_code) {
+      if (!actor.referred_by_code) {
         return res
           .status(400)
-          .json({ success: false, message: "Invalid broker" });
+          .json({ success: false, message: `Invalid ${userRole.toLowerCase()}` });
       }
     }
 
     const { user_pass: _, ...userData } = user.toJSON();
 
-    userData.role = "BROKER";
-    userData.logo = await generateImageUrl(broker.logo, "logo");
-    userData.referral_code = broker?.referral_code;
-    userData.broker_id = broker?.id;
-    userData.profile_image = await generateImageUrl(broker.profile_image, "profile");
+    userData.role = userRole;
+    userData.logo = await generateImageUrl(actor.logo, "logo");
+    userData.referral_code = actor?.referral_code;
+    if (userRole === "BROKER") {
+      userData.broker_id = actor?.id;
+    } else {
+      userData.affiliate_id = actor?.id;
+    }
+    userData.profile_image = await generateImageUrl(actor.profile_image, "profile");
 
     let landing_pageurl = null;
     let landing_page = false;
@@ -160,7 +195,7 @@ const Login = async (req, res) => {
       landing_page = true;
     }
 
-    let easyGoldReferralCode = Buffer.from(String(broker?.referral_code), "utf-8").toString("base64")
+    let easyGoldReferralCode = Buffer.from(String(actor?.referral_code), "utf-8").toString("base64");
 
     userData.landing_pageurl = landing_pageurl;
     userData.goldbuying_page = `${process.env.EASY_GOLD_URL}/Goldankauf/${user?.mystorekey}`;

@@ -89,7 +89,13 @@ const GetAllAffiliates = async (req, res) => {
             {
               model: db.Users,
               as: "user",
-              attributes: ["ID", "user_email", "display_name"],
+              attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
+              where: {
+                [Op.or]: [
+                  { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+                  { user_status: 0 }
+                ]
+              }
             },
           ],
           distinct: true,
@@ -121,13 +127,20 @@ const GetAllAffiliates = async (req, res) => {
       if (affiliateUserIds.length > 0) {
         const userWhere = {
           ID: { [Op.in]: affiliateUserIds },
+          [Op.or]: [
+            { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+            { user_status: 0 }
+          ]
         };
 
         if (search && search.trim() !== "") {
-          userWhere[Op.or] = [
-            { display_name: { [Op.like]: `%${search}%` } },
-            { user_email: { [Op.like]: `%${search}%` } },
-          ];
+          const searchCondition = {
+            [Op.or]: [
+              { display_name: { [Op.like]: `%${search}%` } },
+              { user_email: { [Op.like]: `%${search}%` } },
+            ]
+          };
+          userWhere[Op.and] = [searchCondition];
         }
 
         const { count: uCount, rows: uRows } = await db.Users.findAndCountAll({
@@ -196,6 +209,7 @@ const GetAllAffiliates = async (req, res) => {
         steuer_id: affiliate.steuer_id || m.steuer_id || null,
         phone: m.u_phone || null,
         language: m.language || null,
+        user_status: u?.user_status !== undefined ? u.user_status : (affiliate.user_status !== undefined ? affiliate.user_status : 2),
         total_commission_amount: affiliate.total_commission_amount || 0,
         createdAt: affiliate.createdAt || u?.user_registered,
         updatedAt: affiliate.updatedAt || u?.user_registered,

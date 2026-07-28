@@ -123,20 +123,26 @@ const GetDashboardData = async (req, res) => {
     }
 
 
-    // Find current broker
-    const currentBroker = await db.Brokers.findOne({
+    // Find current broker or affiliate
+    let currentBroker = await db.Brokers.findOne({
       where: { user_id: targetUserId },
     });
+
+    if (!currentBroker && db.Affiliates) {
+      currentBroker = await db.Affiliates.findOne({
+        where: { user_id: targetUserId },
+      });
+    }
 
     if (!currentBroker) {
       return res.status(404).json({
         success: false,
-        message: "Broker not found",
+        message: "Broker or Affiliate record not found",
       });
     }
 
-    // Fetch all brokers for network calculations
-    const allBrokers = await db.Brokers.findAll({
+    // Fetch all brokers and affiliates for network calculations
+    let allBrokers = await db.Brokers.findAll({
       include: [
         {
           model: db.Users,
@@ -145,6 +151,22 @@ const GetDashboardData = async (req, res) => {
         },
       ],
     });
+
+    if (db.Affiliates) {
+      const allAffiliates = await db.Affiliates.findAll({
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name"],
+          },
+        ],
+      });
+      // Combine avoiding duplicates
+      const existingBrokerUserIds = new Set(allBrokers.map(b => b.user_id));
+      const newAffiliates = allAffiliates.filter(a => !existingBrokerUserIds.has(a.user_id));
+      allBrokers = [...allBrokers, ...newAffiliates];
+    }
 
     // Build broker level map
     const brokerLevelMap = {};

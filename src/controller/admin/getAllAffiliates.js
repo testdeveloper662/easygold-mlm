@@ -8,54 +8,59 @@ const GetAllAffiliates = async (req, res) => {
     const { page = 1, limit = 10, search = "", referral_code, referred_by_code } = req.query;
     const offset = (page - 1) * limit;
 
-    let targetBrokerId = null;
-    let targetReferralCode = referred_by_code || referral_code || null;
+    const targetParentIds = new Set();
+    const targetRefCodes = new Set();
+
+    if (referred_by_code) targetRefCodes.add(referred_by_code);
+    if (referral_code) targetRefCodes.add(referral_code);
 
     if (user.role === "SUPER_ADMIN" && req.query.viewUserId) {
-      const targetUser = await db.Brokers.findOne({
-        where: { user_id: parseInt(req.query.viewUserId) },
-        attributes: ["id", "referral_code"],
-      }) || (db.Affiliates ? await db.Affiliates.findOne({
-        where: { user_id: parseInt(req.query.viewUserId) },
-        attributes: ["id", "referral_code"],
-      }) : null);
-
-      if (targetUser) {
-        targetBrokerId = targetUser.id;
-        targetReferralCode = targetReferralCode || targetUser.referral_code;
+      const vUserId = parseInt(req.query.viewUserId);
+      const bRec = await db.Brokers.findOne({ where: { user_id: vUserId } });
+      if (bRec) {
+        if (bRec.id) targetParentIds.add(bRec.id);
+        if (bRec.referral_code) targetRefCodes.add(bRec.referral_code);
+      }
+      if (db.Affiliates) {
+        const aRec = await db.Affiliates.findOne({ where: { user_id: vUserId } });
+        if (aRec) {
+          if (aRec.id) targetParentIds.add(aRec.id);
+          if (aRec.referral_code) targetRefCodes.add(aRec.referral_code);
+        }
       }
     } else if (user.role !== "SUPER_ADMIN") {
-      targetBrokerId = user.broker_id || null;
-      targetReferralCode = targetReferralCode || user.referral_code;
-
-      if (!targetBrokerId || !targetReferralCode) {
-        const brokerRec = await db.Brokers.findOne({ where: { user_id: user.ID } });
-        if (brokerRec) {
-          targetBrokerId = brokerRec.id;
-          targetReferralCode = targetReferralCode || brokerRec.referral_code;
-        }
-        if (db.Affiliates) {
-          const affRec = await db.Affiliates.findOne({ where: { user_id: user.ID } });
-          if (affRec) {
-            targetBrokerId = targetBrokerId || affRec.id;
-            targetReferralCode = targetReferralCode || affRec.referral_code;
-          }
+      const loggedUserId = user.ID || user.id;
+      const bRec = await db.Brokers.findOne({ where: { user_id: loggedUserId } });
+      if (bRec) {
+        if (bRec.id) targetParentIds.add(bRec.id);
+        if (bRec.referral_code) targetRefCodes.add(bRec.referral_code);
+      }
+      if (db.Affiliates) {
+        const aRec = await db.Affiliates.findOne({ where: { user_id: loggedUserId } });
+        if (aRec) {
+          if (aRec.id) targetParentIds.add(aRec.id);
+          if (aRec.referral_code) targetRefCodes.add(aRec.referral_code);
         }
       }
     }
 
     const whereClause = {};
 
-    if (user.role !== "SUPER_ADMIN" || targetBrokerId || targetReferralCode) {
+    if (user.role !== "SUPER_ADMIN" || targetRefCodes.size > 0 || targetParentIds.size > 0) {
       const orConditions = [];
-      if (targetBrokerId) {
-        orConditions.push({ parent_id: targetBrokerId });
+
+      // Prioritize referred_by_code as referral codes are unique across tables
+      if (targetRefCodes.size > 0) {
+        orConditions.push({ referred_by_code: { [Op.in]: Array.from(targetRefCodes) } });
+      } else if (targetParentIds.size > 0) {
+        orConditions.push({ parent_id: { [Op.in]: Array.from(targetParentIds) } });
       }
-      if (targetReferralCode) {
-        orConditions.push({ referred_by_code: targetReferralCode });
-      }
+
       if (orConditions.length > 0) {
         whereClause[Op.or] = orConditions;
+      } else {
+        // If non-admin user has no referral code or ID, return no results
+        whereClause.id = -1;
       }
     }
 
@@ -81,8 +86,10 @@ const GetAllAffiliates = async (req, res) => {
     let affiliates = [];
 
     // 1️⃣ Try fetching from db.Affiliates if available
+    let primaryQueried = false;
     try {
       if (db.Affiliates) {
+        primaryQueried = true;
         const result = await db.Affiliates.findAndCountAll({
           where: whereClause,
           include: [
@@ -90,12 +97,7 @@ const GetAllAffiliates = async (req, res) => {
               model: db.Users,
               as: "user",
               attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
-              where: {
-                [Op.or]: [
-                  { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
-                  { user_status: 0 }
-                ]
-              }
+              required: true,
             },
           ],
           distinct: true,
@@ -110,10 +112,11 @@ const GetAllAffiliates = async (req, res) => {
     } catch (affErr) {
       console.warn("db.Affiliates table query failed, falling back to UsersMeta:", affErr.message);
       affiliates = [];
+      primaryQueried = false;
     }
 
-    // 2️⃣ Fallback to db.UsersMeta with user_role = 'AFFILIATE' if db.Affiliates is empty or failed
-    if (affiliates.length === 0) {
+    // 2️⃣ Fallback to db.UsersMeta ONLY if db.Affiliates query was not performed (e.g. model unavailable/failed)
+    if (!primaryQueried) {
       const affiliateMetas = await db.UsersMeta.findAll({
         where: {
           meta_key: "user_role",

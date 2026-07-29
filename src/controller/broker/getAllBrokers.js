@@ -11,24 +11,33 @@ const GetAllBrokers = async (req, res) => {
 
         console.log(search, "search term in get all brokers");
 
-        let broker_id;
+        let targetBroker = null;
         if (user.role === "SUPER_ADMIN" && req.query.viewUserId) {
-            const targetBroker = await db.Brokers.findOne({
+            targetBroker = await db.Brokers.findOne({
                 where: { user_id: parseInt(req.query.viewUserId) },
-                attributes: ["id"],
+                attributes: ["id", "referral_code"],
             });
-            broker_id = targetBroker?.id;
         } else {
-            broker_id = user.broker_id;
+            const loggedUserId = user.ID || user.id;
+            targetBroker = await db.Brokers.findOne({
+                where: { user_id: loggedUserId },
+                attributes: ["id", "referral_code"],
+            });
         }
 
-        if (!broker_id) {
+        if (!targetBroker) {
             return res.status(400).json({ success: false, message: "Broker not found." });
         }
 
-        const whereClause = {
-            parent_id: broker_id,
-        };
+        const broker_id = targetBroker.id;
+        const refCode = targetBroker.referral_code;
+
+        const whereClause = {};
+        if (refCode) {
+            whereClause.referred_by_code = refCode;
+        } else {
+            whereClause.parent_id = broker_id;
+        }
 
         if (search) {
             whereClause[Op.or] = [

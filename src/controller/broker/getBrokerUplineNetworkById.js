@@ -54,6 +54,15 @@ const buildBrokerParentTree = async (
 
 const GetBrokerUplineNetworkById = async (req, res) => {
   try {
+    const { user } = req.user || {};
+    const currentUser = user?.user || user;
+    if (currentUser && currentUser.role !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Logged-in users do not have access to view parent or upline network members.",
+      });
+    }
+
     const { broker_id } = req.params;
 
     if (!broker_id) {

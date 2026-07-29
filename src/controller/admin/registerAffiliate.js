@@ -26,12 +26,28 @@ const RegisterAffiliate = async (req, res) => {
       });
     }
 
-    const registerUrl = `${FRONTEND_URL}/affiliate-register?referral=${ADMIN_REFERRAL_CODE || "ADMIN"}`;
+    // Get logged-in user's referral code
+    const senderUser = req.user?.user || req.user;
+    let senderReferralCode = senderUser?.referral_code || null;
+
+    if (!senderReferralCode && senderUser?.ID) {
+      const broker = await db.Brokers.findOne({ where: { user_id: senderUser.ID }, attributes: ["referral_code"] });
+      if (broker) {
+        senderReferralCode = broker.referral_code;
+      } else if (db.Affiliates) {
+        const aff = await db.Affiliates.findOne({ where: { user_id: senderUser.ID }, attributes: ["referral_code"] });
+        if (aff) senderReferralCode = aff.referral_code;
+      }
+    }
+
+    const referralCodeToUse = senderReferralCode || ADMIN_REFERRAL_CODE || "ADMIN";
+
+    const registerUrl = `${FRONTEND_URL}/affiliate-register?referral=${referralCodeToUse}`;
     const linkText = language === "de" ? "Jetzt als Affiliate registrieren" : "Register now as an affiliate";
 
     const templateVariables = {
       email: email,
-      referral_code: ADMIN_REFERRAL_CODE || "ADMIN",
+      referral_code: referralCodeToUse,
       referal_code_link: `<a href="${registerUrl}" style="color: #7c3aed; text-decoration: none; font-weight: bold;">${linkText}</a>`,
       brokerName: affiliateName || email.split("@")[0],
     };
@@ -42,7 +58,7 @@ const RegisterAffiliate = async (req, res) => {
     } catch (err) {
       emailData = {
         subject: language === "de" ? "Affiliate Registrierung" : "Affiliate Registration",
-        htmlContent: `<p>Hello ${affiliateName || email},</p><p>You have been invited to register as an affiliate. <a href="${registerUrl}">Click here to register</a> using referral code: ${ADMIN_REFERRAL_CODE || "ADMIN"}</p>`,
+        htmlContent: `<p>Hello ${affiliateName || email},</p><p>You have been invited to register as an affiliate. <a href="${registerUrl}">Click here to register</a> using referral code: ${referralCodeToUse}</p>`,
       };
     }
 

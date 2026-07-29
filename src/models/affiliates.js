@@ -29,11 +29,6 @@ const Affiliates = sequelize.define(
     parent_id: {
       type: Sequelize.INTEGER.UNSIGNED,
       allowNull: true,
-      references: {
-        model: "brokers",
-        key: "id",
-      },
-      onDelete: "SET NULL",
     },
     referral_code: {
       type: Sequelize.STRING(10),

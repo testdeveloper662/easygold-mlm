@@ -21,6 +21,12 @@ async function createTable() {
   try {
     // await Users.sync({ alter: true });
     // await Brokers.sync({ alter: true });
+    try {
+      await sequelize.query("ALTER TABLE `affiliates` DROP FOREIGN KEY `affiliates_ibfk_4`;");
+      console.log("Successfully dropped foreign key constraint affiliates_ibfk_4.");
+    } catch (fkErr) {
+      // Ignore if constraint doesn't exist
+    }
     await Affiliates.sync({ alter: true });
     await AffiliateInvitations.sync({ alter: true });
     // await AdminFixedBrokerCommission.sync({ alter: true });

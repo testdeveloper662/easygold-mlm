@@ -117,7 +117,8 @@ const AffiliateRegistration = async (req, res) => {
           total_commission_amount: 0,
         });
       } catch (affErr) {
-        console.error("Error inserting into Affiliates table:", affErr.message);
+        console.error("Error inserting into Affiliates table:", affErr);
+        throw affErr;
       }
     }
 

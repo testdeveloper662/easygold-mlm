@@ -4,37 +4,29 @@ const { roundToTwoDecimalPlaces, generateImageUrl } = require("../../utils/Helpe
 
 const MAX_LEVEL = 5;
 
-const buildBrokerTree = async (brokers, parentId = null, level = 1, commissionMap = {}) => {
-  if (level > MAX_LEVEL) return [];
+const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {}) => {
+  if (level > MAX_LEVEL || !parentNode) return [];
 
-  //   const filteredBrokers = brokers.filter((b) => Number(b.parent_id) === Number(parentId));
+  const parentId = parentNode.id;
+  const parentRefCode = parentNode.referral_code;
 
-  //   const childrenPromises = filteredBrokers.map(async (b) => {
-  //     const children = await buildBrokerTree(brokers, b.id, level + 1, commissionMap, profileImageMap);
-  //     const commissionAmount = commissionMap[b.id] || 0;
-  //     const profile_img = profileImageMap[b.id] || "";
+  const filtered = nodes.filter((b) => {
+    if (Number(b.user_id) === Number(parentNode.user_id)) return false;
 
-  //     return {
-  //       broker_id: b.id,
-  //       user_id: b.user?.ID || null,
-  //       user_email: b.user?.user_email || null,
-  //       display_name: b.user?.display_name || null,
-  //       profile_img: profile_img,
-  //       commission_amount: commissionAmount,
-  //       level,
-  //       children,
-  //     };
-  //   });
-  //  return Promise.all(childrenPromises);
-  const filtered = brokers.filter(
-    (b) => Number(b.parent_id) === Number(parentId)
-  );
+    if (parentRefCode && b.referred_by_code) {
+      return b.referred_by_code === parentRefCode;
+    }
+
+    const matchesParentId = Number(b.parent_id) === Number(parentId);
+    const matchesType = Boolean(b.is_affiliate) === Boolean(parentNode.is_affiliate);
+    return matchesParentId && matchesType;
+  });
 
   const result = await Promise.all(
     filtered.map(async (b) => {
       const children = await buildBrokerTree(
-        brokers,
-        b.id,
+        nodes,
+        b,
         level + 1,
         commissionMap
       );
@@ -48,6 +40,7 @@ const buildBrokerTree = async (brokers, parentId = null, level = 1, commissionMa
         user_email: b.user?.user_email || null,
         display_name: b.user?.display_name || null,
         referral_code: b.referral_code || null,
+        is_affiliate: b.is_affiliate || false,
         commission_amount: commissionAmount,
         level,
         children,
@@ -61,7 +54,7 @@ const buildBrokerTree = async (brokers, parentId = null, level = 1, commissionMa
 
 const GetBrokerNetwork = async (req, res) => {
   try {
-    const { user } = req.user;
+    const user = req.user?.user || req.user;
 
     if (!user || !user.ID) {
       return res.status(400).json({
@@ -74,8 +67,8 @@ const GetBrokerNetwork = async (req, res) => {
       ? parseInt(req.query.viewUserId)
       : user.ID;
 
-    // Find current broker
-    const currentBroker = await db.Brokers.findOne({
+    // Find current broker or affiliate node
+    let currentBroker = await db.Brokers.findOne({
       where: { user_id: targetUserId },
       include: [
         {
@@ -86,15 +79,28 @@ const GetBrokerNetwork = async (req, res) => {
       ],
     });
 
-    if (!currentBroker) {
-      return res.status(404).json({
-        success: false,
-        message: "Broker not found",
+    if (!currentBroker && db.Affiliates) {
+      currentBroker = await db.Affiliates.findOne({
+        where: { user_id: targetUserId },
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name"],
+          },
+        ],
       });
     }
 
-    // Fetch all brokers with user details
-    const allBrokers = await db.Brokers.findAll({
+    if (!currentBroker) {
+      return res.status(404).json({
+        success: false,
+        message: "Broker or Affiliate not found",
+      });
+    }
+
+    // Fetch all brokers and affiliates with user details for the network tree graph
+    const brokersRaw = await db.Brokers.findAll({
       include: [
         {
           model: db.Users,
@@ -103,6 +109,35 @@ const GetBrokerNetwork = async (req, res) => {
         },
       ],
     });
+    const brokersFormatted = brokersRaw.map(b => ({ ...b.toJSON(), is_affiliate: false }));
+
+    let affiliatesFormatted = [];
+    if (db.Affiliates) {
+      const affiliatesRaw = await db.Affiliates.findAll({
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name"],
+          },
+        ],
+      });
+      affiliatesFormatted = affiliatesRaw.map(a => ({ ...a.toJSON(), is_affiliate: true }));
+    }
+
+    const type = req.query.type;
+
+    // Merge brokers and affiliates avoiding duplicate user records
+    let nodesToUse = [];
+    if (type === "broker") {
+      nodesToUse = brokersFormatted;
+    } else if (type === "affiliate") {
+      nodesToUse = affiliatesFormatted;
+    } else {
+      const brokerUserIds = new Set(brokersFormatted.map(b => b.user_id));
+      const uniqueAffiliates = affiliatesFormatted.filter(a => !brokerUserIds.has(a.user_id));
+      nodesToUse = [...brokersFormatted, ...uniqueAffiliates];
+    }
 
     const whereClause = {
       user_id: targetUserId,
@@ -185,8 +220,8 @@ const GetBrokerNetwork = async (req, res) => {
     });
 
 
-    // Build hierarchy
-    const children = await buildBrokerTree(allBrokers, currentBroker.id, 2, commissionMap);
+    // Build hierarchy using strictly matching database table nodes
+    const children = await buildBrokerTree(nodesToUse, currentBroker, 2, commissionMap);
     // Response
     const network = {
       broker_id: currentBroker.id,

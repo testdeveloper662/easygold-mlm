@@ -10,10 +10,18 @@ const GetBrokerBankDetails = async (req, res) => {
             const targetBroker = await db.Brokers.findOne({
                 where: { user_id: parseInt(req.query.viewUserId) },
                 attributes: ["id"],
-            });
+            }) || (db.Affiliates ? await db.Affiliates.findOne({
+                where: { user_id: parseInt(req.query.viewUserId) },
+                attributes: ["id"],
+            }) : null);
             broker_id = targetBroker?.id;
         } else {
-            broker_id = user?.broker_id;
+            broker_id = user?.broker_id || user?.affiliate_id;
+            if (!broker_id && user?.ID) {
+                const b = await db.Brokers.findOne({ where: { user_id: user.ID }, attributes: ["id"] })
+                       || (db.Affiliates ? await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] }) : null);
+                if (b) broker_id = b.id;
+            }
         }
 
         if (!broker_id) {
@@ -22,7 +30,7 @@ const GetBrokerBankDetails = async (req, res) => {
                 message: "broker_id is required.",
             });
         }
-        const brokerDetails = await db.Brokers.findOne({
+        let brokerDetails = await db.Brokers.findOne({
             where: { id: broker_id },
             include: [
                 {
@@ -32,6 +40,19 @@ const GetBrokerBankDetails = async (req, res) => {
                 },
             ],
         });
+
+        if (!brokerDetails && db.Affiliates) {
+            brokerDetails = await db.Affiliates.findOne({
+                where: { id: broker_id },
+                include: [
+                    {
+                        model: db.Users,
+                        as: "user",
+                        attributes: ["ID", "user_nicename", "user_login"],
+                    },
+                ],
+            });
+        }
 
         if (!brokerDetails) {
             return res.status(404).json({

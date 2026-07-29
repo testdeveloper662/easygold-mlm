@@ -8,9 +8,13 @@ const SendEmailHelper = require("../../utils/sendEmailHelper");
 const CreateBrokerPayoutRequest = async (req, res) => {
     try {
         const user = req?.user?.user;
-        const broker_id = user?.broker_id;
+        let broker_id = user?.broker_id || user?.affiliate_id;
+        if (!broker_id && user?.ID) {
+            const b = await db.Brokers.findOne({ where: { user_id: user.ID }, attributes: ["id"] })
+                   || (db.Affiliates ? await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] }) : null);
+            if (b) broker_id = b.id;
+        }
         console.log("user=11111111111 ", broker_id);
-
 
         if (!broker_id) {
             return res.status(400).json({
@@ -44,6 +48,35 @@ const CreateBrokerPayoutRequest = async (req, res) => {
                 }
             ]
         });
+
+        if (!brokerDetails && db.Affiliates) {
+            brokerDetails = await db.Affiliates.findOne({
+                where: { id: broker_id },
+                include: [
+                    {
+                        model: db.Users,
+                        as: "user",
+                        attributes: ["ID", "user_nicename", "user_login", "user_email"],
+                        include: [
+                            {
+                                model: db.UsersMeta,
+                                as: "user_meta",
+                                attributes: ["meta_key", "meta_value"],
+                                where: {
+                                    meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street", "u_postcode", "u_location", "u_account_owner"]
+                                },
+                                required: false
+                            },
+                        ]
+                    },
+                    {
+                        model: db.BrokerBankDetails,
+                        as: "bank_details",
+                        attributes: ["ac_holder_name", "iban", "bic_swift_code", "bank_name"]
+                    }
+                ]
+            });
+        }
         brokerDetails = brokerDetails?.get({ plain: true });
         if (!brokerDetails) {
             return res.status(404).json({

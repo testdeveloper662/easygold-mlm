@@ -119,6 +119,9 @@ const GetBrokerNetwork = async (req, res) => {
     let affiliatesFormatted = [];
     if (db.Affiliates) {
       const affiliatesRaw = await db.Affiliates.findAll({
+        where: {
+          parent_id: { [Op.ne]: null },
+        },
         include: [
           {
             model: db.Users,

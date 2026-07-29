@@ -30,7 +30,7 @@ const calculateBrokerLevel = (broker, allBrokers) => {
 const GetDashboardData = async (req, res) => {
   try {
     const { user } = req.user;
-    const { filterType, from, to, viewUserId } = req.query;
+    const { filterType, from, to, viewUserId, type } = req.query;
 
     const page = parseInt(req.query.page || 1);
     const limit = 5;
@@ -141,8 +141,8 @@ const GetDashboardData = async (req, res) => {
       });
     }
 
-    // Fetch all brokers and affiliates for network calculations
-    let allBrokers = await db.Brokers.findAll({
+    // Fetch brokers and affiliates separately for network calculations
+    const rawBrokers = await db.Brokers.findAll({
       include: [
         {
           model: db.Users,
@@ -152,8 +152,12 @@ const GetDashboardData = async (req, res) => {
       ],
     });
 
+    let rawAffiliates = [];
     if (db.Affiliates) {
-      const allAffiliates = await db.Affiliates.findAll({
+      rawAffiliates = await db.Affiliates.findAll({
+        where: {
+          parent_id: { [Op.ne]: null },
+        },
         include: [
           {
             model: db.Users,
@@ -162,22 +166,84 @@ const GetDashboardData = async (req, res) => {
           },
         ],
       });
-      // Combine avoiding duplicates
-      const existingBrokerUserIds = new Set(allBrokers.map(b => b.user_id));
-      const newAffiliates = allAffiliates.filter(a => !existingBrokerUserIds.has(a.user_id));
-      allBrokers = [...allBrokers, ...newAffiliates];
     }
 
-    // Build broker level map
-    const brokerLevelMap = {};
-    allBrokers.forEach(broker => {
-      brokerLevelMap[broker.id] = calculateBrokerLevel(broker, allBrokers);
-    });
+    const allBrokers = [...rawBrokers, ...rawAffiliates];
 
     const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken", "primeinvest"];
 
+    const findSubNodesWithLevel = (parentId, parentRefCode, list) => {
+      const result = [];
+      if (!parentId && !parentRefCode) return result;
+      if (!list || list.length === 0) return result;
+
+      const visited = new Set();
+      if (parentId) visited.add(parentId);
+
+      // Level 1: Direct children of current user
+      let currentLevelNodes = list.filter(item => {
+        if (item.id === parentId) return false;
+        const isParentIdMatch = parentId && item.parent_id === parentId;
+        const isRefCodeMatch = parentRefCode && item.referred_by_code === parentRefCode;
+        return isParentIdMatch || isRefCodeMatch;
+      });
+
+      for (let level = 1; level <= MAX_LEVEL; level++) {
+        if (currentLevelNodes.length === 0) break;
+
+        const nextLevelNodes = [];
+        currentLevelNodes.forEach(child => {
+          if (!visited.has(child.id)) {
+            visited.add(child.id);
+            result.push({ broker: child, level });
+
+            // Find children of this node for the next level
+            const childChildren = list.filter(item => {
+              if (visited.has(item.id)) return false;
+              const isParentIdMatch = child.id && item.parent_id === child.id;
+              const isRefCodeMatch = child.referral_code && item.referred_by_code === child.referral_code;
+              return isParentIdMatch || isRefCodeMatch;
+            });
+            nextLevelNodes.push(...childChildren);
+          }
+        });
+
+        currentLevelNodes = nextLevelNodes;
+      }
+
+      return result;
+    };
+
+    const subBrokersWithLevel = findSubNodesWithLevel(currentBroker.id, currentBroker.referral_code, rawBrokers);
+    const subAffiliatesWithLevel = findSubNodesWithLevel(currentBroker.id, currentBroker.referral_code, rawAffiliates);
+
+    const isAffiliateMode = type === "affiliate";
+    const activeSubNodes = isAffiliateMode ? subAffiliatesWithLevel : subBrokersWithLevel;
+    const activeRawList = isAffiliateMode ? rawAffiliates : rawBrokers;
+    const totalSubBrokers = subBrokersWithLevel.length;
+    const totalSubAffiliates = subAffiliatesWithLevel.length;
+    const hasAffiliateData = totalSubAffiliates > 0;
+
+    let targetUserIds = [targetUserId];
+    let targetBrokerIds = [currentBroker.id];
+
+    if (isAffiliateMode) {
+      if (user.role !== "AFFILIATE") {
+        if (subAffiliatesWithLevel.length > 0) {
+          targetUserIds = subAffiliatesWithLevel.map(item => item.broker.user_id);
+          targetBrokerIds = subAffiliatesWithLevel.map(item => item.broker.id);
+        } else {
+          targetUserIds = [-1];
+          targetBrokerIds = [-1];
+        }
+      } else {
+        targetUserIds = [targetUserId, ...subAffiliatesWithLevel.map(item => item.broker.user_id)];
+        targetBrokerIds = [currentBroker.id, ...subAffiliatesWithLevel.map(item => item.broker.id)];
+      }
+    }
+
     const whereClause = {
-      user_id: targetUserId,
+      user_id: { [Op.in]: targetUserIds },
       is_deleted: false,
       [Op.or]: [
         // 👉 Seller Logic
@@ -217,7 +283,7 @@ const GetDashboardData = async (req, res) => {
     endOfMonth.setHours(23, 59, 59, 999);
 
     const allCommissionWhereClause = {
-      user_id: targetUserId,
+      user_id: { [Op.in]: targetUserIds },
       is_deleted: false,
       [Op.or]: [
         // 👉 Seller Logic
@@ -312,7 +378,7 @@ const GetDashboardData = async (req, res) => {
     };
 
     const directCommissionWhere = {
-      user_id: targetUserId,
+      user_id: { [Op.in]: targetUserIds },
       is_deleted: false,
       createdAt: {
         [Op.between]: [startOfMonth, endOfMonth],
@@ -339,7 +405,7 @@ const GetDashboardData = async (req, res) => {
     };
 
     const payoutWhere = {
-      broker_id: currentBroker.id,
+      broker_id: { [Op.in]: targetBrokerIds },
       status: "APPROVED",
       createdAt: {
         [db.Sequelize.Op.between]: [startOfMonth, endOfMonth],
@@ -397,26 +463,10 @@ const GetDashboardData = async (req, res) => {
     );
 
 
-    // 3. Number of Sub Brokers - Count total and by level
-    // Find all sub-brokers (brokers where current broker is in their parent chain)
-    const findSubBrokersWithLevel = (parentId, brokers, level = 2, result = []) => {
-      if (level > MAX_LEVEL) return;
-
-      const children = brokers.filter(b => b.parent_id === parentId);
-      children.forEach(child => {
-        result.push({ broker: child, level });
-        findSubBrokersWithLevel(child.id, brokers, level + 1, result);
-      });
-      return result;
-    };
-
-    const subBrokersWithLevel = findSubBrokersWithLevel(currentBroker.id, allBrokers);
-    const totalSubBrokers = subBrokersWithLevel.length;
-
     // Count by level
-    const subBrokersByLevel = {};
-    subBrokersWithLevel.forEach(({ broker, level }) => {
-      subBrokersByLevel[level] = (subBrokersByLevel[level] || 0) + 1;
+    const subNodesByLevel = {};
+    activeSubNodes.forEach(({ broker, level }) => {
+      subNodesByLevel[level] = (subNodesByLevel[level] || 0) + 1;
     });
 
     // Format level counts
@@ -424,7 +474,7 @@ const GetDashboardData = async (req, res) => {
     for (let level = 1; level <= MAX_LEVEL; level++) {
       subBrokersByLevelFormatted.push({
         level,
-        count: subBrokersByLevel[level] || 0,
+        count: subNodesByLevel[level] || 0,
       });
     }
 
@@ -545,7 +595,7 @@ const GetDashboardData = async (req, res) => {
         // Find the position of current broker in the tree
         const currentBrokerInTree = brokerIds.findIndex(brokerId => {
           const broker = allBrokers.find(b => b.id === brokerId);
-          return broker && broker.user_id === targetUserId;
+          return broker && targetUserIds.includes(broker.user_id);
         });
 
         // Level is position + 1 (0 = seller/level 1, 1 = first parent/level 2, etc.)
@@ -577,7 +627,7 @@ const GetDashboardData = async (req, res) => {
     // 6. Monthly Growth Chart (network + earnings) - Current Month Only
     // Group network by level (X-axis: levels, Y-axis: user count per level)
     const networkByLevel = {};
-    subBrokersWithLevel.forEach(({ broker, level }) => {
+    activeSubNodes.forEach(({ broker, level }) => {
       if (!networkByLevel[level]) {
         networkByLevel[level] = {
           level,
@@ -585,7 +635,7 @@ const GetDashboardData = async (req, res) => {
           count: 0,
         };
       }
-      const brokerUser = allBrokers.find(b => b.id === broker.id)?.user;
+      const brokerUser = activeRawList.find(b => b.id === broker.id)?.user;
       networkByLevel[level].users.push({
         broker_id: broker.id,
         user_id: broker.user_id,
@@ -625,7 +675,7 @@ const GetDashboardData = async (req, res) => {
         const brokerIds = commission.tree.split("->").map(id => parseInt(id));
         const currentBrokerInTree = brokerIds.findIndex(brokerId => {
           const broker = allBrokers.find(b => b.id === brokerId);
-          return broker && broker.user_id === targetUserId;
+          return broker && targetUserIds.includes(broker.user_id);
         });
         level = currentBrokerInTree >= 0 ? currentBrokerInTree + 1 : 1;
       }
@@ -694,9 +744,13 @@ const GetDashboardData = async (req, res) => {
           total_commission_received: commissionReceivedTotal
         }],
         sub_brokers: {
-          total: totalSubBrokers,
+          total: activeSubNodes.length,
           by_level: subBrokersByLevelFormatted,
         },
+        sub_affiliates: {
+          total: totalSubAffiliates,
+        },
+        has_affiliate_data: hasAffiliateData,
         recent_orders: {
           records: recentOrders,
           pagination: {

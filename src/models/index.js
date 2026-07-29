@@ -42,6 +42,7 @@ const DiamondOrderShippingOptions = require("./diamondOrderShippingOption");
 const Affiliates = require("./affiliates");
 const AffiliateInvitations = require("./affiliateInvitations");
 const Seeder = require("./seeder");
+const PersonType = require("./personType");
 
 const db = {};
 
@@ -58,6 +59,7 @@ db.Brokers = Brokers;
 db.Affiliates = Affiliates;
 db.AffiliateInvitations = AffiliateInvitations;
 db.Seeder = Seeder;
+db.PersonType = PersonType;
 db.BrokerCommissionHistory = BrokerCommissionHistory;
 db.AdminFixedBrokerCommission = AdminFixedBrokerCommission;
 db.AdminFixedAffiliateCommission = AdminFixedAffiliateCommission;

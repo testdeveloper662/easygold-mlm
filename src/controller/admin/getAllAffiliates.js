@@ -44,7 +44,9 @@ const GetAllAffiliates = async (req, res) => {
       }
     }
 
-    const whereClause = {};
+    const whereClause = {
+      parent_id: { [Op.ne]: null },
+    };
 
     if (user.role !== "SUPER_ADMIN" || targetRefCodes.size > 0 || targetParentIds.size > 0) {
       const orConditions = [];
@@ -98,6 +100,12 @@ const GetAllAffiliates = async (req, res) => {
               as: "user",
               attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
               required: true,
+              where: {
+                [Op.or]: [
+                  { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+                  { role_id: 2, user_status: 0 }
+                ]
+              }
             },
           ],
           distinct: true,
@@ -132,7 +140,7 @@ const GetAllAffiliates = async (req, res) => {
           ID: { [Op.in]: affiliateUserIds },
           [Op.or]: [
             { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
-            { user_status: 0 }
+            { role_id: 2, user_status: 0 }
           ]
         };
 

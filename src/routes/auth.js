@@ -7,8 +7,10 @@ const ValidateOTP = require("../controller/auth/validateOTP");
 const ResetPassword = require("../controller/auth/resetPassword");
 const RegisterBroker = require("../controller/broker/verifyBroker");
 const AffiliateRegistration = require("../controller/auth/affiliateRegistration");
+const GetPersonTypes = require("../controller/auth/getPersonTypes");
 
 // Auth Routes
+authRouter.get("/auth/person-types", GetPersonTypes);
 authRouter.post("/auth/login", Login);
 authRouter.post("/auth/broker-register", RegisterBroker);
 authRouter.post("/auth/affiliate-register", AffiliateRegistration);

@@ -14,6 +14,19 @@ async function seedDatabase() {
       { user_type: "affiliate" },
     ]);
 
+    console.log("Synchronizing PersonType table...");
+    await db.PersonType.sync({ alter: true });
+    console.log("PersonType table synchronized successfully.");
+
+    const personTypeCount = await db.PersonType.count();
+    if (personTypeCount === 0) {
+      console.log("Inserting seed data for PersonTypes (private_individual, company)...");
+      await db.PersonType.bulkCreate([
+        { value: "private_individual", label_en: "Private Individual", label_de: "Privatperson" },
+        { value: "company", label_en: "Company", label_de: "Unternehmen" },
+      ]);
+    }
+
     console.log("Database seeded successfully! 🌱");
   } catch (error) {
     console.error("Error during database seeding:", error);

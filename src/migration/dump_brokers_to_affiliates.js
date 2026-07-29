@@ -39,24 +39,19 @@ async function migrate() {
           logo: broker.logo,
           profile_image: broker.profile_image,
           user_id: broker.user_id,
-          parent_id: broker.parent_id,
+          parent_id: null,
           referral_code: broker.referral_code,
           referred_by_code: broker.referred_by_code,
-          person_typ: person_typ,
-          land: land,
-          steuer_id: steuer_id,
           children_count: broker.children_count,
           total_commission_amount: broker.total_commission_amount,
-          untermaklervertrag_doc: broker.untermaklervertrag_doc,
-          maklervertrag_doc: broker.maklervertrag_doc,
-          inc_partnership_doc: broker.inc_partnership_doc,
-          llc_partnership_doc: broker.llc_partnership_doc,
-          goldflex_partnership_doc: broker.goldflex_partnership_doc,
-          hartmann_benz_gmbh_doc: broker.hartmann_benz_gmbh_doc,
-          binding_loi_doc: broker.binding_loi_doc,
-          partner_tax_billing_doc: broker.partner_tax_billing_doc,
-          uk_company_sales_platform_doc: broker.uk_company_sales_platform_doc,
-          ncnda_doc: broker.ncnda_doc
+          // untermaklervertrag_doc: broker.untermaklervertrag_doc,
+          // maklervertrag_doc: broker.maklervertrag_doc,
+          // inc_partnership_doc: broker.inc_partnership_doc,
+          // llc_partnership_doc: broker.llc_partnership_doc,
+          // goldflex_partnership_doc: broker.goldflex_partnership_doc,
+          // hartmann_benz_gmbh_doc: broker.hartmann_benz_gmbh_doc,
+          // binding_loi_doc: broker.binding_loi_doc,
+          // partner_tax_billing_doc: broker.partner_tax_billing_doc
         };
 
         if (affiliate) {

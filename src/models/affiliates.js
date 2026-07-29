@@ -39,18 +39,6 @@ const Affiliates = sequelize.define(
       type: Sequelize.STRING(10),
       allowNull: true,
     },
-    person_typ: {
-      type: Sequelize.STRING(50),
-      allowNull: true,
-    },
-    land: {
-      type: Sequelize.STRING(100),
-      allowNull: true,
-    },
-    steuer_id: {
-      type: Sequelize.STRING(100),
-      allowNull: true,
-    },
     children_count: {
       type: Sequelize.INTEGER,
       defaultValue: 0,
@@ -61,46 +49,38 @@ const Affiliates = sequelize.define(
       defaultValue: 0,
       comment: "Total commission amount accumulated by affiliate",
     },
-    untermaklervertrag_doc: {
-      type: Sequelize.TEXT("long"),
-      allowNull: true
-    },
-    maklervertrag_doc: {
-      type: Sequelize.TEXT("long"),
-      allowNull: true
-    },
-    inc_partnership_doc: {
-      type: Sequelize.TEXT("long"),
-      allowNull: true
-    },
-    llc_partnership_doc: {
-      type: Sequelize.TEXT("long"),
-      allowNull: true
-    },
-    goldflex_partnership_doc: {
-      type: Sequelize.TEXT("long"),
-      allowNull: true
-    },
-    hartmann_benz_gmbh_doc: {
-      type: Sequelize.TEXT("long"),
-      allowNull: true
-    },
-    binding_loi_doc: {
-      type: Sequelize.TEXT("long"),
-      allowNull: true
-    },
-    partner_tax_billing_doc: {
-      type: Sequelize.TEXT("long"),
-      allowNull: true
-    },
-    uk_company_sales_platform_doc: {
-      type: Sequelize.TEXT("long"),
-      allowNull: true
-    },
-    ncnda_doc: {
-      type: Sequelize.TEXT("long"),
-      allowNull: true
-    }
+    // untermaklervertrag_doc: {
+    //   type: Sequelize.TEXT("long"),
+    //   allowNull: true,
+    // },
+    // maklervertrag_doc: {
+    //   type: Sequelize.TEXT("long"),
+    //   allowNull: true,
+    // },
+    // inc_partnership_doc: {
+    //   type: Sequelize.TEXT("long"),
+    //   allowNull: true,
+    // },
+    // llc_partnership_doc: {
+    //   type: Sequelize.TEXT("long"),
+    //   allowNull: true,
+    // },
+    // goldflex_partnership_doc: {
+    //   type: Sequelize.TEXT("long"),
+    //   allowNull: true,
+    // },
+    // hartmann_benz_gmbh_doc: {
+    //   type: Sequelize.TEXT("long"),
+    //   allowNull: true,
+    // },
+    // binding_loi_doc: {
+    //   type: Sequelize.TEXT("long"),
+    //   allowNull: true,
+    // },
+    // partner_tax_billing_doc: {
+    //   type: Sequelize.TEXT("long"),
+    //   allowNull: true,
+    // },
   },
   {
     timestamps: true,

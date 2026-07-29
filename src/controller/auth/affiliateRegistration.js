@@ -12,21 +12,39 @@ const generateReferralCode = () => Math.random().toString(36).substring(2, 8).to
 const AffiliateRegistration = async (req, res) => {
   try {
     const {
-      vorname,
-      nachname,
+      u_fname,
+      u_lname,
       email,
       password,
-      person_typ,
-      land,
-      steuer_id,
+      u_person_type,
+      u_country,
+      u_vat_no,
+      u_role,
       empfehlercode,
-      lang,
+      language,
     } = req.body;
 
-    if (!email || !password || !vorname || !nachname || !empfehlercode) {
+    const firstName = u_fname;
+    const lastName = u_lname;
+    const personType = u_person_type || "";
+    const country = u_country || "";
+    const vatNo = u_vat_no || "";
+    const userRole = u_role || "AFFILIATE";
+
+    let langValue = "en-US";
+    if (language) {
+      const langStr = String(language).toLowerCase().trim();
+      if (langStr === "de" || langStr === "de-de" || langStr === "german" || langStr === "deutsch") {
+        langValue = "de-DE";
+      } else if (langStr === "en" || langStr === "en-us" || langStr === "english") {
+        langValue = "en-US";
+      }
+    }
+
+    if (!email || !password || !firstName || !lastName || !empfehlercode) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields: vorname, nachname, email, password, empfehlercode",
+        message: "Missing required fields: u_fname, u_lname, email, password, empfehlercode",
       });
     }
 
@@ -84,7 +102,7 @@ const AffiliateRegistration = async (req, res) => {
       hashedPassword = hashedPassword.replace("$2b", "$2y");
     }
 
-    const fullName = `${vorname} ${nachname}`.trim();
+    const fullName = `${firstName} ${lastName}`.trim();
     const newReferralCode = generateReferralCode();
     const createdAt = new Date();
 
@@ -110,9 +128,6 @@ const AffiliateRegistration = async (req, res) => {
           parent_id: isAdminParent ? null : parentBroker?.id || null,
           referral_code: newReferralCode,
           referred_by_code: empfehlercode,
-          person_typ: person_typ || "",
-          land: land || "",
-          steuer_id: steuer_id || "",
           children_count: 0,
           total_commission_amount: 0,
         });
@@ -131,13 +146,13 @@ const AffiliateRegistration = async (req, res) => {
 
     // Save metadata
     const metaEntries = [
-      { user_id: newUser.ID, meta_key: "vorname", meta_value: vorname },
-      { user_id: newUser.ID, meta_key: "nachname", meta_value: nachname },
-      { user_id: newUser.ID, meta_key: "person_typ", meta_value: person_typ || "" },
-      { user_id: newUser.ID, meta_key: "country", meta_value: land || "" },
-      { user_id: newUser.ID, meta_key: "steuer_id", meta_value: steuer_id || "" },
-      { user_id: newUser.ID, meta_key: "user_role", meta_value: "AFFILIATE" },
-      { user_id: newUser.ID, meta_key: "language", meta_value: lang || "en" },
+      { user_id: newUser.ID, meta_key: "u_fname", meta_value: firstName },
+      { user_id: newUser.ID, meta_key: "u_lname", meta_value: lastName },
+      { user_id: newUser.ID, meta_key: "u_person_type", meta_value: personType },
+      { user_id: newUser.ID, meta_key: "u_country", meta_value: country },
+      { user_id: newUser.ID, meta_key: "u_vat_no", meta_value: vatNo },
+      { user_id: newUser.ID, meta_key: "u_role", meta_value: userRole },
+      { user_id: newUser.ID, meta_key: "language", meta_value: langValue },
     ];
 
     await db.UsersMeta.bulkCreate(metaEntries);

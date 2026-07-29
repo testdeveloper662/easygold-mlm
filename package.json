@@ -7,6 +7,7 @@
     "migration": "node src/migration/migration.js",
     "dump-brokers": "node src/migration/dump_brokers_to_affiliates.js",
     "seed": "node src/migration/seeder.js",
+    "seed:person-type": "node src/migration/seeder.js",
     "migrate-roles": "node src/migration/add_roleid_in_user_table.js"
   },
   "keywords": [],

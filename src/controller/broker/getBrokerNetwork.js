@@ -13,6 +13,11 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {})
   const filtered = nodes.filter((b) => {
     if (Number(b.user_id) === Number(parentNode.user_id)) return false;
 
+    // For affiliates, if parent_id is null/falsy, do not show in the network tree
+    if (b.is_affiliate && (b.parent_id === null || b.parent_id === undefined || b.parent_id === "")) {
+      return false;
+    }
+
     if (parentRefCode && b.referred_by_code) {
       return b.referred_by_code === parentRefCode;
     }
@@ -118,7 +123,13 @@ const GetBrokerNetwork = async (req, res) => {
           {
             model: db.Users,
             as: "user",
-            attributes: ["ID", "user_email", "display_name"],
+            attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
+            where: {
+              [Op.or]: [
+                { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+                { role_id: 2, user_status: 0 }
+              ]
+            }
           },
         ],
       });

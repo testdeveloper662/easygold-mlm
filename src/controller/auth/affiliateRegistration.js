@@ -2,6 +2,7 @@ require("dotenv").config();
 const db = require("../../models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { getBrokerLevel } = require("../../utils/brokerLevelHelper");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 const ADMIN_REFERRAL_CODE = process.env.ADMIN_REFERRAL_CODE;
@@ -92,6 +93,14 @@ const AffiliateRegistration = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: "Invalid referral code.",
+        });
+      }
+
+      const parentLevel = await getBrokerLevel(parentBroker.id);
+      if (parentLevel >= 5) {
+        return res.status(400).json({
+          success: false,
+          message: "Referral limit reached. This user has reached the maximum referral level (Level 5) and cannot refer new members.",
         });
       }
     }

@@ -4,6 +4,8 @@ const SendEmailHelper = require("../../utils/sendEmailHelper");
 const path = require("path");
 const fs = require("fs");
 
+const { getBrokerLevel } = require("../../utils/brokerLevelHelper");
+
 const MAIL_SENDER = process.env.MAIL_SENDER;
 const MAIL_PASSWORD = process.env.MAIL_PASSWORD;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:8080";
@@ -60,6 +62,14 @@ const ReferBroker = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Parent broker record not found.",
+      });
+    }
+
+    const parentLevel = await getBrokerLevel(parentBroker.id);
+    if (parentLevel >= 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Referral limit reached. This user has reached the maximum referral level (Level 5) and cannot refer new members.",
       });
     }
 

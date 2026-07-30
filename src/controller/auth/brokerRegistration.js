@@ -13,6 +13,7 @@ const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
 const { generatePartnerPDF } = require("../../utils/partnerPdfHelper");
 const { createStoreUser } = require("../../utils/registerStoreUserHelper");
+const { getBrokerLevel } = require("../../utils/brokerLevelHelper");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 const MAIL_SENDER = process.env.MAIL_SENDER;
@@ -697,6 +698,14 @@ const BrokerRegistration = async (req, res) => {
           message: "Invalid referral code",
         });
       }
+
+      const parentLevel = await getBrokerLevel(parentBroker.id);
+      if (parentLevel >= 5) {
+        return res.status(400).json({
+          success: false,
+          message: "Referral limit reached. This user has reached the maximum referral level (Level 5) and cannot refer new members.",
+        });
+      }
     }
     console.log("3333333333333333333333333");
 
@@ -766,10 +775,10 @@ const BrokerRegistration = async (req, res) => {
     // =========================================================================
 
     // Method 1: External API Call (axios)
-    //apiResponse = await registerViaExternalApi(req, registrationFields);
+    apiResponse = await registerViaExternalApi(req, registrationFields);
 
     // Method 2: Local API Call (direct database/helper)
-    apiResponse = await registerViaLocalHelper(req, registrationFields);
+    // apiResponse = await registerViaLocalHelper(req, registrationFields);
 
     // =========================================================================
 

@@ -73,16 +73,32 @@ const GetBrokerNetwork = async (req, res) => {
       : user.ID;
 
     // Find current broker or affiliate node
-    let currentBroker = await db.Brokers.findOne({
-      where: { user_id: targetUserId },
-      include: [
-        {
-          model: db.Users,
-          as: "user",
-          attributes: ["ID", "user_email", "display_name"],
-        },
-      ],
-    });
+    let currentBroker = null;
+    if (req.query.type === "affiliate" && db.Affiliates) {
+      currentBroker = await db.Affiliates.findOne({
+        where: { user_id: targetUserId },
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name"],
+          },
+        ],
+      });
+    }
+
+    if (!currentBroker) {
+      currentBroker = await db.Brokers.findOne({
+        where: { user_id: targetUserId },
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name"],
+          },
+        ],
+      });
+    }
 
     if (!currentBroker && db.Affiliates) {
       currentBroker = await db.Affiliates.findOne({

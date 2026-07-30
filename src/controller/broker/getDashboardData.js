@@ -123,10 +123,19 @@ const GetDashboardData = async (req, res) => {
     }
 
 
-    // Find current broker or affiliate
-    let currentBroker = await db.Brokers.findOne({
-      where: { user_id: targetUserId },
-    });
+    // Find current broker or affiliate node according to mode/type
+    let currentBroker = null;
+    if (type === "affiliate" && db.Affiliates) {
+      currentBroker = await db.Affiliates.findOne({
+        where: { user_id: targetUserId },
+      });
+    }
+
+    if (!currentBroker) {
+      currentBroker = await db.Brokers.findOne({
+        where: { user_id: targetUserId },
+      });
+    }
 
     if (!currentBroker && db.Affiliates) {
       currentBroker = await db.Affiliates.findOne({
@@ -162,7 +171,13 @@ const GetDashboardData = async (req, res) => {
           {
             model: db.Users,
             as: "user",
-            attributes: ["ID", "user_email", "display_name"],
+            attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
+            where: {
+              [Op.or]: [
+                { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+                { role_id: 2, user_status: 0 }
+              ]
+            }
           },
         ],
       });
@@ -172,7 +187,7 @@ const GetDashboardData = async (req, res) => {
 
     const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken", "primeinvest"];
 
-    const findSubNodesWithLevel = (parentId, parentRefCode, list) => {
+    const findSubNodesWithLevel = (parentId, parentRefCode, list, isAffiliate = false) => {
       const result = [];
       if (!parentId && !parentRefCode) return result;
       if (!list || list.length === 0) return result;
@@ -182,10 +197,18 @@ const GetDashboardData = async (req, res) => {
 
       // Level 1: Direct children of current user
       let currentLevelNodes = list.filter(item => {
-        if (item.id === parentId) return false;
-        const isParentIdMatch = parentId && item.parent_id === parentId;
-        const isRefCodeMatch = parentRefCode && item.referred_by_code === parentRefCode;
-        return isParentIdMatch || isRefCodeMatch;
+        if (item.id === parentId || (item.user_id && currentBroker.user_id && Number(item.user_id) === Number(currentBroker.user_id))) return false;
+
+        if (isAffiliate && (item.parent_id === null || item.parent_id === undefined || item.parent_id === "")) {
+          return false;
+        }
+
+        if (parentRefCode && item.referred_by_code) {
+          return item.referred_by_code === parentRefCode;
+        }
+
+        const isParentIdMatch = Number(item.parent_id) === Number(parentId);
+        return isParentIdMatch;
       });
 
       for (let level = 1; level <= MAX_LEVEL; level++) {
@@ -200,9 +223,17 @@ const GetDashboardData = async (req, res) => {
             // Find children of this node for the next level
             const childChildren = list.filter(item => {
               if (visited.has(item.id)) return false;
-              const isParentIdMatch = child.id && item.parent_id === child.id;
-              const isRefCodeMatch = child.referral_code && item.referred_by_code === child.referral_code;
-              return isParentIdMatch || isRefCodeMatch;
+
+              if (isAffiliate && (item.parent_id === null || item.parent_id === undefined || item.parent_id === "")) {
+                return false;
+              }
+
+              if (child.referral_code && item.referred_by_code) {
+                return item.referred_by_code === child.referral_code;
+              }
+
+              const isParentIdMatch = Number(item.parent_id) === Number(child.id);
+              return isParentIdMatch;
             });
             nextLevelNodes.push(...childChildren);
           }
@@ -214,8 +245,8 @@ const GetDashboardData = async (req, res) => {
       return result;
     };
 
-    const subBrokersWithLevel = findSubNodesWithLevel(currentBroker.id, currentBroker.referral_code, rawBrokers);
-    const subAffiliatesWithLevel = findSubNodesWithLevel(currentBroker.id, currentBroker.referral_code, rawAffiliates);
+    const subBrokersWithLevel = findSubNodesWithLevel(currentBroker.id, currentBroker.referral_code, rawBrokers, false);
+    const subAffiliatesWithLevel = findSubNodesWithLevel(currentBroker.id, currentBroker.referral_code, rawAffiliates, true);
 
     const isAffiliateMode = type === "affiliate";
     const activeSubNodes = isAffiliateMode ? subAffiliatesWithLevel : subBrokersWithLevel;

@@ -65,13 +65,7 @@ const ReferBroker = async (req, res) => {
       });
     }
 
-    const parentLevel = await getBrokerLevel(parentBroker.id);
-    if (parentLevel >= 5) {
-      return res.status(400).json({
-        success: false,
-        message: "Referral limit reached. This user has reached the maximum referral level (Level 5) and cannot refer new members.",
-      });
-    }
+    // Level check removed to allow referrals beyond level 5
 
     // Check if parent broker already has 4 children
     const childrenCount = await db.Brokers.count({

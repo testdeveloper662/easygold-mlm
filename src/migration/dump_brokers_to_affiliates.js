@@ -88,9 +88,7 @@ async function migrate() {
 
   } catch (error) {
     console.error("❌ Fatal error during migration:", error);
-  } finally {
-    await sequelize.close();
   }
 }
 
-migrate();
+module.exports = migrate;

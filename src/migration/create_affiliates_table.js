@@ -9,9 +9,7 @@ async function migrateAffiliates() {
     console.log("✅ Tables 'affiliates' and 'affiliate_invitations' created/synced successfully.");
   } catch (error) {
     console.error("❌ Error running migration:", error);
-  } finally {
-    await sequelize.close();
   }
 }
 
-migrateAffiliates();
+module.exports = migrateAffiliates;

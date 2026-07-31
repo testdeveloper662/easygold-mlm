@@ -43,9 +43,7 @@ async function createTable() {
     console.log("Table created successfully.");
   } catch (error) {
     console.error("Error while creating table:", error);
-  } finally {
-    sequelize.close();
   }
 }
 
-createTable();
+module.exports = createTable;

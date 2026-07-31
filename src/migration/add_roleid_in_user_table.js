@@ -20,12 +20,20 @@ async function migrateUserRoles() {
     }
 
 
-    // 2. Fetch role records from seeders table
-    const adminRole = await db.Seeder.findOne({ where: { user_type: "admin" } });
-    const brokerRole = await db.Seeder.findOne({ where: { user_type: "broker" } });
+    // 2. Fetch role records from seeders table (ensure table exists first)
+    await db.Seeder.sync();
+    let adminRole = await db.Seeder.findOne({ where: { user_type: "admin" } });
+    let brokerRole = await db.Seeder.findOne({ where: { user_type: "broker" } });
 
     if (!adminRole || !brokerRole) {
-      throw new Error("Could not find admin or broker roles in seeders table. Please run the seeder first!");
+      console.log("Seeding default roles (admin, broker, affiliate)...");
+      await db.Seeder.bulkCreate([
+        { user_type: "admin" },
+        { user_type: "broker" },
+        { user_type: "affiliate" },
+      ]);
+      adminRole = await db.Seeder.findOne({ where: { user_type: "admin" } });
+      brokerRole = await db.Seeder.findOne({ where: { user_type: "broker" } });
     }
 
     console.log(`Admin Role ID: ${adminRole.id}, Broker Role ID: ${brokerRole.id}`);
@@ -48,9 +56,7 @@ async function migrateUserRoles() {
     console.log("✅ Migration completed successfully!");
   } catch (error) {
     console.error("❌ Error running migration:", error);
-  } finally {
-    await db.sequelize.close();
   }
 }
 
-migrateUserRoles();
+module.exports = migrateUserRoles;

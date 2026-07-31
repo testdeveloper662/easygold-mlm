@@ -3,10 +3,72 @@ const db = require("../../models");
 const AddUpdateBrokerBankDetails = async (req, res) => {
     try {
         const user = req?.user?.user;
-        let broker_id = user?.broker_id || user?.affiliate_id;
+        const { ac_holder_name, iban, bic_swift_code, bank_name, user_type = "broker" } = req.body;
+
+        if (user_type === "affiliate") {
+            let affiliate_id = user?.affiliate_id;
+            if (!affiliate_id && user?.ID && db.Affiliates) {
+                const aff = await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] });
+                if (aff) affiliate_id = aff.id;
+            }
+            if (!affiliate_id && user?.broker_id && db.Brokers) {
+                // If logged in as broker updating affiliate bank details
+                const brokerObj = await db.Brokers.findOne({ where: { id: user.broker_id }, attributes: ["id", "user_id"] });
+                if (brokerObj) {
+                    const aff = await db.Affiliates.findOne({ where: { user_id: brokerObj.user_id }, attributes: ["id"] });
+                    if (aff) affiliate_id = aff.id;
+                }
+            }
+
+            if (!affiliate_id) {
+                // Fallback to broker_id if affiliate record not separate
+                affiliate_id = user?.broker_id;
+            }
+
+            if (!affiliate_id) {
+                return res.status(400).json({
+                    success: false,
+                    message: "affiliate_id is required.",
+                });
+            }
+
+            const existingAff = await db.AffiliateBankDetails.findOne({
+                where: { affiliate_id },
+            });
+
+            if (existingAff) {
+                await existingAff.update({
+                    ac_holder_name,
+                    iban,
+                    bic_swift_code,
+                    bank_name,
+                });
+                return res.status(200).json({
+                    success: true,
+                    message: "Affiliate bank details updated successfully.",
+                    data: existingAff,
+                });
+            }
+
+            const newAffDetails = await db.AffiliateBankDetails.create({
+                affiliate_id,
+                ac_holder_name,
+                iban,
+                bic_swift_code,
+                bank_name,
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Affiliate bank details added successfully.",
+                data: newAffDetails,
+            });
+        }
+
+        // Default: Broker Bank Details
+        let broker_id = user?.broker_id;
         if (!broker_id && user?.ID) {
-            const b = await db.Brokers.findOne({ where: { user_id: user.ID }, attributes: ["id"] })
-                   || (db.Affiliates ? await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] }) : null);
+            const b = await db.Brokers.findOne({ where: { user_id: user.ID }, attributes: ["id"] });
             if (b) broker_id = b.id;
         }
 
@@ -16,32 +78,12 @@ const AddUpdateBrokerBankDetails = async (req, res) => {
                 message: "broker_id is required.",
             });
         }
-        let brokerDetails = await db.Brokers.findOne({
-            where: { id: broker_id },
-        });
 
-        if (!brokerDetails && db.Affiliates) {
-            brokerDetails = await db.Affiliates.findOne({
-                where: { id: broker_id },
-            });
-        }
-
-        if (!brokerDetails) {
-            return res.status(404).json({
-                success: false,
-                message: "Broker not found.",
-            });
-        }
-
-        const { ac_holder_name, iban, bic_swift_code, bank_name } = req.body;
-
-        // Check existing bank details
         const existing = await db.BrokerBankDetails.findOne({
             where: { broker_id },
         });
 
         if (existing) {
-            // Update
             await existing.update({
                 ac_holder_name,
                 iban,
@@ -56,7 +98,6 @@ const AddUpdateBrokerBankDetails = async (req, res) => {
             });
         }
 
-        // Create new
         const newDetails = await db.BrokerBankDetails.create({
             broker_id,
             ac_holder_name,
@@ -71,7 +112,7 @@ const AddUpdateBrokerBankDetails = async (req, res) => {
             data: newDetails,
         });
     } catch (error) {
-        console.error("Error in Add/Update Broker Bank Details:", error);
+        console.error("Error in Add/Update Bank Details:", error);
 
         return res.status(500).json({
             success: false,

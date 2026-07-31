@@ -5,7 +5,7 @@ const { generateImageUrl } = require("../../utils/Helper");
 const GetBrokerPayoutRequests = async (req, res) => {
     try {
         // Optional filters
-        const { broker_id, email } = req.query;
+        const { broker_id, email, type } = req.query;
 
         // Pagination
         const page = parseInt(req.query.page) || 1;
@@ -15,6 +15,67 @@ const GetBrokerPayoutRequests = async (req, res) => {
         // Build where clause dynamically
         const whereClause = {};
         if (broker_id) whereClause.broker_id = broker_id;
+        if (type) whereClause.user_type = type;
+
+        if (type === "affiliate" && db.AffiliatePayoutRequests) {
+            const affiliateInclude = {
+                model: db.Affiliates,
+                as: "affiliate",
+                include: [
+                    {
+                        model: db.Users,
+                        as: "user",
+                        attributes: ["ID", "user_nicename", "user_login", "user_email"],
+                    },
+                ],
+            };
+            if (email) {
+                affiliateInclude.include[0].where = {
+                    [Op.or]: [{ user_login: email }, { user_email: email }],
+                };
+                affiliateInclude.include[0].required = true;
+                affiliateInclude.required = true;
+            }
+
+            const affWhere = {};
+            if (broker_id) affWhere.affiliate_id = broker_id;
+
+            const totalCount = await db.AffiliatePayoutRequests.count({
+                where: affWhere,
+                include: email ? [affiliateInclude] : [],
+                distinct: !!email,
+            });
+
+            const payoutList = await db.AffiliatePayoutRequests.findAll({
+                where: affWhere,
+                include: [affiliateInclude],
+                order: [["createdAt", "DESC"]],
+                limit: limit,
+                offset: offset,
+            });
+
+            const formattedData = await Promise.all(
+                payoutList.map(async (item) => {
+                    const json = item.toJSON();
+                    json.broker = json.affiliate || json.broker;
+                    json.invoice_url = json.invoice
+                        ? await generateImageUrl(json.invoice, "invoice")
+                        : null;
+                    return json;
+                })
+            );
+
+            return res.status(200).json({
+                success: true,
+                data: formattedData,
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalCount / limit) || 1,
+                    totalItems: totalCount,
+                    itemsPerPage: limit,
+                },
+            });
+        }
 
         // Build include clause with optional email filter
         const brokerInclude = {

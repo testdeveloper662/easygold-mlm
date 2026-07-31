@@ -62,9 +62,25 @@ const GetBrokerBankDetails = async (req, res) => {
         }
 
 
-        const bankDetails = await db.BrokerBankDetails.findOne({
+        const brokerBankDetails = await db.BrokerBankDetails.findOne({
             where: { broker_id },
         });
+
+        // Find affiliate id
+        let aff_id = user?.affiliate_id;
+        if (!aff_id && user?.ID && db.Affiliates) {
+            const aff = await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] });
+            if (aff) aff_id = aff.id;
+        }
+        if (!aff_id && brokerDetails?.user?.ID && db.Affiliates) {
+            const aff = await db.Affiliates.findOne({ where: { user_id: brokerDetails.user.ID }, attributes: ["id"] });
+            if (aff) aff_id = aff.id;
+        }
+        if (!aff_id) aff_id = broker_id;
+
+        const affiliateBankDetails = db.AffiliateBankDetails
+            ? await db.AffiliateBankDetails.findOne({ where: { affiliate_id: aff_id } })
+            : null;
 
         const commissionTotals = await getBrokerCommissionTotals(brokerDetails);
         const approvedPayouts = await db.BrokerPayoutRequests.findAll({
@@ -108,7 +124,11 @@ const GetBrokerBankDetails = async (req, res) => {
         });
         return res.status(200).json({
             success: true,
-            data: bankDetails ? { ...bankDetails.dataValues, commissions_totals: finalTotals } || {} : { commissions_totals: finalTotals }
+            data: {
+                ...(brokerBankDetails ? brokerBankDetails.dataValues : {}),
+                affiliate_bank: affiliateBankDetails ? affiliateBankDetails.dataValues : null,
+                commissions_totals: finalTotals,
+            }
         });
     } catch (error) {
         console.error("Error in GetBrokerBankDetails:", error);

@@ -86,7 +86,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         }
         console.log("brokerDetails= ", brokerDetails);
 
-        const { amount, payout_for } = req.body;
+        const { amount, payout_for, user_type = "broker" } = req.body;
 
         if (!amount || !payout_for) {
             return res.status(400).json({
@@ -104,12 +104,29 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         }
 
         // Create new payout request
-        const newRequest = await db.BrokerPayoutRequests.create({
-            broker_id,
-            amount,
-            payout_for,
-            status: "PENDING",
-        });
+        let newRequest;
+        if (user_type === "affiliate" && db.AffiliatePayoutRequests) {
+            let aff_id = user?.affiliate_id;
+            if (!aff_id && user?.ID && db.Affiliates) {
+                const aff = await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] });
+                if (aff) aff_id = aff.id;
+            }
+            if (!aff_id) aff_id = broker_id;
+
+            newRequest = await db.AffiliatePayoutRequests.create({
+                affiliate_id: aff_id,
+                amount,
+                payout_for,
+                status: "PENDING",
+            });
+        } else {
+            newRequest = await db.BrokerPayoutRequests.create({
+                broker_id,
+                amount,
+                payout_for,
+                status: "PENDING",
+            });
+        }
 
         const userDetails = brokerDetails?.user;
         const metas = userDetails?.user_meta || [];

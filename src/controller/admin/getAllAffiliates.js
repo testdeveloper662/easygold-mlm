@@ -44,9 +44,10 @@ const GetAllAffiliates = async (req, res) => {
       }
     }
 
-    const whereClause = {
-      parent_id: { [Op.ne]: null },
-    };
+    const whereClause = {};
+    if (user.role !== "SUPER_ADMIN") {
+      whereClause.parent_id = { [Op.ne]: null };
+    }
 
     if (user.role !== "SUPER_ADMIN" || targetRefCodes.size > 0 || targetParentIds.size > 0) {
       const orConditions = [];

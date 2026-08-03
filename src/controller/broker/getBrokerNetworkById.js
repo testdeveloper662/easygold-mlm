@@ -59,7 +59,7 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {})
         commissionMap
       );
 
-      const commissionAmount = roundToTwoDecimalPlaces(commissionMap[b.id] || 0);
+      const commissionAmount = b.is_affiliate ? 0 : roundToTwoDecimalPlaces(commissionMap[b.id] || 0);
 
       return {
         broker_id: b.id,
@@ -336,7 +336,7 @@ const GetBrokerNetworkById = async (req, res) => {
       user_email: targetBroker.user?.user_email || null,
       display_name: targetBroker.user?.display_name || null,
       referral_code: targetBroker.referral_code || null,
-      commission_amount: commissionMap[targetBroker.id] ? roundToTwoDecimalPlaces(commissionMap[targetBroker.id]) : 0,
+      commission_amount: (targetBroker.is_affiliate || req.query.type === "affiliate") ? 0 : (commissionMap[targetBroker.id] ? roundToTwoDecimalPlaces(commissionMap[targetBroker.id]) : 0),
       level: 1,
       children,
       children_count: children.length,

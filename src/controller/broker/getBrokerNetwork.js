@@ -36,7 +36,7 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {})
         commissionMap
       );
 
-      const commissionAmount = commissionMap[b.id] || 0;
+      const commissionAmount = b.is_affiliate ? 0 : roundToTwoDecimalPlaces(commissionMap[b.id] || 0);
 
       return {
         broker_id: b.id,
@@ -260,7 +260,7 @@ const GetBrokerNetwork = async (req, res) => {
       display_name: currentBroker.user?.display_name || null,
       profile_image: await generateImageUrl(currentBroker.profile_image),
       level: 1,
-      commission_amount: commissionMap[currentBroker.id] ? roundToTwoDecimalPlaces(commissionMap[currentBroker.id]) : 0,
+      commission_amount: (currentBroker.is_affiliate || type === "affiliate") ? 0 : (commissionMap[currentBroker.id] ? roundToTwoDecimalPlaces(commissionMap[currentBroker.id]) : 0),
       children,
     };
 

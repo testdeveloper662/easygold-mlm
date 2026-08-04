@@ -27,6 +27,9 @@ async function seedDatabase() {
       ]);
     }
 
+    const seedRegistrationEmailTemplate = require("./seed_registration_template");
+    await seedRegistrationEmailTemplate();
+
     console.log("Database seeded successfully! 🌱");
   } catch (error) {
     console.error("Error during database seeding:", error);

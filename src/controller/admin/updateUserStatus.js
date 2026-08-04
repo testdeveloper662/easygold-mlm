@@ -73,76 +73,29 @@ const UpdateUserStatus = async (req, res) => {
         }
       }
 
+      const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
       const userName = userRecord.display_name || userRecord.user_email?.split("@")[0] || "Affiliate";
       const userEmail = userRecord.user_email;
 
       if (statusVal === 0) {
-        // Activation Email
-        let subject = "";
-        let htmlContent = "";
-
-        if (userLang === "de") {
-          subject = "Registrierung erfolgreich eingegangen";
-          htmlContent = `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-              <p>Hallo ${userName},</p>
-              <p>vielen Dank für Ihre Registrierung – wir freuen uns, Sie als neuen Partner begrüßen zu dürfen.</p>
-              <p>Wir gleichen nun kurz Ihre Daten ab und schalten Ihren Zugang in Kürze frei.</p>
-              <p>Sollten Unterlagen oder Informationen fehlen, können Sie diese gerne nachreichen.</p>
-              <p>Vielen Dank für Ihre Geduld.</p>
-              <p>Beste Grüße<br/>Ihr easygold24-Team</p>
-            </div>
-          `;
-        } else {
-          subject = "Registration successfully received";
-          htmlContent = `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-              <p>Hello ${userName},</p>
-              <p>Thank you for registering—we are delighted to welcome you as a new partner.</p>
-              <p>We will now briefly check your details and activate your account shortly.</p>
-              <p>If any documents or information are missing, please feel free to submit them later.</p>
-              <p>Thank you for your patience.</p>
-              <p>Best regards,<br/>Your easygold24 team</p>
-            </div>
-          `;
-        }
-
+        // Activation Email using DB template ID 136 (Affiliate active email)
         if (userEmail) {
-          await SendEmailHelper(subject, htmlContent, userEmail);
+          const dashboardUrl = `${process.env.FRONTEND_URL || "http://localhost:8080"}/login`;
+          const emailData = await getRenderedEmail(136, userLang, {
+            name: userName,
+            dashboard_link: dashboardUrl,
+          });
+          if (emailData && emailData.subject && emailData.htmlContent) {
+            await SendEmailHelper(emailData.subject, emailData.htmlContent, userEmail);
+          }
         }
       } else if (statusVal === 1) {
-        // Deactivation / Rejection Email
-        let subject = "";
-        let htmlContent = "";
-
-        if (userLang === "de") {
-          subject = "Ihr Affiliate-Zugang ist vorerst gesperrt";
-          htmlContent = `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-              <p>Lieber Affiliate,</p>
-              <p>wir haben Ihre Daten geprüft und bedauern, dass wir Ihr Konto derzeit nicht freischalten können.</p>
-              <p>Dies kann verschiedene Gründe haben, zum Beispiel fehlende Unterlagen oder eine unvollständige Verifizierung.</p>
-              <p>Wir werden uns erneut bei Ihnen melden und gegebenenfalls weitere Dokumente anfordern.</p>
-              <p>Vielen Dank für Ihr Verständnis und Ihre Geduld.</p>
-              <p>Beste Grüße<br/>Ihr easygold24-Team</p>
-            </div>
-          `;
-        } else {
-          subject = "Your affiliate access is currently blocked";
-          htmlContent = `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-              <p>Dear affiliate,</p>
-              <p>We have checked your details and regret that we are unable to activate your account at this time.</p>
-              <p>There may be various reasons for this, such as missing documents or incomplete verification.</p>
-              <p>We will contact you again and request further documents if necessary.</p>
-              <p>Thank you for your understanding and patience.</p>
-              <p>Best regards,<br/>Your easygold24 team</p>
-            </div>
-          `;
-        }
-
+        // Deactivation / Rejection Email using DB template ID 135
         if (userEmail) {
-          await SendEmailHelper(subject, htmlContent, userEmail);
+          const emailData = await getRenderedEmail(135, userLang, { name: userName });
+          if (emailData && emailData.subject && emailData.htmlContent) {
+            await SendEmailHelper(emailData.subject, emailData.htmlContent, userEmail);
+          }
         }
       }
     } catch (emailErr) {

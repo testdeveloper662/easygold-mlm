@@ -14,7 +14,7 @@ const UpdateBrokerPayoutRequest = async (req, res) => {
             });
         }
 
-        const payoutRequest = await db.BrokerPayoutRequests.findOne({
+        let payoutRequest = await db.BrokerPayoutRequests.findOne({
             where: { id },
             include: [
                 {
@@ -44,6 +44,38 @@ const UpdateBrokerPayoutRequest = async (req, res) => {
                 },
             ],
         });
+
+        if (!payoutRequest && db.AffiliatePayoutRequests) {
+            payoutRequest = await db.AffiliatePayoutRequests.findOne({
+                where: { id },
+                include: [
+                    {
+                        model: db.Affiliates,
+                        as: "affiliate",
+                        attributes: ["id"],
+                        include: [
+                            {
+                                model: db.Users,
+                                as: "user",
+                                attributes: ["ID", "user_email"],
+                                include: [
+                                    {
+                                        model: db.UsersMeta,
+                                        as: "user_meta",
+                                        attributes: ["meta_key", "meta_value"],
+                                        where: { meta_key: ["language"] },
+                                        required: false,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            });
+            if (payoutRequest) {
+                payoutRequest.broker = payoutRequest.affiliate;
+            }
+        }
 
         if (!payoutRequest) {
             return res.status(404).json({

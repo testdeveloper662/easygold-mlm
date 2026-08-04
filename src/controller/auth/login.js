@@ -134,9 +134,19 @@ const Login = async (req, res) => {
     console.log("userVerified= ", userVerified);
 
     if (userVerified && userVerified?.user_status != 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Your Profile is Under Review. We will notify you soon through email." });
+      if (userVerified.user_status === 1) {
+        return res.status(403).json({
+          success: false,
+          message: "Your account is deactivated/inactive. Please contact support for assistance.",
+          user_status: 1,
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "Your Profile is Under Review. We will notify you soon through email.",
+          user_status: userVerified.user_status,
+        });
+      }
     }
 
     if (isNewUser) {

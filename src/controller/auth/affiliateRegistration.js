@@ -3,6 +3,8 @@ const db = require("../../models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { getBrokerLevel } = require("../../utils/brokerLevelHelper");
+const SendEmailHelper = require("../../utils/sendEmailHelper");
+const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 const ADMIN_REFERRAL_CODE = process.env.ADMIN_REFERRAL_CODE;
@@ -167,6 +169,17 @@ const AffiliateRegistration = async (req, res) => {
       referral_code: newReferralCode,
       role: "AFFILIATE",
     };
+
+    // Send registration confirmation email to newly registered affiliate using DB template (ID: 134)
+    try {
+      const emailData = await getRenderedEmail(134, langValue, { name: fullName });
+      if (emailData && emailData.subject && emailData.htmlContent) {
+        await SendEmailHelper(emailData.subject, emailData.htmlContent, email);
+        console.log(`[AffiliateRegistration] Sent registration confirmation email to affiliate: ${email}`);
+      }
+    } catch (mailErr) {
+      console.error("[AffiliateRegistration] Error sending registration confirmation email to affiliate:", mailErr);
+    }
 
     const token = jwt.sign({ user: userResponse }, JWT_ACCESS_TOKEN, {
       expiresIn: process.env.JWT_EXPIRE || "90d",

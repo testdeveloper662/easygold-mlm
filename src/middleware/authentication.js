@@ -43,7 +43,38 @@ let authenticateToken = (req, res, next) => {
     }
 
     req.user = user;
-    next();
+
+    // Check user active status in database
+    const userId = user.user?.ID || user.user?.id || user.ID || user.id;
+    if (userId) {
+      const db = require("../models");
+      db.Users.findByPk(userId, { attributes: ["user_status", "deleted_at"] })
+        .then((dbUser) => {
+          if (!dbUser || dbUser.deleted_at !== null) {
+            return res.status(401).send({
+              success: false,
+              message: "Account no longer exists.",
+            });
+          }
+          if (dbUser.user_status !== 0) {
+            const isDeactivated = dbUser.user_status === 1;
+            return res.status(403).send({
+              success: false,
+              message: isDeactivated
+                ? "Your account is deactivated/inactive. Access denied."
+                : "Your profile is under review. Access denied.",
+              account_status: dbUser.user_status,
+            });
+          }
+          next();
+        })
+        .catch((dbErr) => {
+          console.error("[AuthenticateToken] Error checking user status:", dbErr);
+          next();
+        });
+    } else {
+      next();
+    }
   });
 };
 

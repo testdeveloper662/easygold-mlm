@@ -17,56 +17,92 @@ const GetBrokerPayoutRequests = async (req, res) => {
         if (broker_id) whereClause.broker_id = broker_id;
         if (type) whereClause.user_type = type;
 
-        if (type === "affiliate" && db.AffiliatePayoutRequests) {
-            const affiliateInclude = {
-                model: db.Affiliates,
-                as: "affiliate",
-                include: [
-                    {
-                        model: db.Users,
-                        as: "user",
-                        attributes: ["ID", "user_nicename", "user_login", "user_email"],
-                    },
-                ],
-            };
-            if (email) {
-                affiliateInclude.include[0].where = {
-                    [Op.or]: [{ user_login: email }, { user_email: email }],
-                };
-                affiliateInclude.include[0].required = true;
-                affiliateInclude.required = true;
+        if (type === "affiliate") {
+            let totalCount = 0;
+            let formattedData = [];
+            if (db.AffiliatePayoutRequests) {
+                try {
+                    const affiliateInclude = {
+                        model: db.Affiliates,
+                        as: "affiliate",
+                        include: [
+                            {
+                                model: db.Users,
+                                as: "user",
+                                attributes: ["ID", "user_nicename", "user_login", "user_email"],
+                            },
+                        ],
+                    };
+                    if (email) {
+                        affiliateInclude.include[0].where = {
+                            [Op.or]: [{ user_login: email }, { user_email: email }],
+                        };
+                        affiliateInclude.include[0].required = true;
+                        affiliateInclude.required = true;
+                    }
+
+                    const affWhere = {};
+                    if (broker_id) affWhere.affiliate_id = broker_id;
+
+                    totalCount = await db.AffiliatePayoutRequests.count({
+                        where: affWhere,
+                        include: email ? [affiliateInclude] : [],
+                        distinct: !!email,
+                    });
+
+                    const payoutList = await db.AffiliatePayoutRequests.findAll({
+                        where: affWhere,
+                        include: [affiliateInclude],
+                        order: [["createdAt", "DESC"]],
+                        limit: limit,
+                        offset: offset,
+                    });
+
+                    formattedData = await Promise.all(
+                        payoutList.map(async (item) => {
+                            const json = item.toJSON();
+                            const invoice_url = json.invoice
+                                ? await generateImageUrl(json.invoice, "invoice")
+                                : "";
+
+                            const aff = json.affiliate || {};
+                            const u = aff.user || {};
+
+                            return {
+                                id: json.id,
+                                broker_id: json.affiliate_id || json.broker_id,
+                                affiliate_id: json.affiliate_id,
+                                amount: json.amount,
+                                invoice: invoice_url,
+                                payout_for: json.payout_for,
+                                status: json.status,
+                                created_at: json.createdAt,
+                                updated_at: json.updatedAt,
+
+                                broker: {
+                                    id: aff.id || json.affiliate_id,
+                                    referral_code: aff.referral_code || "",
+                                    children_count: aff.children_count || 0,
+                                    total_commission_amount: aff.total_commission_amount || 0,
+                                    user: u.ID
+                                        ? {
+                                            id: u.ID,
+                                            username: u.user_login || "",
+                                            name: u.user_nicename || "",
+                                        }
+                                        : null,
+                                },
+                            };
+                        })
+                    );
+                } catch (affErr) {
+                    console.error("Error fetching affiliate payout requests:", affErr);
+                }
             }
-
-            const affWhere = {};
-            if (broker_id) affWhere.affiliate_id = broker_id;
-
-            const totalCount = await db.AffiliatePayoutRequests.count({
-                where: affWhere,
-                include: email ? [affiliateInclude] : [],
-                distinct: !!email,
-            });
-
-            const payoutList = await db.AffiliatePayoutRequests.findAll({
-                where: affWhere,
-                include: [affiliateInclude],
-                order: [["createdAt", "DESC"]],
-                limit: limit,
-                offset: offset,
-            });
-
-            const formattedData = await Promise.all(
-                payoutList.map(async (item) => {
-                    const json = item.toJSON();
-                    json.broker = json.affiliate || json.broker;
-                    json.invoice_url = json.invoice
-                        ? await generateImageUrl(json.invoice, "invoice")
-                        : null;
-                    return json;
-                })
-            );
 
             return res.status(200).json({
                 success: true,
+                message: "Affiliate payout requests fetched successfully.",
                 data: formattedData,
                 pagination: {
                     currentPage: page,

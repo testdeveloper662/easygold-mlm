@@ -212,6 +212,12 @@ const runBrokerRegisterBackground = async ({
       return;
     }
 
+    // Ensure user role_id is set to 2 for broker
+    await db.Users.update(
+      { role_id: 2 },
+      { where: { ID: user_id } }
+    );
+
     console.log(partnerDocsData, "partnerDocsData");
 
     // Map frontend language codes to database format (we'll save this at the end)
@@ -466,6 +472,7 @@ const registerViaExternalApi = async (req, fields) => {
   form.append("internationalTrade", fields.u_export_import);
   form.append("language", fields.languageForApi);
   form.append("u_date", fields.idExpiryDate || new Date().toISOString().split("T")[0]);
+  form.append("role_id", 2);
 
   if (req.files?.u_travel_id?.[0]) {
     const file = req.files.u_travel_id[0];

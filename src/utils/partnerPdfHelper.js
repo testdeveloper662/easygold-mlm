@@ -4,6 +4,11 @@ const { generatePDF } = require("./pdfGenerator");
 require("dotenv").config();
 
 const replaceContractVariables = (html, variables = {}) => {
+    if (!html) return html;
+
+    // Clean HTML tags split inside bracket placeholders (e.g. [<strong>b2b_vat_id</strong>])
+    html = html.replace(/\[\s*(?:<[^>]+>\s*)*([a-zA-Z0-9_]+)\s*(?:<[^>]+>\s*)*\]/gi, '[$1]');
+
     Object.entries(variables).forEach(([key, value]) => {
         const regex = new RegExp(`\\[${key}\\]`, "gi");
         html = html.replace(regex, value ?? "");

@@ -12,7 +12,7 @@ async function generatePDF(data, templateName, outputfolder, outputFileName) {
 
         // Replace dynamic variables
         Object.keys(data).forEach((key) => {
-            const regex = new RegExp(`{{\\s*${key}\\s*}}`, "g");
+            const regex = new RegExp(`{{\\s*${key}\\s*}}`, "gi");
             html = html.replace(regex, data[key] ?? "");
         });
 

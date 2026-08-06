@@ -134,6 +134,7 @@ const GetAllBrokers = async (req, res) => {
             const partner_tax_billing_doc = broker.partner_tax_billing_doc !== null ? `${process.env.NODE_URL}${broker.partner_tax_billing_doc}` : null;
             const uk_company_sales_platform_doc = broker.uk_company_sales_platform_doc !== null ? `${process.env.NODE_URL}${broker.uk_company_sales_platform_doc}` : null;
             const ncnda_doc = broker.ncnda_doc !== null ? `${process.env.NODE_URL}${broker.ncnda_doc}` : null;
+            const option_subscription_doc = broker.option_subscription_doc ? `${process.env.NODE_URL}${broker.option_subscription_doc}` : null;
 
             // Construct public URLs if exist
             // const tradeRegisterUrl = m.u_trade_register
@@ -185,6 +186,7 @@ const GetAllBrokers = async (req, res) => {
                 partner_tax_billing_doc: partner_tax_billing_doc,
                 uk_company_sales_platform_doc: uk_company_sales_platform_doc,
                 ncnda_doc: ncnda_doc,
+                option_subscription_doc: option_subscription_doc,
 
                 createdAt: broker.createdAt,
                 updatedAt: broker.updatedAt,

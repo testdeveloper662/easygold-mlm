@@ -93,6 +93,11 @@ const Brokers = sequelize.define(
     ncnda_doc: {
       type: Sequelize.TEXT("long"),
       allowNull: true
+    },
+    option_subscription_doc: {
+      type: Sequelize.TEXT("long"),
+      allowNull: true,
+      defaultValue: null
     }
   },
   {

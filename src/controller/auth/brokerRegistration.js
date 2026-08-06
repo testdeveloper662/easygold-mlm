@@ -41,6 +41,25 @@ const formatLegalDate = (dateInput) => {
   };
 };
 
+const getSignatureImgHtml = (relativePath) => {
+  if (!relativePath || relativePath === "null" || relativePath === "undefined") return "";
+  try {
+    const cleanPath = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+    const fullPath = path.join(__dirname, "../../public", cleanPath);
+    if (fs.existsSync(fullPath)) {
+      const ext = path.extname(fullPath).replace(".", "") || "png";
+      const base64 = fs.readFileSync(fullPath).toString("base64");
+      return `<img src="data:image/${ext};base64,${base64}" style="width:150px;height:100px;object-fit:contain;" />`;
+    }
+  } catch (err) {
+    console.error("[getSignatureImgHtml] Error reading signature file for PDF:", err);
+  }
+  const cleanRel = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+  const baseUrl = process.env.NODE_URL || "";
+  const finalUrl = baseUrl.endsWith("/") ? `${baseUrl}${cleanRel}` : `${baseUrl}/${cleanRel}`;
+  return `<img src="${finalUrl}" style="width:150px;height:100px;object-fit:contain;" />`;
+};
+
 const runBrokerRegisterBackground = async ({
   fullName,
   username,
@@ -161,30 +180,43 @@ const runBrokerRegisterBackground = async ({
 
     const { day, month, year } = formatLegalDate(new Date());
 
+    const userIdVal = apiResponse.data?.data?.user_id || "";
+
     let partnerPdfData = {
-      b2b_name: fullName,
-      b2b_address: formattedAddress,
-      b2b_location: city,
-      b2b_company: company,
-      b2b_email: email,
-      b2b_signature: `<img src="${process.env.PUBLIC_URL}${userSign?.meta_value}" style="width:150px;height:100px;" />`,
-      b2b_userid: apiResponse.data?.data?.user_id,
-      parent_b2b_signature: `<img src="${process.env.PUBLIC_URL}${parentSignature}" style="width:150px;height:100px;" />`,
+      b2b_name: fullName || "",
+      b2b_address: formattedAddress || "",
+      b2b_location: city || "",
+      b2b_company: company || "",
+      company: company || "",
+      b2b_email: email || "",
+      email: email || "",
+      b2b_signature: getSignatureImgHtml(userSign?.meta_value),
+      b2b_userid: userIdVal,
+      user_id: userIdVal,
+      b2b_user_id: userIdVal,
+      parent_b2b_signature: getSignatureImgHtml(parentSignature),
       date: new Date().toISOString().split("T")[0],
-      ip_address: ip,
-      parent_b2b_name: parentBroker.user?.display_name,
-      parent_b2b_address: parentformattedAddress,
-      parent_b2b_email: parentBroker.user?.user_email,
-      parent_b2b_location: parentcity,
+      ip_address: ip || "",
+      parent_b2b_name: parentBroker.user?.display_name || "",
+      parent_b2b_address: parentformattedAddress || "",
+      parent_b2b_email: parentBroker.user?.user_email || "",
+      parent_b2b_location: parentcity || "",
       language: languageForApi,
       day: day,
       month: month,
       year: year,
-      b2b_info: partnerInfo,
-      b2b_info_full: brokerInfo,
+      legal_status: legalStatus || "",
+      legalStatus: legalStatus || "",
+      b2b_legal_status: legalStatus || "",
+      b2b_vat_id: vatId || "",
+      partner_vat_id: vatId || "",
+      vat_id: vatId || "",
+      vatId: vatId || "",
+      b2b_info: partnerInfo || "",
+      b2b_info_full: brokerInfo || "",
     };
 
-    console.log(partnerPdfData, "partnerPdfData");
+    console.log("📄 [partnerPdfData Data Check]:", JSON.stringify(partnerPdfData, null, 2));
 
     let partnerDocsData = await generatePartnerPDF(partnerPdfData);
 
@@ -253,7 +285,8 @@ const runBrokerRegisterBackground = async ({
       binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
       partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
       uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
-      ncnda_doc: `uploads/agreements/${partnerDocsData.ncnda_doc}`,
+      ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
+      option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
     });
 
     // Create affiliate entry (every Broker is an Affiliate)
@@ -279,7 +312,8 @@ const runBrokerRegisterBackground = async ({
           binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
           partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
           uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
-          ncnda_doc: `uploads/agreements/${partnerDocsData.ncnda_doc}`,
+          ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
+          option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
         });
       } catch (affErr) {
         console.error("Error inserting into Affiliates table during broker registration:", affErr.message);
@@ -776,10 +810,10 @@ const BrokerRegistration = async (req, res) => {
     // =========================================================================
 
     // Method 1: External API Call (axios)
-    apiResponse = await registerViaExternalApi(req, registrationFields);
+    //apiResponse = await registerViaExternalApi(req, registrationFields);
 
     // Method 2: Local API Call (direct database/helper)
-    // apiResponse = await registerViaLocalHelper(req, registrationFields);
+    apiResponse = await registerViaLocalHelper(req, registrationFields);
 
     // =========================================================================
 
@@ -818,17 +852,17 @@ const BrokerRegistration = async (req, res) => {
         isAdminParent,
         veriff_session_id,
         phone,
-        vatId,
-        taxNumber,
-        website,
+        vatId: vatId || req.body.u_vat_no || req.body.vat_no || req.body.vat_id || "",
+        taxNumber: taxNumber || req.body.u_tax_no || req.body.tax_no || "",
+        website: website || req.body.u_web_site || "",
         lang,
         languageParam,
-        email,
+        email: email || req.body.u_email || "",
         mobile,
-        company,
+        company: company || req.body.u_company || "",
         newReferralCode,
         banks,
-        legalStatus,
+        legalStatus: legalStatus || req.body.person_typ || req.body.legal_status || "",
       });
     });
 

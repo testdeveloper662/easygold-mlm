@@ -5,7 +5,7 @@ require("dotenv").config();
 
 const replaceContractVariables = (html, variables = {}) => {
     Object.entries(variables).forEach(([key, value]) => {
-        const regex = new RegExp(`\\[${key}\\]`, "g");
+        const regex = new RegExp(`\\[${key}\\]`, "gi");
         html = html.replace(regex, value ?? "");
     });
 
@@ -27,6 +27,7 @@ const generatePartnerPDF = async (data) => {
             "partner_tax_billing_doc",
             "uk_company_sales_platform_doc",
             "ncnda_doc",
+            "option_subscription_doc",
         ];
 
         const contracts = await db.AdminContracts.findAll({

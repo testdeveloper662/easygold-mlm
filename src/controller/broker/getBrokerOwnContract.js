@@ -60,6 +60,9 @@ const GetBrokerOwnContract = async (req, res) => {
             ncnda_doc: broker.ncnda_doc
                 ? `${process.env.NODE_URL}${broker.ncnda_doc}`
                 : null,
+            option_subscription_doc: broker.option_subscription_doc
+                ? `${process.env.NODE_URL}${broker.option_subscription_doc}`
+                : null,
         };
 
         return res.status(200).json({

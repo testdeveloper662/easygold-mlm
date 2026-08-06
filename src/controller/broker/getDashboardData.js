@@ -795,6 +795,7 @@ const GetDashboardData = async (req, res) => {
         monthly_growth_chart: monthlyGrowthChart,
         untermaklervertrag_doc: currentBroker.untermaklervertrag_doc ? `${process.env.NODE_URL}${currentBroker.untermaklervertrag_doc}` : null,
         maklervertrag_doc: currentBroker.maklervertrag_doc ? `${process.env.NODE_URL}${currentBroker.maklervertrag_doc}` : null,
+        option_subscription_doc: currentBroker.option_subscription_doc ? `${process.env.NODE_URL}${currentBroker.option_subscription_doc}` : null,
       },
     });
   } catch (error) {

@@ -43,9 +43,21 @@ const formatLegalDate = (dateInput) => {
 
 const getSignatureImgHtml = (relativePath) => {
   if (!relativePath || relativePath === "null" || relativePath === "undefined") return "";
+  
+  // If already a full URL, use it directly
+  if (relativePath.startsWith("http://") || relativePath.startsWith("https://")) {
+    return `<img src="${relativePath}" style="width:150px;height:100px;object-fit:contain;" />`;
+  }
+
   try {
     const cleanPath = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
-    const fullPath = path.join(__dirname, "../../public", cleanPath);
+    // Check root /public directory (3 levels up from src/controller/auth)
+    let fullPath = path.join(__dirname, "../../../public", cleanPath);
+    if (!fs.existsSync(fullPath)) {
+      // Also check 2 levels up in case public is inside src/
+      fullPath = path.join(__dirname, "../../public", cleanPath);
+    }
+    
     if (fs.existsSync(fullPath)) {
       const ext = path.extname(fullPath).replace(".", "") || "png";
       const base64 = fs.readFileSync(fullPath).toString("base64");
@@ -54,9 +66,10 @@ const getSignatureImgHtml = (relativePath) => {
   } catch (err) {
     console.error("[getSignatureImgHtml] Error reading signature file for PDF:", err);
   }
+
   const cleanRel = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
-  const baseUrl = process.env.NODE_URL || "";
-  const finalUrl = baseUrl.endsWith("/") ? `${baseUrl}${cleanRel}` : `${baseUrl}/${cleanRel}`;
+  const baseUrl = process.env.PUBLIC_URL || process.env.NODE_URL || "";
+  const finalUrl = baseUrl ? (baseUrl.endsWith("/") ? `${baseUrl}${cleanRel}` : `${baseUrl}/${cleanRel}`) : relativePath;
   return `<img src="${finalUrl}" style="width:150px;height:100px;object-fit:contain;" />`;
 };
 

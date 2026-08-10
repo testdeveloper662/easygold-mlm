@@ -185,7 +185,11 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       b2b_address: parent_address,
       b2b_email: parent_email,
       b2b_phone: parent_telephone,
-      b2b_signature: `<img src="${process.env.PUBLIC_URL}${parent_signaturedata}" style="width:150px;height:100px;" />`,
+      b2b_signature: `<img src="${
+        (parent_signaturedata || "").startsWith("http://") || (parent_signaturedata || "").startsWith("https://")
+          ? parent_signaturedata
+          : `${process.env.PUBLIC_URL || ""}${(parent_signaturedata || "").startsWith("/") ? (parent_signaturedata || "").substring(1) : parent_signaturedata}`
+      }" style="width:150px;height:100px;" />`,
       ip_address: ip,
       day: day,
       month: month,

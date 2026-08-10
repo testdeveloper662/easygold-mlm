@@ -42,11 +42,18 @@ const generateAgreementPDF = async (data, parentBroker = null) => {
         }
 
 
+        let formattedParentSignature = parent_signaturedata || "";
+        if (formattedParentSignature && !formattedParentSignature.startsWith("http://") && !formattedParentSignature.startsWith("https://")) {
+            const pubUrl = process.env.PUBLIC_URL || process.env.NODE_URL || "";
+            const cleanSig = formattedParentSignature.startsWith("/") ? formattedParentSignature.substring(1) : formattedParentSignature;
+            formattedParentSignature = pubUrl ? (pubUrl.endsWith("/") ? `${pubUrl}${cleanSig}` : `${pubUrl}/${cleanSig}`) : formattedParentSignature;
+        }
+
         let pdfData = {
             parent_name: parent_name,
             parent_address: parent_address,
             parent_u_location: parent_city,
-            parent_signaturedata: `${process.env.PUBLIC_URL}${parent_signaturedata}`,
+            parent_signaturedata: formattedParentSignature,
             ...data
         };
 

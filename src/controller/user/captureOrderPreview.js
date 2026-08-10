@@ -1,5 +1,4 @@
 const db = require("../../models");
-const ReferralLogs = db.TargetCustomerReferralLogs;
 
 const getNetAmount = (gross, vatPercent) => {
   if (!vatPercent || vatPercent <= 0) return gross;
@@ -18,11 +17,11 @@ const getCommissionFromPrices = (sellGross, b2bGross, vatPercent) => {
 };
 
 
-const CaptureOrder = async (req, res) => {
+const CaptureOrderPreview = async (req, res) => {
   const startTime = new Date();
-  console.log(`\n [CAPTURE ORDER] ==========================================`);
-  console.log(` [CAPTURE ORDER] START TIME: ${startTime.toISOString()}`);
-  console.log(` [CAPTURE ORDER] ==========================================\n`);
+  console.log(`\n [PREVIEW CAPTURE ORDER] ==========================================`);
+  console.log(` [PREVIEW CAPTURE ORDER] START TIME: ${startTime.toISOString()}`);
+  console.log(` [PREVIEW CAPTURE ORDER] ==========================================\n`);
 
   try {
     // Log request source information
@@ -31,7 +30,7 @@ const CaptureOrder = async (req, res) => {
     const referer = req.headers['referer'] || req.headers['referrer'] || 'Direct';
     const origin = req.headers['origin'] || 'Unknown';
 
-    console.log(` [CAPTURE ORDER] Request Source Information:`);
+    console.log(` [PREVIEW CAPTURE ORDER] Request Source Information:`);
     console.log(`   - Client IP: ${clientIP}`);
     console.log(`   - User Agent: ${userAgent}`);
     console.log(`   - Referer: ${referer}`);
@@ -43,7 +42,7 @@ const CaptureOrder = async (req, res) => {
 
     // Check if req.body exists
     if (!req.body) {
-      console.error(` [CAPTURE ORDER] req.body is undefined. Check body parser middleware.`);
+      console.error(` [PREVIEW CAPTURE ORDER] req.body is undefined. Check body parser middleware.`);
       return res.status(400).json({
         success: false,
         message: "Request body is missing. Please ensure Content-Type: application/json header is set.",
@@ -59,27 +58,8 @@ const CaptureOrder = async (req, res) => {
 
     const isDiamondGemstone = orderType == 'diamond_gemstone';
 
-    if (!isDiamondGemstone) {
-      const existingCommission = await db.BrokerCommissionHistory.findOne({
-        where: {
-          order_id: normalizedOrderId,
-          order_type: orderType,
-        },
-      });
-
-      if (existingCommission) {
-        console.log(` [CAPTURE ORDER] ⚠️ Commission already exists for Order ID: ${orderId}, Type: ${orderType}`);
-
-        return res.status(200).json({
-          success: true,
-          message: "Commission already calculated for this order",
-          data: {
-            orderId,
-            orderType,
-          },
-        });
-      }
-    }
+    // Preview mode: always compute and return the distribution, regardless of
+    // whether this order was already captured for real — no "already exists" short-circuit.
 
     const isGoldFlex = orderType == 'goldflex';
     const isEasyGoldToken = orderType == 'easygoldtoken';
@@ -90,16 +70,16 @@ const CaptureOrder = async (req, res) => {
     const isDealerPurchasingDiamond = orderType == 'dealer_purchasing_diamond';
     const isGoldPriceFixing = orderType == 'goldprice_fixing';
 
-    console.log(` [CAPTURE ORDER] Request received - orderId: ${orderId}, orderType: ${orderType}`);
+    console.log(` [PREVIEW CAPTURE ORDER] Request received - orderId: ${orderId}, orderType: ${orderType}`);
 
     if (!orderId || !orderType) {
-      console.error(` [CAPTURE ORDER] Missing required fields - orderId: ${orderId}, orderType: ${orderType}`);
+      console.error(` [PREVIEW CAPTURE ORDER] Missing required fields - orderId: ${orderId}, orderType: ${orderType}`);
       return res.status(400).json({
         success: false,
         message: "Missing required fields: orderId and orderType",
       });
     } else if ((isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest) && !b2bCommissionAmount) {
-      console.error(` [CAPTURE ORDER] Missing required fields - b2bCommissionAmount: ${b2bCommissionAmount}`);
+      console.error(` [PREVIEW CAPTURE ORDER] Missing required fields - b2bCommissionAmount: ${b2bCommissionAmount}`);
       return res.status(400).json({
         success: false,
         message: "Missing required fields: b2bCommissionAmount",
@@ -121,17 +101,17 @@ const CaptureOrder = async (req, res) => {
     } else if (isDiamondGemstone) {
       OrderModel = db.DiamondOrder;
       PivotModel = db.DiamondOrderPivot;
-      console.log(` [CAPTURE ORDER] Diamond & Gemstone order type detected.`);
+      console.log(` [PREVIEW CAPTURE ORDER] Diamond & Gemstone order type detected.`);
     } else if (isGoldPurchase) {
       OrderModel = db.GoldPurchaseOrder;
     } else if (isGoldPurchaseSell) {
       OrderModel = db.GoldPurchaseSellOrders;
     } else if (isGoldFlex) {
-      console.log(` [CAPTURE ORDER] Gold Flex order type detected.`);
+      console.log(` [PREVIEW CAPTURE ORDER] Gold Flex order type detected.`);
     } else if (isEasyGoldToken) {
-      console.log(` [CAPTURE ORDER] Easy Gold Token order type detected.`);
+      console.log(` [PREVIEW CAPTURE ORDER] Easy Gold Token order type detected.`);
     } else if (isPrimeInvest) {
-      console.log(` [CAPTURE ORDER] Prime Invest order type detected.`);
+      console.log(` [PREVIEW CAPTURE ORDER] Prime Invest order type detected.`);
     } else if (isDealerPurchasing) {
       let productOrder = await db.ProductOrder.findOne({
         where: { id: orderId },
@@ -152,7 +132,7 @@ const CaptureOrder = async (req, res) => {
 
       b2bEmail = productOrder.user?.user_email;
       console.log(b2bEmail, "b2bEmail extracted for Dealer Purchasing");
-      console.log(` [CAPTURE ORDER] Dealer Purchasing order type detected.`);
+      console.log(` [PREVIEW CAPTURE ORDER] Dealer Purchasing order type detected.`);
     } else if (isDealerPurchasingDiamond) {
       let productOrder = await db.ProductOrderDiamond.findOne({
         where: { id: orderId },
@@ -173,7 +153,7 @@ const CaptureOrder = async (req, res) => {
 
       b2bEmail = productOrder.user?.user_email;
       console.log(b2bEmail, "b2bEmail extracted for Dealer Purchasing");
-      console.log(` [CAPTURE ORDER] Dealer Purchasing order type detected.`);
+      console.log(` [PREVIEW CAPTURE ORDER] Dealer Purchasing order type detected.`);
     } else if (isGoldPriceFixing) {
       const order = await db.Order.findOne({
         where: { id: orderId },
@@ -197,7 +177,7 @@ const CaptureOrder = async (req, res) => {
       }
       b2bEmail = order.user?.user_email;
       console.log(b2bEmail, "b2bEmail extracted for Gold Price Fixing");
-      console.log(` [CAPTURE ORDER] Gold Price Fixing order type detected.`);
+      console.log(` [PREVIEW CAPTURE ORDER] Gold Price Fixing order type detected.`);
     } else {
       return res.status(400).json({
         success: false,
@@ -235,29 +215,11 @@ const CaptureOrder = async (req, res) => {
     let productTypesToProcess = ["product"];
 
     if (isDiamondGemstone) {
-      const productTypesInOrder = [...new Set(orderPivots.map(resolveProductType))];
+      // Preview mode: process every product type present in the order, regardless
+      // of what's already been captured for real — no "already exists" short-circuit.
+      productTypesToProcess = [...new Set(orderPivots.map(resolveProductType))];
 
-      const alreadyProcessed = await db.BrokerCommissionHistory.findAll({
-        where: { order_id: normalizedOrderId, order_type: orderType },
-        attributes: ["product_type"],
-      });
-      const alreadyProcessedTypes = new Set(alreadyProcessed.map((row) => row.product_type));
-
-      productTypesToProcess = productTypesInOrder.filter((pt) => !alreadyProcessedTypes.has(pt));
-
-      console.log(` [CAPTURE ORDER] Diamond & Gemstone product types in order: [${productTypesInOrder.join(", ")}], already processed: [${[...alreadyProcessedTypes].join(", ")}], to process: [${productTypesToProcess.join(", ")}]`);
-
-      if (productTypesToProcess.length === 0) {
-        console.log(` [CAPTURE ORDER] ⚠️ Commission already exists for all product types in Order ID: ${orderId}, Type: ${orderType}`);
-        return res.status(200).json({
-          success: true,
-          message: "Commission already calculated for this order",
-          data: {
-            orderId,
-            orderType,
-          },
-        });
-      }
+      console.log(` [PREVIEW CAPTURE ORDER] Diamond & Gemstone product types in order: [${productTypesToProcess.join(", ")}]`);
     }
 
     let broker = null;
@@ -360,7 +322,9 @@ const CaptureOrder = async (req, res) => {
 
         console.log(b2bAddress, "b2bAddress inside call");
 
-        targetCustomerLogFound = await ReferralLogs.create({
+        // Preview mode: build the would-be log in memory only, do not persist it.
+        targetCustomerLogFound = {
+          id: null,
           broker_id: customer.broker_id,
           from_customer_id: customer.parent_customer_id,
           to_customer_id: customer.id,
@@ -371,9 +335,9 @@ const CaptureOrder = async (req, res) => {
           status: "PENDING",
           address: b2bAddress,
           b2bName: b2bName
-        });
+        };
 
-        console.log("✅ INVESTMENT_DONE log created", {
+        console.log("✅ INVESTMENT_DONE log (preview only, not saved)", {
           investment,
           commission_amount,
           targetCustomerLogFound
@@ -426,14 +390,14 @@ const CaptureOrder = async (req, res) => {
 
     const serviceType = orderTypeToServiceType[orderType];
     if (!serviceType) {
-      console.error(`❌ [CAPTURE ORDER] Invalid orderType: ${orderType}`);
+      console.error(`❌ [PREVIEW CAPTURE ORDER] Invalid orderType: ${orderType}`);
       return res.status(400).json({
         success: false,
         message: `Invalid orderType: ${orderType}. Must be one of: landing_page, my_store, api, gold_purchase, gold_purchase_sell_orders, goldflex, easygoldtoken, primeinvest, dealer_purchasing, dealer_purchasing_diamond, goldprice_fixing, diamond_gemstone`,
       });
     }
 
-    console.log(` [CAPTURE ORDER] Fetching variable broker commissions for serviceType: ${serviceType}, orderType: ${orderType}`);
+    console.log(` [PREVIEW CAPTURE ORDER] Fetching variable broker commissions for serviceType: ${serviceType}, orderType: ${orderType}`);
 
     let commissionRecords;
 
@@ -446,7 +410,7 @@ const CaptureOrder = async (req, res) => {
         },
         order: [["level", "ASC"]],
       });
-      console.log(` [CAPTURE ORDER] Found ${commissionRecords.length} fixed commission records for Gold Flex serviceType: ${serviceType}`);
+      console.log(` [PREVIEW CAPTURE ORDER] Found ${commissionRecords.length} fixed commission records for Gold Flex serviceType: ${serviceType}`);
     } else {
 
       // Step 7.1: Fetch dynamic commission percentages from database (Variable Broker Commissions)
@@ -459,21 +423,21 @@ const CaptureOrder = async (req, res) => {
         order: [["level", "ASC"]],
       });
 
-      console.log(` [CAPTURE ORDER] Found ${commissionRecords.length} commission records for serviceType: ${serviceType}`);
+      console.log(` [PREVIEW CAPTURE ORDER] Found ${commissionRecords.length} commission records for serviceType: ${serviceType}`);
     }
 
-    console.log(` [CAPTURE ORDER] Commission Records:`, commissionRecords.map(r => ({ level: r.level, percentage: r.percentage })));
+    console.log(` [PREVIEW CAPTURE ORDER] Commission Records:`, commissionRecords.map(r => ({ level: r.level, percentage: r.percentage })));
 
     // Extract percentages from database records
     let basePercentages = [];
     if (commissionRecords && commissionRecords.length > 0) {
       basePercentages = commissionRecords.map((record) => record.percentage || 0);
-      console.log(` [CAPTURE ORDER] Dynamic percentages from DB: [${basePercentages.join(", ")}]`);
+      console.log(` [PREVIEW CAPTURE ORDER] Dynamic percentages from DB: [${basePercentages.join(", ")}]`);
     } else {
       // Fallback to static values if database is empty
-      console.warn(` [CAPTURE ORDER] No commission records found in DB for serviceType: ${serviceType}. Using fallback static values.`);
+      console.warn(` [PREVIEW CAPTURE ORDER] No commission records found in DB for serviceType: ${serviceType}. Using fallback static values.`);
       basePercentages = [50, 20, 15, 10, 5];
-      console.log(` [CAPTURE ORDER] Using fallback static percentages: [${basePercentages.join(", ")}]`);
+      console.log(` [PREVIEW CAPTURE ORDER] Using fallback static percentages: [${basePercentages.join(", ")}]`);
     }
 
     // brokerlevel = isEasyGoldToken || isGoldFlex ? 6 : 5;
@@ -499,8 +463,8 @@ const CaptureOrder = async (req, res) => {
     }
     const activeBase = basePercentages.slice(0, activeLevels.length);
 
-    console.log(` [CAPTURE ORDER] Active levels count: ${activeLevels.length}, Active base percentages: [${activeBase.join(", ")}]`);
-    console.log(` [CAPTURE ORDER] Broker Hierarchy: Level 1 (Seller) + ${parentBrokers.length} Parent(s)`);
+    console.log(` [PREVIEW CAPTURE ORDER] Active levels count: ${activeLevels.length}, Active base percentages: [${activeBase.join(", ")}]`);
+    console.log(` [PREVIEW CAPTURE ORDER] Broker Hierarchy: Level 1 (Seller) + ${parentBrokers.length} Parent(s)`);
 
     // Distribute remaining percent to level 1 (seller)
     const totalBase = activeBase.reduce((a, b) => a + b, 0);
@@ -510,7 +474,7 @@ const CaptureOrder = async (req, res) => {
       activeBase[0] += remaining;
     }
 
-    console.log(`[CAPTURE ORDER] Commission Distribution Logic:`);
+    console.log(`[PREVIEW CAPTURE ORDER] Commission Distribution Logic:`);
     console.log(`   - Total Base Percentages: ${totalBase}%`);
     console.log(`   - Remaining: ${remaining}%`);
     console.log(`   - Adjusted Level 1 (Seller): ${activeBase[0]}% (original: ${basePercentages[0]}% + remaining: ${remaining}%)`);
@@ -524,7 +488,7 @@ const CaptureOrder = async (req, res) => {
       parseFloat(((p / 100) * 100).toFixed(2))
     );
 
-    console.log(` [CAPTURE ORDER] Normalized percentages: [${normalizedPercents.join(", ")}]`);
+    console.log(` [PREVIEW CAPTURE ORDER] Normalized percentages: [${normalizedPercents.join(", ")}]`);
 
     // Step 8: Build tree string (e.g., "1->2->3")
     const tree = activeLevels.map((b) => b.id).join("->");
@@ -541,7 +505,7 @@ const CaptureOrder = async (req, res) => {
         ? orderPivots.filter((pivot) => resolveProductType(pivot) === productType)
         : orderPivots;
 
-      console.log(`\n [CAPTURE ORDER] ========== Processing product_type group: "${productType}" (${groupPivots.length} pivot rows) ==========`);
+      console.log(`\n [PREVIEW CAPTURE ORDER] ========== Processing product_type group: "${productType}" (${groupPivots.length} pivot rows) ==========`);
 
       let totalProfitAmount = 0;
       let totalOrderAmount = 0;
@@ -577,7 +541,7 @@ const CaptureOrder = async (req, res) => {
             const isGoldProduct = gemProduct?.material?.toLowerCase() === "gold";
             const vatPercent = isGoldProduct ? vatFromProduct : Math.max(vatFromProduct, vatFromCountry);
 
-            console.log(`\n [CAPTURE ORDER] Diamond/Gemstone VAT Determination:`);
+            console.log(`\n [PREVIEW CAPTURE ORDER] Diamond/Gemstone VAT Determination:`);
             console.log(`Product ID: ${pivot.product_id}, Product Type: ${resolveProductType(pivot)}`);
             console.log(`VAT from Product: ${vatFromProduct}%`);
             console.log(`VAT from Country: ${vatFromCountry}%`);
@@ -596,7 +560,7 @@ const CaptureOrder = async (req, res) => {
 
             let brokerVatPercent = isGoldProduct ? vatFromProduct : Math.max(vatFromProduct, brokerVatFromCountry);
 
-            console.log(`\n [CAPTURE ORDER] Diamond/Gemstone Broker VAT Determination:`);
+            console.log(`\n [PREVIEW CAPTURE ORDER] Diamond/Gemstone Broker VAT Determination:`);
             console.log(`VAT from Broker Country: ${brokerVatFromCountry}%`);
             console.log(`Applied Broker VAT Percent: ${brokerVatPercent}%`);
 
@@ -605,28 +569,28 @@ const CaptureOrder = async (req, res) => {
 
             const isHomeDeliveryMode = order?.delivery_types === 1;
             if (isHomeDeliveryMode) {
-              console.log(` [CAPTURE ORDER] Home Delivery Mode detected for Order ID: ${orderId}. Adjusting VAT calculations if necessary.`);
+              console.log(` [PREVIEW CAPTURE ORDER] Home Delivery Mode detected for Order ID: ${orderId}. Adjusting VAT calculations if necessary.`);
               brokerVatPercent = vatPercent;
             }
 
             const sellNetBase = getNetBaseFromGross(grossPrice, vatPercent);
             const b2bNetBase = getNetBaseFromGross(grossB2B, brokerVatPercent);
 
-            console.log(`\n [CAPTURE ORDER] Diamond/Gemstone Net Base Calculation:`);
+            console.log(`\n [PREVIEW CAPTURE ORDER] Diamond/Gemstone Net Base Calculation:`);
             console.log(`   - Gross Price: €${grossPrice}, Gross B2B: €${grossB2B}`);
             console.log(`   - VAT Percent: ${vatPercent}%, Sell Net Base: €${sellNetBase}, B2B Net Base: €${b2bNetBase}`);
 
             const productProfit = (sellNetBase - b2bNetBase) * pivot.quantity;
             const productNetTotal = sellNetBase * pivot.quantity;
 
-            console.log(`\n [CAPTURE ORDER] Diamond/Gemstone Product Total Calculation:`);
+            console.log(`\n [PREVIEW CAPTURE ORDER] Diamond/Gemstone Product Total Calculation:`);
             console.log(`   - Product Net Total: €${productNetTotal}, Product Profit: €${productProfit}`);
 
             totalOrderAmount += productNetTotal;
             totalProfitAmount += productProfit;
             totalB2BAmount += b2bNetBase * pivot.quantity;
 
-            console.log(`\n [CAPTURE ORDER] Cumulative Totals So Far:`);
+            console.log(`\n [PREVIEW CAPTURE ORDER] Cumulative Totals So Far:`);
             console.log(`   - Total Order Amount: €${totalOrderAmount.toFixed(2)}`);
             console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
 
@@ -682,7 +646,7 @@ const CaptureOrder = async (req, res) => {
             vatPercent = Math.max(vatFromProduct, vatFromCountry);
           }
 
-          console.log(`\n [CAPTURE ORDER] VAT Determination:`);
+          console.log(`\n [PREVIEW CAPTURE ORDER] VAT Determination:`);
           console.log(`Product ID: ${pivot.product_id}`);
           console.log(`VAT from Product: ${vatFromProduct}%`);
           console.log(`VAT from Country: ${vatFromCountry}%`);
@@ -712,7 +676,7 @@ const CaptureOrder = async (req, res) => {
             brokerVatPercent = Math.max(vatFromProduct, brokerVatFromCountry);
           }
 
-          console.log(`\n [CAPTURE ORDER] Broker VAT Determination:`);
+          console.log(`\n [PREVIEW CAPTURE ORDER] Broker VAT Determination:`);
           console.log(`Product ID: ${pivot.product_id}`);
           console.log(`VAT from Product: ${vatFromProduct}%`);
           console.log(`VAT from Broker Country: ${brokerVatFromCountry}%`);
@@ -724,7 +688,7 @@ const CaptureOrder = async (req, res) => {
           const isHomeDeliveryMode = order?.type === 1;
 
           if (isHomeDeliveryMode) {
-            console.log(` [CAPTURE ORDER] Home Delivery Mode detected for Order ID: ${orderId}. Adjusting VAT calculations if necessary.`);
+            console.log(` [PREVIEW CAPTURE ORDER] Home Delivery Mode detected for Order ID: ${orderId}. Adjusting VAT calculations if necessary.`);
             brokerVatPercent = vatPercent;
           }
 
@@ -732,7 +696,7 @@ const CaptureOrder = async (req, res) => {
           const b2bNetBase = getNetBaseFromGross(grossB2B, brokerVatPercent);
           const sellNetBase = getNetBaseFromGross(grossPrice, vatPercent);
 
-          console.log(`\n [CAPTURE ORDER] Net Base Calculation:`);
+          console.log(`\n [PREVIEW CAPTURE ORDER] Net Base Calculation:`);
           console.log(`   - Gross Price: €${grossPrice}`);
           console.log(`   - Gross B2B: €${grossB2B}`);
           console.log(`   - VAT Percent: ${vatPercent}%`);
@@ -742,24 +706,24 @@ const CaptureOrder = async (req, res) => {
           const commissionNet = sellNetBase - b2bNetBase;   // VAT-FREE commission
           const productProfit = commissionNet * pivot.quantity;
 
-          console.log(`\n [CAPTURE ORDER] Commission Calculation:`);
+          console.log(`\n [PREVIEW CAPTURE ORDER] Commission Calculation:`);
           console.log(`   - Commission Net (per unit): €${commissionNet}`);
           console.log(`   - Product Profit: €${productProfit}`);
 
           const productNetTotal = sellNetBase * pivot.quantity;
 
-          console.log(`\n [CAPTURE ORDER] Product Total Calculation:`);
+          console.log(`\n [PREVIEW CAPTURE ORDER] Product Total Calculation:`);
           console.log(`   - Product Net Total: €${productNetTotal}`);
 
           totalOrderAmount += productNetTotal;
           totalProfitAmount += productProfit;
           totalB2BAmount += b2bNetBase * pivot.quantity;
 
-          console.log(`\n [CAPTURE ORDER] Cumulative Totals So Far:`);
+          console.log(`\n [PREVIEW CAPTURE ORDER] Cumulative Totals So Far:`);
           console.log(`   - Total Order Amount: €${totalOrderAmount.toFixed(2)}`);
           console.log(`   - Total Profit Amount: €${totalProfitAmount.toFixed(2)}`);
 
-          console.log(`\n [CAPTURE ORDER] Order Pivot Details:`);
+          console.log(`\n [PREVIEW CAPTURE ORDER] Order Pivot Details:`);
           console.log(`   - Product Type: ${productType}`);
           console.log(`   - Price: €${pivot.price}`);
           console.log(`   - B2B Price: €${pivot.b2b_price}`);
@@ -779,7 +743,7 @@ const CaptureOrder = async (req, res) => {
             ? ((totalOrderAmount / totalB2BAmount) - 1) * 100
             : 0;
 
-        console.log(` [CAPTURE ORDER] Profit Calculation:`);
+        console.log(` [PREVIEW CAPTURE ORDER] Profit Calculation:`);
         console.log(`   - TOTAL Order Amount: €${totalOrderAmount.toFixed(2)}`);
         console.log(`   - TOTAL B2B Amount: €${totalB2BAmount.toFixed(2)}`);
         console.log(`   - TOTAL Profit Amount: €${totalProfitAmount.toFixed(2)}`);
@@ -787,7 +751,7 @@ const CaptureOrder = async (req, res) => {
         console.log(`   - Formula: (Total Order / Total B2B - 1) * 100`);
 
         if (totalProfitAmount <= 0) {
-          console.error(` [CAPTURE ORDER] WARNING: Total Profit Amount is ${totalProfitAmount}. Commission will be 0!`);
+          console.error(` [PREVIEW CAPTURE ORDER] WARNING: Total Profit Amount is ${totalProfitAmount}. Commission will be 0!`);
         }
       }
 
@@ -796,16 +760,16 @@ const CaptureOrder = async (req, res) => {
 
       let totalCommissionAmount = 0;
 
-      console.log(` [CAPTURE ORDER] Starting commission distribution for ${activeLevels.length} brokers (product_type: ${productType})`);
+      console.log(` [PREVIEW CAPTURE ORDER] Starting commission distribution for ${activeLevels.length} brokers (product_type: ${productType})`);
 
       for (let i = 0; i < activeLevels.length; i++) {
         const currentBroker = activeLevels[i];
         const commissionPercent = normalizedPercents[i];
 
-        console.log(`\n [CAPTURE ORDER] ==========================================`);
-        console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation START (product_type: ${productType})`);
-        console.log(` [CAPTURE ORDER] ==========================================`);
-        console.log(` [CAPTURE ORDER] Input Values:`);
+        console.log(`\n [PREVIEW CAPTURE ORDER] ==========================================`);
+        console.log(` [PREVIEW CAPTURE ORDER] Level ${i + 1} Commission Calculation START (product_type: ${productType})`);
+        console.log(` [PREVIEW CAPTURE ORDER] ==========================================`);
+        console.log(` [PREVIEW CAPTURE ORDER] Input Values:`);
         console.log(`   - Broker ID: ${currentBroker.id}`);
         console.log(`   - User ID: ${currentBroker.user_id}`);
         console.log(`   - Commission Percent (raw): ${commissionPercent}`);
@@ -814,7 +778,7 @@ const CaptureOrder = async (req, res) => {
         const isFlatCommissionFlow = isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing;
         const rawCalculation = isFlatCommissionFlow ? (commissionPercent / 100) * b2bCommissionAmount : (commissionPercent / 100) * totalProfitAmount;
 
-        console.log(` [CAPTURE ORDER] Calculation Steps:`);
+        console.log(` [PREVIEW CAPTURE ORDER] Calculation Steps:`);
         console.log(`   - Step 1: (${commissionPercent} / 100) = ${commissionPercent / 100}`);
         console.log(`   - Step 2: ${commissionPercent / 100} * ${isFlatCommissionFlow ? b2bCommissionAmount : totalProfitAmount} = ${rawCalculation}`);
         console.log(`   - Step 3: ${rawCalculation}.toFixed(2) = ${rawCalculation.toFixed(2)}`);
@@ -823,7 +787,7 @@ const CaptureOrder = async (req, res) => {
         totalCommissionAmount += commissionAmount;
 
         console.log(`   - Step 4: parseFloat(${rawCalculation.toFixed(2)}) = ${commissionAmount}`);
-        console.log(` [CAPTURE ORDER] Final Commission Amount:`);
+        console.log(` [PREVIEW CAPTURE ORDER] Final Commission Amount:`);
         console.log(`   - Value: ${commissionAmount}`);
         console.log(`   - Type: ${typeof commissionAmount}`);
         console.log(`   - Is NaN: ${isNaN(commissionAmount)}`);
@@ -831,13 +795,13 @@ const CaptureOrder = async (req, res) => {
         console.log(`   - Is Undefined: ${commissionAmount === undefined}`);
 
         const isSeller = i === 0;
-        console.log(` [CAPTURE ORDER] Additional Info:`);
+        console.log(` [PREVIEW CAPTURE ORDER] Additional Info:`);
         console.log(`   - Is Seller: ${isSeller}`);
 
         if (commissionAmount <= 0 || isNaN(commissionAmount)) {
-          console.error(` [CAPTURE ORDER] ⚠️ WARNING: Commission Amount is ${commissionAmount} for Level ${i + 1} (product_type: ${productType})!`);
-          console.error(` [CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${isFlatCommissionFlow ? b2bCommissionAmount : totalProfitAmount}`);
-          console.error(` [CAPTURE ORDER] ⚠️ Raw calculation result: ${rawCalculation}`);
+          console.error(` [PREVIEW CAPTURE ORDER] ⚠️ WARNING: Commission Amount is ${commissionAmount} for Level ${i + 1} (product_type: ${productType})!`);
+          console.error(` [PREVIEW CAPTURE ORDER] ⚠️ Check: commissionPercent=${commissionPercent}%, totalProfitAmount=€${isFlatCommissionFlow ? b2bCommissionAmount : totalProfitAmount}`);
+          console.error(` [PREVIEW CAPTURE ORDER] ⚠️ Raw calculation result: ${rawCalculation}`);
         }
 
         console.log(targetCustomerLogFound, "targetCustomerLogFound");
@@ -856,10 +820,10 @@ const CaptureOrder = async (req, res) => {
 
         // ✅ Save in BrokerCommissionHistory with order_type and distribution timestamp
         const distributionTimestamp = new Date();
-        console.log(`\n [CAPTURE ORDER] ==========================================`);
-        console.log(` [CAPTURE ORDER] Preparing Database Save`);
-        console.log(` [CAPTURE ORDER] ==========================================`);
-        console.log(` [CAPTURE ORDER] All Values Before Save:`);
+        console.log(`\n [PREVIEW CAPTURE ORDER] ==========================================`);
+        console.log(` [PREVIEW CAPTURE ORDER] Preparing Database Save`);
+        console.log(` [PREVIEW CAPTURE ORDER] ==========================================`);
+        console.log(` [PREVIEW CAPTURE ORDER] All Values Before Save:`);
         console.log(`   - Broker ID: ${currentBroker.id} (type: ${typeof currentBroker.id})`);
         console.log(`   - User ID: ${currentBroker.user_id} (type: ${typeof currentBroker.user_id})`);
         console.log(`   - Order ID: ${orderId} (type: ${typeof orderId})`);
@@ -875,16 +839,16 @@ const CaptureOrder = async (req, res) => {
         console.log(`   - Distribution Timestamp: ${distributionTimestamp.toISOString()}`);
 
         // Validate commission_amount before saving
-        console.log(`\n [CAPTURE ORDER] Validation Checks:`);
+        console.log(`\n [PREVIEW CAPTURE ORDER] Validation Checks:`);
         console.log(`   - isNaN(commissionAmount): ${isNaN(commissionAmount)}`);
         console.log(`   - commissionAmount < 0: ${commissionAmount < 0}`);
         console.log(`   - commissionAmount === null: ${commissionAmount === null}`);
         console.log(`   - commissionAmount === undefined: ${commissionAmount === undefined}`);
 
         if (isNaN(commissionAmount) || commissionAmount < 0) {
-          console.error(` [CAPTURE ORDER] ❌ ERROR: Invalid commission_amount: ${commissionAmount}`);
-          console.error(` [CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${isFlatCommissionFlow ? b2bCommissionAmount : totalProfitAmount}`);
-          console.error(` [CAPTURE ORDER] ❌ commissionPercent type: ${typeof commissionPercent}`);
+          console.error(` [PREVIEW CAPTURE ORDER] ❌ ERROR: Invalid commission_amount: ${commissionAmount}`);
+          console.error(` [PREVIEW CAPTURE ORDER] ❌ commissionPercent: ${commissionPercent}, totalProfitAmount: ${isFlatCommissionFlow ? b2bCommissionAmount : totalProfitAmount}`);
+          console.error(` [PREVIEW CAPTURE ORDER] ❌ commissionPercent type: ${typeof commissionPercent}`);
         }
 
         // Calculate safe commission amount
@@ -892,7 +856,7 @@ const CaptureOrder = async (req, res) => {
           ? 0.00
           : parseFloat(commissionAmount.toFixed(2));
 
-        console.log(`\n [CAPTURE ORDER] Safe Commission Amount Calculation:`);
+        console.log(`\n [PREVIEW CAPTURE ORDER] Safe Commission Amount Calculation:`);
         console.log(`   - Input: ${commissionAmount}`);
         console.log(`   - Is NaN: ${isNaN(commissionAmount)}`);
         console.log(`   - Is < 0: ${commissionAmount < 0}`);
@@ -913,10 +877,6 @@ const CaptureOrder = async (req, res) => {
               ? parseFloat(order.confirmed_price.toFixed(2))
               : parseFloat(totalOrderAmount.toFixed(2));
 
-        // Gold Purchase, Price Fixing and Dealer Purchase orders don't go through
-        // an admin payment-confirmation step, so mark payment as done immediately.
-        const isAutoConfirmedOrderType = isGoldPurchase || isGoldPurchaseSell || isGoldPriceFixing || isDealerPurchasing || isDealerPurchasingDiamond;
-
         rowsToInsert.push({
           broker_id: currentBroker.id,
           user_id: currentBroker.user_id,
@@ -930,7 +890,6 @@ const CaptureOrder = async (req, res) => {
           is_seller: isSeller,
           selected_payment_method: selected_payment || 1,
           choose_payment_option: choose_payment_option || 1,
-          ...(isAutoConfirmedOrderType ? { is_payment_done: true } : {}),
           target_customer_log_id: targetCustomerLogFound
             ? targetCustomerLogFound.id
             : customerInfo
@@ -939,7 +898,7 @@ const CaptureOrder = async (req, res) => {
           is_send_bonus: targetCustomerLogFound ? true : false,
         });
 
-        console.log(`\n [CAPTURE ORDER] Database Create Object (Preview):`);
+        console.log(`\n [PREVIEW CAPTURE ORDER] Database Create Object (Preview):`);
         console.log(`   - broker_id: ${currentBroker.id} (type: ${typeof currentBroker.id})`);
         console.log(`   - user_id: ${currentBroker.user_id} (type: ${typeof currentBroker.user_id})`);
         console.log(`   - order_id: ${orderId} (type: ${typeof orderId})`);
@@ -954,19 +913,15 @@ const CaptureOrder = async (req, res) => {
         console.log(`   - tree: ${tree} (type: ${typeof tree})`);
         console.log(`   - is_seller: ${isSeller} (type: ${typeof isSeller})`);
 
-        console.log(`\n [CAPTURE ORDER] Attempting Database Create...`);
+        console.log(`\n [PREVIEW CAPTURE ORDER] Attempting Database Create...`);
         console.log(`   - This commission_percent and commission_amount will be shown in frontend via getAllBrokerCommissionHistory API\n`);
-        console.log(` [CAPTURE ORDER] ==========================================`);
-        console.log(` [CAPTURE ORDER] Level ${i + 1} Commission Calculation END (product_type: ${productType})`);
-        console.log(` [CAPTURE ORDER] ==========================================\n`);
+        console.log(` [PREVIEW CAPTURE ORDER] ==========================================`);
+        console.log(` [PREVIEW CAPTURE ORDER] Level ${i + 1} Commission Calculation END (product_type: ${productType})`);
+        console.log(` [PREVIEW CAPTURE ORDER] ==========================================\n`);
 
         if (!isEasyGoldToken && !isGoldFlex && !isPrimeInvest && i === 0) {
-          // ✅ Increment total commission in Brokers table
-          await db.Brokers.increment(
-            { total_commission_amount: commissionAmount },
-            { where: { id: currentBroker.id } }
-          );
-          console.log(` [CAPTURE ORDER] Updated total commission for broker ID: ${currentBroker.id} (product_type: ${productType})`);
+          // Preview mode: skip incrementing Brokers.total_commission_amount (no DB write).
+          console.log(` [PREVIEW CAPTURE ORDER] Would update total commission for broker ID: ${currentBroker.id} (product_type: ${productType}) — skipped in preview mode`);
         }
       }
 
@@ -988,31 +943,32 @@ const CaptureOrder = async (req, res) => {
         productType,
         totalCommissionPercent: isGoldPurchase || isGoldPurchaseSell || isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isDealerPurchasingDiamond || isGoldPriceFixing ? 100 : parseFloat(totalCommissionPercent.toFixed(2)),
         totalProfitAmount: finalProfitAmount,
+        seller_commission: distribution.find((d) => d.is_seller)?.commission_amount ?? 0,
         distribution,
         tree,
       });
     }
 
-    await db.BrokerCommissionHistory.bulkCreate(allRowsToInsert);
+    // Preview mode: skip db.BrokerCommissionHistory.bulkCreate(allRowsToInsert) — no DB write.
 
     const endTime = new Date();
     const duration = endTime - startTime;
 
-    console.log(`\n✅ [CAPTURE ORDER] ==========================================`);
-    console.log(`✅ [CAPTURE ORDER] Commission distribution completed successfully`);
-    console.log(`✅ [CAPTURE ORDER] Order ID: ${orderId}`);
-    console.log(`✅ [CAPTURE ORDER] Order Type: ${orderType}`);
-    console.log(`✅ [CAPTURE ORDER] Service Type: ${serviceType}`);
-    console.log(`✅ [CAPTURE ORDER] Product type groups processed: [${productTypesToProcess.join(", ")}]`);
-    console.log(`✅ [CAPTURE ORDER] Total Brokers per group: ${activeLevels.length}`);
-    console.log(`✅ [CAPTURE ORDER] Tree Structure: ${tree}`);
-    console.log(`✅ [CAPTURE ORDER] Commission Distribution Summary:`);
+    console.log(`\n✅ [PREVIEW CAPTURE ORDER] ==========================================`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] Commission distribution completed successfully`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] Order ID: ${orderId}`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] Order Type: ${orderType}`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] Service Type: ${serviceType}`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] Product type groups processed: [${productTypesToProcess.join(", ")}]`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] Total Brokers per group: ${activeLevels.length}`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] Tree Structure: ${tree}`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] Commission Distribution Summary:`);
     allDistributions.forEach((dist) => {
       console.log(`   [${dist.product_type}] Level ${dist.level}: Broker ${dist.broker_id} → ${dist.commission_percent}% (€${dist.commission_amount})`);
     });
-    console.log(`✅ [CAPTURE ORDER] END TIME: ${endTime.toISOString()}`);
-    console.log(`✅ [CAPTURE ORDER] DURATION: ${duration}ms`);
-    console.log(`✅ [CAPTURE ORDER] ==========================================\n`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] END TIME: ${endTime.toISOString()}`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] DURATION: ${duration}ms`);
+    console.log(`✅ [PREVIEW CAPTURE ORDER] ==========================================\n`);
 
     // Top-level fields mirror the first (and, for every order type other than
     // diamond_gemstone, the only) group so existing consumers keep working unchanged.
@@ -1020,10 +976,11 @@ const CaptureOrder = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Commission distribution stored successfully",
+      message: "Commission distribution calculated (preview only — nothing was stored)",
       data: {
         totalCommissionPercent: primarySummary.totalCommissionPercent,
         totalProfitAmount: primarySummary.totalProfitAmount,
+        seller_commission: primarySummary.seller_commission,
         distribution: allDistributions,
         tree,
         productTypeBreakdown: groupSummaries,
@@ -1032,7 +989,7 @@ const CaptureOrder = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error in CaptureOrder:", error);
+    console.error("Error in CaptureOrderPreview:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error.",
@@ -1040,4 +997,4 @@ const CaptureOrder = async (req, res) => {
   }
 };
 
-module.exports = CaptureOrder;
+module.exports = CaptureOrderPreview;

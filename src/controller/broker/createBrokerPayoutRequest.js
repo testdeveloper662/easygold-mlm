@@ -286,7 +286,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             await SendEmailHelper(
                 adminEmailData.subject,
                 adminEmailData.htmlContent,
-                "hsn_shop88@yahoo.de",
+                process.env.ADMIN_NOTIFICATION_EMAIL || "hsn_shop88@yahoo.de",
                 attachmentPath
             );
         } catch (adminMailError) {

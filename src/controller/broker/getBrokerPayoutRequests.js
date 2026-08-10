@@ -88,6 +88,7 @@ const GetBrokerPayoutRequests = async (req, res) => {
                     invoice: invoice_url,
                     payout_for: json.payout_for,
                     status: json.status,
+                    rejection_reason: json.rejection_reason || null,
                     created_at: json.createdAt,
                     updated_at: json.updatedAt,
                 };

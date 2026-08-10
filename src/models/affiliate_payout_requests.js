@@ -35,6 +35,10 @@ const AffiliatePayoutRequests = sequelize.define(
             allowNull: false,
             defaultValue: "PENDING",
         },
+        rejection_reason: {
+            type: Sequelize.TEXT,
+            allowNull: true,
+        },
     },
     {
         timestamps: true,

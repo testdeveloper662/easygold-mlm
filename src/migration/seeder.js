@@ -30,6 +30,9 @@ async function seedDatabase() {
     const seedRegistrationEmailTemplate = require("./seed_registration_template");
     await seedRegistrationEmailTemplate();
 
+    const seedPayoutRequestEmailTemplate = require("./seed_payout_request_template");
+    await seedPayoutRequestEmailTemplate();
+
     console.log("Database seeded successfully! 🌱");
   } catch (error) {
     console.error("Error during database seeding:", error);

@@ -35,6 +35,10 @@ const BrokerPayoutRequests = sequelize.define(
             allowNull: false,
             defaultValue: "PENDING",
         },
+        rejection_reason: {
+            type: Sequelize.TEXT,
+            allowNull: true,
+        },
     },
     {
         timestamps: true, // created_at, updated_at

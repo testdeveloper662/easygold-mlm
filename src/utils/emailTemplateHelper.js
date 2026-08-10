@@ -47,10 +47,10 @@ const applyPlaceholders = (template, variables = {}) => {
 
   let result = template;
 
-  // Replace all placeholders in format [variable_name] using square brackets
+  // Replace all placeholders in formats [variable_name], {variable_name}, or {{variable_name}}
   Object.keys(variables).forEach((key) => {
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const placeholder = new RegExp(`\\[${escapedKey}\\]`, "g");
+    const placeholder = new RegExp(`\\[${escapedKey}\\]|\\{${escapedKey}\\}|\\{\\{${escapedKey}\\}\\}`, "g");
     const value = variables[key] !== undefined && variables[key] !== null ? String(variables[key]) : "";
     result = result.replace(placeholder, value);
   });

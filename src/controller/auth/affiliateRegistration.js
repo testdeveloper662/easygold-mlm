@@ -151,12 +151,18 @@ const AffiliateRegistration = async (req, res) => {
 
     // Save metadata
     const metaEntries = [
+      { user_id: newUser.ID, meta_key: "vorname", meta_value: firstName },
+      { user_id: newUser.ID, meta_key: "nachname", meta_value: lastName },
+      { user_id: newUser.ID, meta_key: "person_typ", meta_value: personType },
+      { user_id: newUser.ID, meta_key: "country", meta_value: country },
+      { user_id: newUser.ID, meta_key: "steuer_id", meta_value: vatNo },
       { user_id: newUser.ID, meta_key: "u_fname", meta_value: firstName },
       { user_id: newUser.ID, meta_key: "u_lname", meta_value: lastName },
       { user_id: newUser.ID, meta_key: "u_person_type", meta_value: personType },
       { user_id: newUser.ID, meta_key: "u_country", meta_value: country },
       { user_id: newUser.ID, meta_key: "u_vat_no", meta_value: vatNo },
       { user_id: newUser.ID, meta_key: "u_role", meta_value: userRole },
+      { user_id: newUser.ID, meta_key: "user_role", meta_value: userRole },
       { user_id: newUser.ID, meta_key: "language", meta_value: langValue },
     ];
 

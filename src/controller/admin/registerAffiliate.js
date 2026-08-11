@@ -41,8 +41,9 @@ const RegisterAffiliate = async (req, res) => {
     }
 
     const referralCodeToUse = senderReferralCode || ADMIN_REFERRAL_CODE || "ADMIN";
+    const encodedReferralCode = Buffer.from(String(referralCodeToUse), "utf-8").toString("base64");
 
-    const registerUrl = `${FRONTEND_URL}/affiliate-register?referral=${referralCodeToUse}`;
+    const registerUrl = `${FRONTEND_URL}/affiliate-register?referral=${encodedReferralCode}`;
     const linkText = language === "de" ? "Jetzt als Affiliate registrieren" : "Register now as an affiliate";
 
     const templateVariables = {

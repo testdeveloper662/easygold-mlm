@@ -4,7 +4,6 @@ async function seedRegistrationEmailTemplate() {
   try {
     const templates = [
       {
-        id: 134,
         subject_english: "Registration successfully received",
         subject_german: "Registrierung erfolgreich eingegangen",
         content_english: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -25,7 +24,6 @@ async function seedRegistrationEmailTemplate() {
 </div>`,
       },
       {
-        id: 135,
         subject_english: "Your affiliate access is currently blocked",
         subject_german: "Ihr Affiliate-Zugang ist vorerst gesperrt",
         content_english: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -46,7 +44,6 @@ async function seedRegistrationEmailTemplate() {
 </div>`,
       },
       {
-        id: 136,
         subject_english: "Your Affiliate dashboard is now active",
         subject_german: "Ihr Affiliate-Dashboard ist jetzt aktiv",
         content_english: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">

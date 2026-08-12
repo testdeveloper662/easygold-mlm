@@ -18,6 +18,18 @@ const AdjustVariableAffiliateCommission = async (req, res) => {
       });
     }
 
+    const totalPercentage = updatedPercentage.reduce(
+      (sum, item) => sum + (Number(item.percentage) || 0),
+      0
+    );
+
+    if (Math.abs(totalPercentage - 100) > 0.01) {
+      return res.status(400).json({
+        success: false,
+        message: "Sum of level 1 to 5 percentages for variable commission must equal 100%",
+      });
+    }
+
     await db.AdminVariableAffiliateCommission.sync();
     
     try {

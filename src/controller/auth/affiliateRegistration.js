@@ -178,7 +178,7 @@ const AffiliateRegistration = async (req, res) => {
 
     // Send registration confirmation email to newly registered affiliate using DB template (ID: 134)
     try {
-      const emailData = await getRenderedEmail(134, langValue, { name: fullName });
+      const emailData = await getRenderedEmail(140, langValue, { name: fullName });
       if (emailData && emailData.subject && emailData.htmlContent) {
         await SendEmailHelper(emailData.subject, emailData.htmlContent, email);
         console.log(`[AffiliateRegistration] Sent registration confirmation email to affiliate: ${email}`);

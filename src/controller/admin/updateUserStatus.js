@@ -92,7 +92,7 @@ const UpdateUserStatus = async (req, res) => {
       } else if (statusVal === 1) {
         // Deactivation / Rejection Email using DB template ID 135
         if (userEmail) {
-          const emailData = await getRenderedEmail(135, userLang, { name: userName });
+          const emailData = await getRenderedEmail(141, userLang, { name: userName });
           if (emailData && emailData.subject && emailData.htmlContent) {
             await SendEmailHelper(emailData.subject, emailData.htmlContent, userEmail);
           }

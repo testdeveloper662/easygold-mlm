@@ -4,7 +4,6 @@ async function seedPayoutRequestEmailTemplate() {
   try {
     const templates = [
       {
-        id: 137,
         subject_english: "New Payout Request Received",
         subject_german: "Neue Auszahlungsanfrage eingegangen",
         content_english: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -59,7 +58,6 @@ async function seedPayoutRequestEmailTemplate() {
 </div>`,
       },
       {
-        id: 138,
         subject_english: "Payout Request Approved",
         subject_german: "Auszahlungsanfrage genehmigt",
         content_english: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -100,7 +98,6 @@ async function seedPayoutRequestEmailTemplate() {
 </div>`,
       },
       {
-        id: 139,
         subject_english: "Payout Request Rejected",
         subject_german: "Auszahlungsanfrage abgelehnt",
         content_english: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">

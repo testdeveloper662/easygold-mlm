@@ -10,12 +10,13 @@ const GetInvitations = async (req, res) => {
             : (userObj.ID || userObj.id);
 
         let broker = null;
+        let affiliate = null;
         if (targetUserId) {
             broker = await db.Brokers.findOne({
                 where: { user_id: targetUserId },
             });
-            if (!broker && db.Affiliates) {
-                broker = await db.Affiliates.findOne({
+            if (db.Affiliates) {
+                affiliate = await db.Affiliates.findOne({
                     where: { user_id: targetUserId },
                 });
             }
@@ -32,13 +33,17 @@ const GetInvitations = async (req, res) => {
         if (targetUserId) invitedByIds.push(targetUserId);
         if (userObj.ID) invitedByIds.push(userObj.ID);
         if (userObj.broker_id) invitedByIds.push(userObj.broker_id);
+        if (userObj.affiliate_id) invitedByIds.push(userObj.affiliate_id);
         if (broker && broker.id) invitedByIds.push(broker.id);
+        if (affiliate && affiliate.id) invitedByIds.push(affiliate.id);
 
         const uniqueInvitedByIds = [...new Set(invitedByIds.filter(Boolean))];
 
         const whereClause = {};
-        if (userObj.role !== "SUPER_ADMIN" || req.query.viewUserId || uniqueInvitedByIds.length > 0) {
-            whereClause.invited_by = { [Op.in]: uniqueInvitedByIds };
+        if (userObj.role === "SUPER_ADMIN" && !req.query.viewUserId) {
+            // Super Admin gets all invitations
+        } else if (uniqueInvitedByIds.length > 0) {
+            whereClause.invited_by = { [Op.in]: [...uniqueInvitedByIds, null] };
         }
 
         // Search by email only
@@ -47,20 +52,52 @@ const GetInvitations = async (req, res) => {
         }
 
         const invitationType = req.query.type || req.query.invitation_type;
-        const targetModel = (invitationType === "affiliate" && db.AffiliateInvitations) ? db.AffiliateInvitations : db.BrokerInvitations;
 
-        // Get total count
-        const totalCount = await targetModel.count({
-            where: whereClause,
-        });
+        let invitations = [];
+        let totalCount = 0;
 
-        // Get paginated list ordered by id DESC
-        const invitations = await targetModel.findAll({
-            where: whereClause,
-            order: [["id", "DESC"]],
-            limit,
-            offset,
-        });
+        if (invitationType === "affiliate") {
+            totalCount = db.AffiliateInvitations ? await db.AffiliateInvitations.count({ where: whereClause }) : 0;
+            if (db.AffiliateInvitations) {
+                invitations = await db.AffiliateInvitations.findAll({
+                    where: whereClause,
+                    order: [["id", "DESC"]],
+                    limit,
+                    offset,
+                });
+            }
+        } else if (invitationType === "broker") {
+            totalCount = db.BrokerInvitations ? await db.BrokerInvitations.count({ where: whereClause }) : 0;
+            if (db.BrokerInvitations) {
+                invitations = await db.BrokerInvitations.findAll({
+                    where: whereClause,
+                    order: [["id", "DESC"]],
+                    limit,
+                    offset,
+                });
+            }
+        } else {
+            const affCount = db.AffiliateInvitations ? await db.AffiliateInvitations.count({ where: whereClause }) : 0;
+            if (affCount > 0) {
+                totalCount = affCount;
+                invitations = await db.AffiliateInvitations.findAll({
+                    where: whereClause,
+                    order: [["id", "DESC"]],
+                    limit,
+                    offset,
+                });
+            } else {
+                totalCount = db.BrokerInvitations ? await db.BrokerInvitations.count({ where: whereClause }) : 0;
+                if (db.BrokerInvitations) {
+                    invitations = await db.BrokerInvitations.findAll({
+                        where: whereClause,
+                        order: [["id", "DESC"]],
+                        limit,
+                        offset,
+                    });
+                }
+            }
+        }
 
         const downloadlinkEnglish = `${process.env.NODE_URL}public/uploads/agreements/broker_pdf_en.pdf`;
         const downloadlinkGerman = `${process.env.NODE_URL}public/uploads/agreements/broker_pdf_de.pdf`;

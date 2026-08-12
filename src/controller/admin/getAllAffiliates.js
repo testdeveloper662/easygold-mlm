@@ -44,10 +44,9 @@ const GetAllAffiliates = async (req, res) => {
       }
     }
 
-    const whereClause = {};
-    if (user.role !== "SUPER_ADMIN") {
-      whereClause.parent_id = { [Op.ne]: null };
-    }
+    const whereClause = {
+      parent_id: { [Op.ne]: null },
+    };
 
     if (user.role !== "SUPER_ADMIN" || targetRefCodes.size > 0 || targetParentIds.size > 0) {
       const orConditions = [];
@@ -55,7 +54,8 @@ const GetAllAffiliates = async (req, res) => {
       // Prioritize referred_by_code as referral codes are unique across tables
       if (targetRefCodes.size > 0) {
         orConditions.push({ referred_by_code: { [Op.in]: Array.from(targetRefCodes) } });
-      } else if (targetParentIds.size > 0) {
+      }
+      if (targetParentIds.size > 0) {
         orConditions.push({ parent_id: { [Op.in]: Array.from(targetParentIds) } });
       }
 

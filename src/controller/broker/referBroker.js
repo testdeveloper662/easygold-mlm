@@ -141,6 +141,7 @@ const ReferBroker = async (req, res) => {
       },
     });
     if (invitation) {
+      invitation.invited_by = parentBroker.id;
       invitation.last_invitation_sent = new Date();
       await invitation.save();
       console.log("===================RESEND EMAIL WITH INVITATION=====================");

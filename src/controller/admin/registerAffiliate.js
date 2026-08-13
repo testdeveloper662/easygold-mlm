@@ -68,17 +68,19 @@ const RegisterAffiliate = async (req, res) => {
     }
 
     // Save invitation record in db.AffiliateInvitations
+    let createdInvitation = null;
     try {
       const senderUserId = req.user?.user?.ID || req.user?.ID || req.user?.id;
-      let brokerId = senderUserId || null;
+      let affiliateId = null;
 
       if (senderUserId) {
-        const broker = await db.Brokers.findOne({ where: { user_id: senderUserId } });
-        if (broker) {
-          brokerId = broker.id;
-        } else if (db.Affiliates) {
+        if (db.Affiliates) {
           const aff = await db.Affiliates.findOne({ where: { user_id: senderUserId } });
-          if (aff) brokerId = aff.id;
+          if (aff) affiliateId = aff.id;
+        }
+        if (!affiliateId) {
+          const firstAff = db.Affiliates ? await db.Affiliates.findOne() : null;
+          if (firstAff) affiliateId = firstAff.id;
         }
       }
 
@@ -86,14 +88,15 @@ const RegisterAffiliate = async (req, res) => {
         // Check if an invitation record already exists for this email
         const existingInv = await db.AffiliateInvitations.findOne({ where: { email } });
         if (existingInv) {
-          await existingInv.update({
+          createdInvitation = await existingInv.update({
+            invited_by: affiliateId,
             last_invitation_sent: new Date(),
           });
         } else {
-          await db.AffiliateInvitations.create({
+          createdInvitation = await db.AffiliateInvitations.create({
             email: email,
             invitation_status: "SENT",
-            invited_by: brokerId,
+            invited_by: affiliateId,
             last_invitation_sent: new Date(),
           });
         }
@@ -105,7 +108,7 @@ const RegisterAffiliate = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Affiliate registration invitation email sent successfully.",
-      data: { registerUrl },
+      data: { registerUrl, invitation: createdInvitation },
     });
   } catch (error) {
     console.error("Error in RegisterAffiliate:", error);

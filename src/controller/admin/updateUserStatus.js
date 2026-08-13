@@ -61,6 +61,30 @@ const UpdateUserStatus = async (req, res) => {
     const previousStatus = userRecord.user_status;
     await userRecord.update({ user_status: statusVal });
 
+    // Sync invitation_status in AffiliateInvitations & BrokerInvitations
+    try {
+      let invStatus = null;
+      if (statusVal === 0) invStatus = "APPROVED";
+      else if (statusVal === 1) invStatus = "REJECTED";
+
+      if (invStatus && userRecord.user_email) {
+        if (db.AffiliateInvitations) {
+          await db.AffiliateInvitations.update(
+            { invitation_status: invStatus },
+            { where: { email: userRecord.user_email } }
+          );
+        }
+        if (db.BrokerInvitations) {
+          await db.BrokerInvitations.update(
+            { invitation_status: invStatus },
+            { where: { email: userRecord.user_email } }
+          );
+        }
+      }
+    } catch (invUpdateErr) {
+      console.error("Error updating invitation status:", invUpdateErr);
+    }
+
     // Send email notification based on status change and user language
     try {
       const SendEmailHelper = require("../../utils/sendEmailHelper");

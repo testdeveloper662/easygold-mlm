@@ -176,6 +176,37 @@ const AffiliateRegistration = async (req, res) => {
       role: "AFFILIATE",
     };
 
+    // Update invitation status in db.AffiliateInvitations & db.BrokerInvitations
+    try {
+      const invData = {
+        invitation_status: "REGISTERED",
+        ...(parentBroker?.id ? { invited_by: parentBroker.id } : {}),
+      };
+
+      if (db.AffiliateInvitations) {
+        const existingInv = await db.AffiliateInvitations.findOne({ where: { email } });
+        if (existingInv) {
+          await existingInv.update(invData);
+        } else {
+          await db.AffiliateInvitations.create({
+            email,
+            invitation_status: "REGISTERED",
+            invited_by: parentBroker?.id || null,
+            last_invitation_sent: new Date(),
+          });
+        }
+      }
+
+      if (db.BrokerInvitations) {
+        const existingBrokerInv = await db.BrokerInvitations.findOne({ where: { email } });
+        if (existingBrokerInv) {
+          await existingBrokerInv.update({ invitation_status: "REGISTERED" });
+        }
+      }
+    } catch (invErr) {
+      console.error("[AffiliateRegistration] Error updating invitation status to REGISTERED:", invErr.message);
+    }
+
     // Send registration confirmation email to newly registered affiliate using DB template (ID: 134)
     try {
       const emailData = await getRenderedEmail(140, langValue, { name: fullName });

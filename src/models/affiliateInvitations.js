@@ -1,5 +1,5 @@
 const { Sequelize, sequelize } = require("../config/database");
-const Brokers = require("./brokers");
+const Affiliates = require("./affiliates");
 
 const AffiliateInvitations = sequelize.define(
   "affiliate_invitations",
@@ -22,10 +22,10 @@ const AffiliateInvitations = sequelize.define(
       defaultValue: "SENT",
     },
     invited_by: {
-      type: Sequelize.INTEGER.UNSIGNED,
+      type: Sequelize.INTEGER,
       allowNull: true,
       references: {
-        model: "brokers",
+        model: "affiliates",
         key: "id",
       },
       onDelete: "SET NULL",
@@ -42,9 +42,9 @@ const AffiliateInvitations = sequelize.define(
   }
 );
 
-AffiliateInvitations.belongsTo(Brokers, {
+AffiliateInvitations.belongsTo(Affiliates, {
   foreignKey: "invited_by",
-  as: "invitedByBroker",
+  as: "invitedByAffiliate",
 });
 
 module.exports = AffiliateInvitations;

@@ -25,129 +25,26 @@ const GetBrokerCommissionHistory = async (req, res) => {
       ? req.query.is_seller === "true"
       : null;
 
+    // captureOrder.js computes is_payment_done correctly at capture time
+    // (EU/non-EU + payment method/option for seller rows, always-true for the
+    // admin-exempt order types, admin-confirmed for everything else) — so it's
+    // the single source of truth here: only show records that are paid out.
+    // (Existing historical rows were backfilled via
+    // src/migration/backfill_is_payment_done.js before this filter went live.)
     let whereClause;
-
-    const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken", "primeinvest"];
 
     if (isSellerFilter === true) {
       whereClause = {
         user_id: id,
         is_seller: true,
         is_deleted: false,
-        [Op.or]: [
-          // Method 1 → seller, not declined
-          {
-            selected_payment_method: [1, 3, 4, 5],
-            choose_payment_option: [1, 2],
-            is_payment_declined: false,
-            order_type: {
-              [Op.notIn]: [
-                ...GOLD_ORDER_TYPES,
-                "gold_purchase_sell_orders",
-                "gold_purchase",
-                "goldprice_fixing",
-                "dealer_purchasing",
-                "dealer_purchasing_diamond"
-              ]
-            }
-          },
-          {
-            is_payment_done: true,
-          },
-          // {
-          //   selected_payment_method: 1,
-          //   is_payment_done: true,
-          //   order_type: {
-          //     [Op.in]: [
-          //       "gold_purchase_sell_orders",
-          //       "gold_purchase",
-          //       "goldprice_fixing",
-          //       "dealer_purchasing",
-          //       "dealer_purchasing_diamond"
-          //     ]
-          //   },
-          // },
-          // {
-          //   order_type: { [Op.in]: GOLD_ORDER_TYPES },
-          //   is_payment_done: true,
-          // },
-          // Method 3 & 4 → seller, payment must be done
-          // {
-          //   selected_payment_method: { [Op.in]: [3, 4] },
-          //   is_payment_declined: false,
-          // },
-        ],
+        is_payment_done: true,
       };
     } else {
       whereClause = {
         user_id: id,
         is_deleted: false,
-        [Op.or]: [
-          // Seller logic
-          {
-            is_seller: true,
-            [Op.or]: [
-              {
-                selected_payment_method: [1, 3, 4, 5],
-                choose_payment_option: [1, 2],
-                is_payment_declined: false,
-                order_type: {
-                  [Op.notIn]: [
-                    ...GOLD_ORDER_TYPES,
-                    "gold_purchase_sell_orders",
-                    "gold_purchase",
-                    "goldprice_fixing",
-                    "dealer_purchasing",
-                    "dealer_purchasing_diamond"
-                  ]
-                },
-              }, // seller + method 1 (always show)
-              // {
-              //   selected_payment_method: 1,
-              //   is_payment_done: true,
-              //   order_type: {
-              //     [Op.in]: [
-              //       "gold_purchase_sell_orders",
-              //       "gold_purchase",
-              //       "goldprice_fixing",
-              //       "dealer_purchasing",
-              //       "dealer_purchasing_diamond"
-              //     ]
-              //   },
-              // },
-              {
-                is_payment_done: true,
-              },
-              // {
-              //   [Op.and]: [
-              //     { selected_payment_method: 2 },
-              //     { is_payment_done: true }, // seller + method 2 only if payment done
-              //   ],
-              // },
-              // {
-              //   [Op.and]: [
-              //     { selected_payment_method: { [Op.in]: [3, 4] } },
-              //     { is_payment_declined: false },
-              //   ],
-              // },
-            ],
-          },
-
-          // Non Seller logic
-          {
-            is_seller: false,
-            [Op.or]: [
-              {
-                is_payment_done: true,
-              },
-              // {
-              //   selected_payment_method: { [Op.in]: [1, 3, 4, 5] },
-              //   choose_payment_option: [1, 2],
-              //   is_payment_done: true
-              // },
-            ],
-          },
-        ],
+        is_payment_done: true,
       };
     }
 

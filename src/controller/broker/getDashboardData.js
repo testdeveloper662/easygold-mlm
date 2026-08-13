@@ -368,8 +368,16 @@ const GetDashboardData = async (req, res) => {
       ],
     };
 
+    // captureOrder.js computes is_payment_done correctly at capture time
+    // (EU/non-EU + payment method/option for seller rows, always-true for the
+    // admin-exempt order types, admin-confirmed for everything else) — so it's
+    // the single source of truth here: only show records that are paid out.
+    // (Existing historical rows were backfilled via
+    // src/migration/backfill_is_payment_done.js before this filter went live.)
     const recentOrdersWhereClause = {
-      ...allCommissionWhereClause,
+      user_id: { [Op.in]: targetUserIds },
+      is_deleted: false,
+      is_payment_done: true,
       createdAt: {
         [Op.between]: [startDate, endDate],
       },

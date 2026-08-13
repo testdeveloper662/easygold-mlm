@@ -1,4 +1,3 @@
-const { Op } = require("sequelize");
 const db = require("../models");
 const { roundToTwoDecimalPlaces } = require("./Helper");
 
@@ -14,61 +13,17 @@ async function getBrokerCommissionTotals(broker) {
 
     const userId = broker.user.ID;
 
-    // Fetch all commission rows for this user
+    // captureOrder.js computes is_payment_done correctly at capture time
+    // (EU/non-EU + payment method/option for seller rows, always-true for the
+    // admin-exempt order types, admin-confirmed for everything else) — so it's
+    // the single source of truth here: only count records that are paid out.
+    // (Existing historical rows were backfilled via
+    // src/migration/backfill_is_payment_done.js before this filter went live.)
     const commissionRows = await db.BrokerCommissionHistory.findAll({
         where: {
             user_id: userId,
             is_deleted: false,
-            [Op.or]: [
-                // 👉 Seller Logic
-                {
-                    is_seller: true,
-                    [Op.or]: [
-                        {
-                            selected_payment_method: [1, 2, 3, 4, 5],
-                            choose_payment_option: [1, 2, 3, 4],
-                            is_payment_declined: false,
-                            order_type: {
-                                [Op.notIn]: [
-                                    "gold_purchase_sell_orders",
-                                    "gold_purchase",
-                                    "goldprice_fixing",
-                                    "dealer_purchasing",
-                                    "dealer_purchasing_diamond",
-                                    "goldflex",
-                                    "easygoldtoken",
-                                    "primeinvest",
-                                ],
-                            },
-                        },
-                        {
-                            order_type: {
-                                [Op.in]: [
-                                    "gold_purchase_sell_orders",
-                                    "gold_purchase",
-                                    "goldprice_fixing",
-                                    "dealer_purchasing",
-                                    "dealer_purchasing_diamond",
-                                    "goldflex",
-                                    "easygoldtoken",
-                                    "primeinvest",
-                                ],
-                            },
-                            is_payment_done: true,
-                        }
-                    ],
-                },
-
-                // 👉 Non-Seller Logic
-                {
-                    is_seller: false,
-                    [Op.or]: [
-                        {
-                            is_payment_done: true,
-                        },
-                    ],
-                },
-            ],
+            is_payment_done: true,
         },
         attributes: ["commission_amount", "order_type", "is_seller", "selected_payment_method"],
         raw: true,

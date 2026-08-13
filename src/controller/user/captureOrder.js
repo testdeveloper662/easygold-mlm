@@ -1,4 +1,5 @@
 const db = require("../../models");
+const { resolveOrderPaymentDone } = require("../../utils/orderPaymentDoneResolver");
 const ReferralLogs = db.TargetCustomerReferralLogs;
 
 const getNetAmount = (gross, vatPercent) => {
@@ -16,7 +17,6 @@ const getCommissionFromPrices = (sellGross, b2bGross, vatPercent) => {
 
   return parseFloat((sellNetBase - b2bNetBase).toFixed(2));
 };
-
 
 const CaptureOrder = async (req, res) => {
   const startTime = new Date();
@@ -214,6 +214,29 @@ const CaptureOrder = async (req, res) => {
         return res
           .status(404)
           .json({ success: false, message: "Order not found" });
+    }
+
+    // Determine EU vs non-EU from the order's shipping country (s_country meta),
+    // not IP-based — used to gate is_payment_done for landing_page/my_store/api orders below.
+    // Also check for a vat_id meta value, which overrides the EU/non-EU result.
+    let isEU = false;
+    let hasVatId = false;
+    const isStandardStoreOrderType = orderType === "landing_page" || orderType === "my_store" || orderType === "api";
+
+    if (isStandardStoreOrderType) {
+      const ShippingOptionsModel = orderType === "landing_page" ? db.LpOrderShippingOptions : db.MyStoreOrderShippingOptions;
+      const shippingIdField = orderType === "landing_page" ? "lp_order_id" : "my_store_order_id";
+
+      const shippingCountryRow = await ShippingOptionsModel.findOne({ where: { [shippingIdField]: orderId, meta_key: "s_country" } });
+      if (shippingCountryRow) {
+        const euCountryMatch = await db.TaxCountry.findOne({ where: { Country_name: shippingCountryRow.meta_value } });
+        isEU = !!euCountryMatch;
+      }
+      console.log(` [CAPTURE ORDER] Shipping country: ${shippingCountryRow?.meta_value || "unknown"}, isEU: ${isEU}`);
+
+      const vatIdRow = await ShippingOptionsModel.findOne({ where: { [shippingIdField]: orderId, meta_key: "vat_id" } });
+      hasVatId = !!(vatIdRow && String(vatIdRow.meta_value || "").trim());
+      console.log(` [CAPTURE ORDER] vat_id: ${vatIdRow?.meta_value || "none"}, hasVatId: ${hasVatId}`);
     }
 
     let orderPivots = [];
@@ -917,6 +940,13 @@ const CaptureOrder = async (req, res) => {
         // an admin payment-confirmation step, so mark payment as done immediately.
         const isAutoConfirmedOrderType = isGoldPurchase || isGoldPurchaseSell || isGoldPriceFixing || isDealerPurchasing || isDealerPurchasingDiamond;
 
+        let rowIsPaymentDone;
+        if (isAutoConfirmedOrderType) {
+          rowIsPaymentDone = true;
+        } else if (isStandardStoreOrderType) {
+          rowIsPaymentDone = resolveOrderPaymentDone(selected_payment, choose_payment_option, isSeller, isEU, hasVatId);
+        }
+
         rowsToInsert.push({
           broker_id: currentBroker.id,
           user_id: currentBroker.user_id,
@@ -930,7 +960,7 @@ const CaptureOrder = async (req, res) => {
           is_seller: isSeller,
           selected_payment_method: selected_payment || 1,
           choose_payment_option: choose_payment_option || 1,
-          ...(isAutoConfirmedOrderType ? { is_payment_done: true } : {}),
+          ...(rowIsPaymentDone !== undefined ? { is_payment_done: rowIsPaymentDone } : {}),
           target_customer_log_id: targetCustomerLogFound
             ? targetCustomerLogFound.id
             : customerInfo

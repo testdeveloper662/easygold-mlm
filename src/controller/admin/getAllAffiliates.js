@@ -228,6 +228,8 @@ const GetAllAffiliates = async (req, res) => {
         phone: m.u_phone || null,
         language: m.language || null,
         user_status: u?.user_status !== undefined ? u.user_status : (affiliate.user_status !== undefined ? affiliate.user_status : 2),
+        role_id: u?.role_id || null,
+        role: u?.role_id === 2 ? "BROKER" : "AFFILIATE",
         total_commission_amount: affiliate.total_commission_amount || 0,
         createdAt: affiliate.createdAt || u?.user_registered,
         updatedAt: affiliate.updatedAt || u?.user_registered,

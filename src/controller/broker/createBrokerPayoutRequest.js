@@ -35,7 +35,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
                             as: "user_meta",
                             attributes: ["meta_key", "meta_value"],
                             where: {
-                                meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street_no", "u_street", "u_postcode", "u_location", "u_country", "u_account_owner"]
+                                meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street_no", "u_street", "u_postcode", "u_location", "u_country", "u_account_owner", "banks"]
                             },
                             required: false
                         },
@@ -141,12 +141,29 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         const phone = metas.find(m => m.meta_key === "u_phone")?.meta_value;
         const web_site = metas.find(m => m.meta_key === "u_web_site")?.meta_value;
         const account_owner = metas.find(m => m.meta_key === "u_account_owner")?.meta_value;
+        const bankMetaVal = metas.find(m => m.meta_key === "banks")?.meta_value;
+        let parsedBanks = null;
+        if (bankMetaVal) {
+            try {
+                parsedBanks = typeof bankMetaVal === "string" ? JSON.parse(bankMetaVal) : bankMetaVal;
+            } catch (e) {}
+        }
+        let primarySepa = {};
+        let primarySwift = {};
+        let primaryAch = {};
+        if (Array.isArray(parsedBanks)) {
+            primarySepa = parsedBanks[0] || {};
+        } else if (parsedBanks && typeof parsedBanks === "object") {
+            primarySepa = parsedBanks.sepa?.[0] || {};
+            primarySwift = parsedBanks.swift?.[0] || {};
+            primaryAch = parsedBanks.ach?.[0] || {};
+        }
         const bankDetails = brokerDetails?.bank_details || {};
 
-        const account_holder = bankDetails?.ac_holder_name;
-        const bank = bankDetails?.bank_name;
-        const iban = bankDetails?.iban;
-        const bic = bankDetails?.bic_swift_code;
+        const account_holder = primarySepa.account_holder || primarySwift.account_holder || primaryAch.account_holder || bankDetails?.ac_holder_name;
+        const bank = primarySepa.bank_name || primarySwift.bank_name || primaryAch.bank_name || bankDetails?.bank_name;
+        const iban = primarySepa.iban || primarySwift.iban || bankDetails?.iban;
+        const bic = primarySepa.bic_swift || primarySwift.swift_bic || bankDetails?.bic_swift_code;
 
         // Use logged-in user's language stored in user_meta
         const language = metas.find(m => m.meta_key === "language")?.meta_value || "en";

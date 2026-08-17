@@ -62,25 +62,49 @@ const GetBrokerBankDetails = async (req, res) => {
         }
 
 
-        const brokerBankDetails = await db.BrokerBankDetails.findOne({
-            where: { broker_id },
+        const targetUserId = brokerDetails?.user?.ID || brokerDetails?.user_id;
+        const userMetaRows = targetUserId ? await db.UsersMeta.findAll({
+            where: {
+                user_id: targetUserId,
+                meta_key: ["banks", "affiliate_banks", "ac_holder_name", "iban", "bic_swift_code", "bank_name", "u_account_owner"]
+            },
+        }) : [];
+
+        const metaMap = {};
+        userMetaRows.forEach(m => {
+            metaMap[m.meta_key] = m.meta_value;
         });
 
-        // Find affiliate id
-        let aff_id = user?.affiliate_id;
-        if (!aff_id && user?.ID && db.Affiliates) {
-            const aff = await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] });
-            if (aff) aff_id = aff.id;
-        }
-        if (!aff_id && brokerDetails?.user?.ID && db.Affiliates) {
-            const aff = await db.Affiliates.findOne({ where: { user_id: brokerDetails.user.ID }, attributes: ["id"] });
-            if (aff) aff_id = aff.id;
-        }
-        if (!aff_id) aff_id = broker_id;
+        const parseBanksObj = (raw, isAffiliate = false) => {
+            let parsed = null;
+            if (raw) {
+                try {
+                    parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+                } catch (e) {}
+            }
 
-        const affiliateBankDetails = db.AffiliateBankDetails
-            ? await db.AffiliateBankDetails.findOne({ where: { affiliate_id: aff_id } })
-            : null;
+            let sepa = {};
+            let swift = {};
+            let ach = {};
+
+            if (Array.isArray(parsed)) {
+                sepa = parsed[0] || {};
+            } else if (parsed && typeof parsed === "object") {
+                sepa = parsed.sepa?.[0] || {};
+                swift = parsed.swift?.[0] || {};
+                ach = parsed.ach?.[0] || {};
+            }
+
+            const holder = sepa.account_holder || swift.account_holder || ach.account_holder || (!isAffiliate ? (metaMap.ac_holder_name || metaMap.u_account_owner || "") : "");
+            const ibanVal = sepa.iban || swift.iban || (!isAffiliate ? (metaMap.iban || "") : "");
+            const bicVal = sepa.bic_swift || swift.swift_bic || (!isAffiliate ? (metaMap.bic_swift_code || "") : "");
+            const nameVal = sepa.bank_name || swift.bank_name || ach.bank_name || (!isAffiliate ? (metaMap.bank_name || "") : "");
+
+            return { parsed, holder, iban: ibanVal, bic: bicVal, name: nameVal };
+        };
+
+        const brokerBankMeta = parseBanksObj(metaMap.banks, false);
+        const affiliateBankMeta = parseBanksObj(metaMap.affiliate_banks, true);
 
         const commissionTotals = await getBrokerCommissionTotals(brokerDetails);
         const approvedPayouts = await db.BrokerPayoutRequests.findAll({
@@ -122,11 +146,28 @@ const GetBrokerBankDetails = async (req, res) => {
         Object.keys(finalTotals).forEach(key => {
             if (finalTotals[key] < 0) finalTotals[key] = 0;
         });
+
+        const bankDataObj = {
+            ac_holder_name: brokerBankMeta.holder,
+            iban: brokerBankMeta.iban,
+            bic_swift_code: brokerBankMeta.bic,
+            bank_name: brokerBankMeta.name,
+            banks: brokerBankMeta.parsed,
+        };
+
+        const affiliateBankDataObj = (affiliateBankMeta.holder || affiliateBankMeta.iban || affiliateBankMeta.name || affiliateBankMeta.parsed) ? {
+            ac_holder_name: affiliateBankMeta.holder,
+            iban: affiliateBankMeta.iban,
+            bic_swift_code: affiliateBankMeta.bic,
+            bank_name: affiliateBankMeta.name,
+            banks: affiliateBankMeta.parsed,
+        } : null;
+
         return res.status(200).json({
             success: true,
             data: {
-                ...(brokerBankDetails ? brokerBankDetails.dataValues : {}),
-                affiliate_bank: affiliateBankDetails ? affiliateBankDetails.dataValues : null,
+                ...bankDataObj,
+                affiliate_bank: affiliateBankDataObj,
                 commissions_totals: finalTotals,
             }
         });

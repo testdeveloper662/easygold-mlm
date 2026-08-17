@@ -3,113 +3,83 @@ const db = require("../../models");
 const AddUpdateBrokerBankDetails = async (req, res) => {
     try {
         const user = req?.user?.user;
-        const { ac_holder_name, iban, bic_swift_code, bank_name, user_type = "broker" } = req.body;
+        const { ac_holder_name, iban, bic_swift_code, bank_name, banks, user_type = "broker" } = req.body;
 
-        if (user_type === "affiliate") {
-            let affiliate_id = user?.affiliate_id;
-            if (!affiliate_id && user?.ID && db.Affiliates) {
-                const aff = await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] });
-                if (aff) affiliate_id = aff.id;
-            }
-            if (!affiliate_id && user?.broker_id && db.Brokers) {
-                // If logged in as broker updating affiliate bank details
-                const brokerObj = await db.Brokers.findOne({ where: { id: user.broker_id }, attributes: ["id", "user_id"] });
-                if (brokerObj) {
-                    const aff = await db.Affiliates.findOne({ where: { user_id: brokerObj.user_id }, attributes: ["id"] });
-                    if (aff) affiliate_id = aff.id;
-                }
-            }
-
-            if (!affiliate_id) {
-                // Fallback to broker_id if affiliate record not separate
-                affiliate_id = user?.broker_id;
-            }
-
-            if (!affiliate_id) {
-                return res.status(400).json({
-                    success: false,
-                    message: "affiliate_id is required.",
-                });
-            }
-
-            const existingAff = await db.AffiliateBankDetails.findOne({
-                where: { affiliate_id },
-            });
-
-            if (existingAff) {
-                await existingAff.update({
-                    ac_holder_name,
-                    iban,
-                    bic_swift_code,
-                    bank_name,
-                });
-                return res.status(200).json({
-                    success: true,
-                    message: "Affiliate bank details updated successfully.",
-                    data: existingAff,
-                });
-            }
-
-            const newAffDetails = await db.AffiliateBankDetails.create({
-                affiliate_id,
-                ac_holder_name,
-                iban,
-                bic_swift_code,
-                bank_name,
-            });
-
-            return res.status(200).json({
-                success: true,
-                message: "Affiliate bank details added successfully.",
-                data: newAffDetails,
-            });
+        let targetUserId = user?.ID || user?.id;
+        if (!targetUserId && user?.broker_id) {
+            const b = await db.Brokers.findOne({ where: { id: user.broker_id }, attributes: ["user_id"] });
+            if (b) targetUserId = b.user_id;
+        }
+        if (!targetUserId && user?.affiliate_id && db.Affiliates) {
+            const a = await db.Affiliates.findOne({ where: { id: user.affiliate_id }, attributes: ["user_id"] });
+            if (a) targetUserId = a.user_id;
         }
 
-        // Default: Broker Bank Details
-        let broker_id = user?.broker_id;
-        if (!broker_id && user?.ID) {
-            const b = await db.Brokers.findOne({ where: { user_id: user.ID }, attributes: ["id"] });
-            if (b) broker_id = b.id;
-        }
-
-        if (!broker_id) {
+        if (!targetUserId) {
             return res.status(400).json({
                 success: false,
-                message: "broker_id is required.",
+                message: "User ID is required.",
             });
         }
 
-        const existing = await db.BrokerBankDetails.findOne({
-            where: { broker_id },
-        });
-
-        if (existing) {
-            await existing.update({
-                ac_holder_name,
-                iban,
-                bic_swift_code,
-                bank_name,
-            });
-
-            return res.status(200).json({
-                success: true,
-                message: "Broker bank details updated successfully.",
-                data: existing,
+        let banksData;
+        if (banks) {
+            banksData = typeof banks === "string" ? banks : JSON.stringify(banks);
+        } else {
+            banksData = JSON.stringify({
+                sepa: [
+                    {
+                        account_holder: ac_holder_name || "",
+                        bank_name: bank_name || "",
+                        iban: iban || "",
+                        bic_swift: bic_swift_code || "",
+                        bank_address: "",
+                    },
+                ],
+                swift: [],
+                ach: [],
             });
         }
 
-        const newDetails = await db.BrokerBankDetails.create({
-            broker_id,
-            ac_holder_name,
-            iban,
-            bic_swift_code,
-            bank_name,
-        });
+        const targetMetaKey = user_type === "affiliate" ? "affiliate_banks" : "banks";
+
+        const metaKeysToUpdate = [
+            { key: targetMetaKey, value: banksData },
+            ...(user_type === "broker" ? [
+                ...(ac_holder_name ? [{ key: "ac_holder_name", value: ac_holder_name }] : []),
+                ...(iban ? [{ key: "iban", value: iban }] : []),
+                ...(bic_swift_code ? [{ key: "bic_swift_code", value: bic_swift_code }] : []),
+                ...(bank_name ? [{ key: "bank_name", value: bank_name }] : []),
+            ] : []),
+        ];
+
+        for (const item of metaKeysToUpdate) {
+            const existingMeta = await db.UsersMeta.findOne({
+                where: { user_id: targetUserId, meta_key: item.key },
+            });
+
+            if (existingMeta) {
+                await existingMeta.update({ meta_value: item.value });
+            } else {
+                await db.UsersMeta.create({
+                    user_id: targetUserId,
+                    meta_key: item.key,
+                    meta_value: item.value,
+                });
+            }
+        }
 
         return res.status(200).json({
             success: true,
-            message: "Broker bank details added successfully.",
-            data: newDetails,
+            message: `${user_type === "affiliate" ? "Affiliate" : "Broker"} bank details updated successfully in user metadata.`,
+            data: {
+                user_id: targetUserId,
+                banks: typeof banksData === "string" ? JSON.parse(banksData) : banksData,
+                ac_holder_name,
+                iban,
+                bic_swift_code,
+                bank_name,
+            },
         });
     } catch (error) {
         console.error("Error in Add/Update Bank Details:", error);

@@ -8,59 +8,50 @@ const GetAllAffiliates = async (req, res) => {
     const { page = 1, limit = 10, search = "", referral_code, referred_by_code } = req.query;
     const offset = (page - 1) * limit;
 
-    const targetParentIds = new Set();
-    const targetRefCodes = new Set();
-
-    if (referred_by_code) targetRefCodes.add(referred_by_code);
-    if (referral_code) targetRefCodes.add(referral_code);
+    let targetUserId = null;
 
     if (user.role === "SUPER_ADMIN" && req.query.viewUserId) {
-      const vUserId = parseInt(req.query.viewUserId);
-      const bRec = await db.Brokers.findOne({ where: { user_id: vUserId } });
-      if (bRec) {
-        if (bRec.id) targetParentIds.add(bRec.id);
-        if (bRec.referral_code) targetRefCodes.add(bRec.referral_code);
-      }
-      if (db.Affiliates) {
-        const aRec = await db.Affiliates.findOne({ where: { user_id: vUserId } });
-        if (aRec) {
-          if (aRec.id) targetParentIds.add(aRec.id);
-          if (aRec.referral_code) targetRefCodes.add(aRec.referral_code);
-        }
-      }
+      targetUserId = parseInt(req.query.viewUserId);
     } else if (user.role !== "SUPER_ADMIN") {
-      const loggedUserId = user.ID || user.id;
-      const bRec = await db.Brokers.findOne({ where: { user_id: loggedUserId } });
-      if (bRec) {
-        if (bRec.id) targetParentIds.add(bRec.id);
-        if (bRec.referral_code) targetRefCodes.add(bRec.referral_code);
-      }
-      if (db.Affiliates) {
-        const aRec = await db.Affiliates.findOne({ where: { user_id: loggedUserId } });
-        if (aRec) {
-          if (aRec.id) targetParentIds.add(aRec.id);
-          if (aRec.referral_code) targetRefCodes.add(aRec.referral_code);
-        }
-      }
+      targetUserId = user.ID || user.id;
     }
 
     const whereClause = {};
 
-    if (user.role !== "SUPER_ADMIN" || targetRefCodes.size > 0 || targetParentIds.size > 0) {
-      const orConditions = [];
+    if (targetUserId) {
+      const targetParentIds = [];
+      const targetRefCodes = [];
 
-      // Prioritize referred_by_code as referral codes are unique across tables
-      if (targetRefCodes.size > 0) {
-        orConditions.push({ referred_by_code: { [Op.in]: Array.from(targetRefCodes) } });
+      if (referred_by_code) targetRefCodes.push(referred_by_code);
+      if (referral_code) targetRefCodes.push(referral_code);
+
+      const bRec = await db.Brokers.findOne({ where: { user_id: targetUserId } });
+      if (bRec) {
+        if (bRec.id) targetParentIds.push(bRec.id);
+        if (bRec.referral_code) targetRefCodes.push(bRec.referral_code);
       }
-      if (targetParentIds.size > 0) {
-        orConditions.push({ parent_id: { [Op.in]: Array.from(targetParentIds) } });
+      if (db.Affiliates) {
+        const aRec = await db.Affiliates.findOne({ where: { user_id: targetUserId } });
+        if (aRec) {
+          if (aRec.id) targetParentIds.push(aRec.id);
+          if (aRec.referral_code) targetRefCodes.push(aRec.referral_code);
+        }
+      }
+
+      const orConditions = [];
+      if (targetRefCodes.length > 0) {
+        orConditions.push({ referred_by_code: { [Op.in]: Array.from(new Set(targetRefCodes)) } });
+      }
+      if (targetParentIds.length > 0) {
+        orConditions.push({ parent_id: { [Op.in]: Array.from(new Set(targetParentIds)) } });
       }
 
       if (orConditions.length > 0) {
-        whereClause[Op.or] = orConditions;
+        whereClause[Op.and] = [
+          { [Op.or]: orConditions },
+          { parent_id: { [Op.ne]: null } },
+        ];
       } else {
-        // If non-admin user has no referral code or ID, return no results
         whereClause.id = -1;
       }
     }
@@ -72,7 +63,9 @@ const GetAllAffiliates = async (req, res) => {
           { "$user.user_email$": { [Op.like]: `%${search}%` } },
         ],
       };
-      if (whereClause[Op.or]) {
+      if (whereClause[Op.and]) {
+        whereClause[Op.and].push(searchCondition);
+      } else if (whereClause[Op.or]) {
         whereClause[Op.and] = [
           { [Op.or]: whereClause[Op.or] },
           searchCondition,

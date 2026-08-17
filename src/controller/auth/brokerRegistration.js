@@ -43,7 +43,7 @@ const formatLegalDate = (dateInput) => {
 
 const getSignatureImgHtml = (relativePath) => {
   if (!relativePath || relativePath === "null" || relativePath === "undefined") return "";
-  
+
   // If already a full URL, use it directly
   if (relativePath.startsWith("http://") || relativePath.startsWith("https://")) {
     return `<img src="${relativePath}" style="width:150px;height:100px;object-fit:contain;" />`;
@@ -57,7 +57,7 @@ const getSignatureImgHtml = (relativePath) => {
       // Also check 2 levels up in case public is inside src/
       fullPath = path.join(__dirname, "../../public", cleanPath);
     }
-    
+
     if (fs.existsSync(fullPath)) {
       const ext = path.extname(fullPath).replace(".", "") || "png";
       const base64 = fs.readFileSync(fullPath).toString("base64");

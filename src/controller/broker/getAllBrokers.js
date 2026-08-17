@@ -11,32 +11,45 @@ const GetAllBrokers = async (req, res) => {
 
         console.log(search, "search term in get all brokers");
 
-        let targetBroker = null;
+        let targetUserId = null;
         if (user.role === "SUPER_ADMIN" && req.query.viewUserId) {
-            targetBroker = await db.Brokers.findOne({
-                where: { user_id: parseInt(req.query.viewUserId) },
-                attributes: ["id", "referral_code"],
-            });
-        } else {
-            const loggedUserId = user.ID || user.id;
-            targetBroker = await db.Brokers.findOne({
-                where: { user_id: loggedUserId },
-                attributes: ["id", "referral_code"],
-            });
+            targetUserId = parseInt(req.query.viewUserId);
+        } else if (user.role !== "SUPER_ADMIN") {
+            targetUserId = user.ID || user.id;
         }
-
-        if (!targetBroker) {
-            return res.status(400).json({ success: false, message: "Broker not found." });
-        }
-
-        const broker_id = targetBroker.id;
-        const refCode = targetBroker.referral_code;
 
         const whereClause = {};
-        if (refCode) {
-            whereClause.referred_by_code = refCode;
-        } else {
-            whereClause.parent_id = broker_id;
+
+        if (targetUserId) {
+            const targetParentIds = [];
+            const targetRefCodes = [];
+
+            const bRec = await db.Brokers.findOne({ where: { user_id: targetUserId } });
+            if (bRec) {
+                if (bRec.id) targetParentIds.push(bRec.id);
+                if (bRec.referral_code) targetRefCodes.push(bRec.referral_code);
+            }
+            if (db.Affiliates) {
+                const aRec = await db.Affiliates.findOne({ where: { user_id: targetUserId } });
+                if (aRec) {
+                    if (aRec.id) targetParentIds.push(aRec.id);
+                    if (aRec.referral_code) targetRefCodes.push(aRec.referral_code);
+                }
+            }
+
+            const orConditions = [];
+            if (targetRefCodes.length > 0) {
+                orConditions.push({ referred_by_code: { [Op.in]: Array.from(new Set(targetRefCodes)) } });
+            }
+            if (targetParentIds.length > 0) {
+                orConditions.push({ parent_id: { [Op.in]: Array.from(new Set(targetParentIds)) } });
+            }
+
+            if (orConditions.length > 0) {
+                whereClause[Op.or] = orConditions;
+            } else {
+                whereClause.id = -1;
+            }
         }
 
         if (search) {

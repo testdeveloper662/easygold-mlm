@@ -35,7 +35,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
                             as: "user_meta",
                             attributes: ["meta_key", "meta_value"],
                             where: {
-                                meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street_no", "u_street", "u_postcode", "u_location", "u_country", "u_account_owner", "banks"]
+                                meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street_no", "u_street", "u_postcode", "u_location", "u_country", "u_account_owner", "banks", "affiliate_banks", "ac_holder_name", "iban", "bic_swift_code", "bank_name"]
                             },
                             required: false
                         },
@@ -63,7 +63,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
                                 as: "user_meta",
                                 attributes: ["meta_key", "meta_value"],
                                 where: {
-                                    meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street_no", "u_street", "u_postcode", "u_location", "u_country", "u_account_owner"]
+                                    meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street_no", "u_street", "u_postcode", "u_location", "u_country", "u_account_owner", "banks", "affiliate_banks", "ac_holder_name", "iban", "bic_swift_code", "bank_name"]
                                 },
                                 required: false
                             },
@@ -141,32 +141,136 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         const phone = metas.find(m => m.meta_key === "u_phone")?.meta_value;
         const web_site = metas.find(m => m.meta_key === "u_web_site")?.meta_value;
         const account_owner = metas.find(m => m.meta_key === "u_account_owner")?.meta_value;
-        const bankMetaVal = metas.find(m => m.meta_key === "banks")?.meta_value;
+        const language = metas.find(m => m.meta_key === "language")?.meta_value || "en";
+        const isGerman = language?.includes("de");
+
+        const bankMetaVal = metas.find(m => m.meta_key === "banks" || m.meta_key === "affiliate_banks")?.meta_value;
         let parsedBanks = null;
         if (bankMetaVal) {
             try {
                 parsedBanks = typeof bankMetaVal === "string" ? JSON.parse(bankMetaVal) : bankMetaVal;
-            } catch (e) {}
+            } catch (e) { }
         }
-        let primarySepa = {};
-        let primarySwift = {};
-        let primaryAch = {};
+
+        const allBanks = [];
+
         if (Array.isArray(parsedBanks)) {
-            primarySepa = parsedBanks[0] || {};
+            parsedBanks.forEach((b) => {
+                if (b && (b.bank_name || b.iban || b.account_holder || b.account_number)) {
+                    allBanks.push({
+                        type: b.type || "",
+                        holder: b.account_holder || b.ac_holder_name || account_owner || "",
+                        bank: b.bank_name || "",
+                        iban: b.iban || "",
+                        account_number: b.account_number || "",
+                        bic: b.bic_swift || b.bic_swift_code || b.swift_bic || "",
+                        routing_number: b.routing_number || "",
+                        account_type: b.account_type || "",
+                        bank_address: b.bank_address || "",
+                        correspondent_bank: b.correspondent_bank || ""
+                    });
+                }
+            });
         } else if (parsedBanks && typeof parsedBanks === "object") {
-            primarySepa = parsedBanks.sepa?.[0] || {};
-            primarySwift = parsedBanks.swift?.[0] || {};
-            primaryAch = parsedBanks.ach?.[0] || {};
+            if (Array.isArray(parsedBanks.sepa)) {
+                parsedBanks.sepa.forEach((b) => {
+                    if (b && (b.bank_name || b.iban || b.account_holder)) {
+                        allBanks.push({
+                            type: "SEPA",
+                            holder: b.account_holder || account_owner || "",
+                            bank: b.bank_name || "",
+                            iban: b.iban || "",
+                            bic: b.bic_swift || b.bic_swift_code || "",
+                            bank_address: b.bank_address || ""
+                        });
+                    }
+                });
+            }
+            if (Array.isArray(parsedBanks.swift)) {
+                parsedBanks.swift.forEach((b) => {
+                    if (b && (b.bank_name || b.iban || b.account_holder || b.swift_bic || b.account_number)) {
+                        allBanks.push({
+                            type: "SWIFT",
+                            holder: b.account_holder || account_owner || "",
+                            bank: b.bank_name || "",
+                            swift_bic: b.swift_bic || b.bic_swift || "",
+                            account_number: b.account_number || "",
+                            iban: b.iban || "",
+                            bank_address: b.bank_address || "",
+                            correspondent_bank: b.correspondent_bank || ""
+                        });
+                    }
+                });
+            }
+            if (Array.isArray(parsedBanks.ach)) {
+                parsedBanks.ach.forEach((b) => {
+                    if (b && (b.bank_name || b.account_number || b.account_holder || b.routing_number)) {
+                        allBanks.push({
+                            type: "ACH",
+                            holder: b.account_holder || account_owner || "",
+                            bank: b.bank_name || "",
+                            routing_number: b.routing_number || "",
+                            account_number: b.account_number || "",
+                            account_type: b.account_type || "",
+                            bank_address: b.bank_address || ""
+                        });
+                    }
+                });
+            }
         }
-        const bankDetails = brokerDetails?.bank_details || {};
 
-        const account_holder = primarySepa.account_holder || primarySwift.account_holder || primaryAch.account_holder || bankDetails?.ac_holder_name;
-        const bank = primarySepa.bank_name || primarySwift.bank_name || primaryAch.bank_name || bankDetails?.bank_name;
-        const iban = primarySepa.iban || primarySwift.iban || bankDetails?.iban;
-        const bic = primarySepa.bic_swift || primarySwift.swift_bic || bankDetails?.bic_swift_code;
+        // Fallback if no structured bank list present
+        if (allBanks.length === 0) {
+            const bankDetails = brokerDetails?.bank_details || {};
+            const holder = bankDetails?.ac_holder_name || metas.find(m => m.meta_key === "ac_holder_name")?.meta_value || account_owner || "";
+            const bank = bankDetails?.bank_name || metas.find(m => m.meta_key === "bank_name")?.meta_value || "";
+            const iban = bankDetails?.iban || metas.find(m => m.meta_key === "iban")?.meta_value || "";
+            const bic = bankDetails?.bic_swift_code || metas.find(m => m.meta_key === "bic_swift_code")?.meta_value || "";
 
-        // Use logged-in user's language stored in user_meta
-        const language = metas.find(m => m.meta_key === "language")?.meta_value || "en";
+            if (holder || bank || iban || bic) {
+                allBanks.push({ holder, bank, iban, bic });
+            }
+        }
+
+        const account_holder = allBanks[0]?.holder || account_owner || "";
+        const bank = allBanks[0]?.bank || "";
+        const iban = allBanks[0]?.iban || "";
+        const bic = allBanks[0]?.bic || allBanks[0]?.swift_bic || "";
+
+        const all_banks_html = allBanks.map((b, idx) => {
+            let labelHeader = null;
+            if (b.type === "SEPA") {
+                labelHeader = "SEPA / IBAN";
+            } else if (b.type === "SWIFT") {
+                labelHeader = isGerman ? "Internationale SWIFT-Überweisungen" : "International SWIFT Transfer";
+            } else if (b.type === "ACH") {
+                labelHeader = "ACH (USA)";
+            } else if (b.type) {
+                labelHeader = `${b.type} Bank`;
+            } else if (allBanks.length > 1) {
+                labelHeader = `${isGerman ? 'Bankkonto' : 'Bank Account'} ${idx + 1}`;
+            }
+            let block = '<div style="display: table-cell; vertical-align: top; padding-left: 5px; word-break: break-word;">';
+            if (labelHeader) {
+                block += `<div style="font-weight: 700; margin-bottom: 2px;">${labelHeader}</div>`;
+            }
+            if (b.holder) block += `${isGerman ? 'Kontoinhaber' : 'Account holder'}: ${b.holder}<br>`;
+            if (b.bank) block += `${isGerman ? 'Bank' : 'Bank'}: ${b.bank}<br>`;
+            if (b.type === 'SEPA' && (b.bic || b.bic_swift)) {
+                block += `${isGerman ? 'BIC' : 'BIC'}: ${b.bic || b.bic_swift}<br>`;
+            } else if (b.swift_bic || b.bic || b.bic_swift) {
+                block += `${isGerman ? 'SWIFT/BIC' : 'SWIFT/BIC'}: ${b.swift_bic || b.bic || b.bic_swift}<br>`;
+            }
+            if (b.routing_number) block += `${isGerman ? 'Routing-Nr.' : 'Routing No.'}: ${b.routing_number}<br>`;
+            if (b.account_number) block += `${isGerman ? 'Konto-Nr.' : 'Account No.'}: ${b.account_number}<br>`;
+            if (b.iban) block += `${isGerman ? 'IBAN' : 'IBAN'}: ${b.iban}<br>`;
+            if (b.account_type) block += `${isGerman ? 'Kontotyp' : 'Account Type'}: ${b.account_type}<br>`;
+            if (b.bank_address) block += `${isGerman ? 'Bankadresse' : 'Bank Address'}: ${b.bank_address}<br>`;
+            if (b.correspondent_bank) block += `${isGerman ? 'Korrespondenzbank' : 'Correspondent Bank'}: ${b.correspondent_bank}<br>`;
+            block += '</div>';
+            return block;
+        }).join('');
+
         const addressMap = companyAddressMap();
         const to_company_address = addressMap[payout_for] || "";
 
@@ -187,10 +291,12 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             String(now.getMinutes()).padStart(2, "0") + ":" +
             String(now.getSeconds()).padStart(2, "0");
 
+        const headerName = account_holder || account_owner || userDetails?.user_nicename || userDetails?.user_login || "";
+
         const paylodForMailPDF = {
             logo: await generateImageUrl(brokerDetails?.logo, 'profile'),
             company,
-            name: account_owner,
+            name: headerName,
             postcode,
             city: location,
             phone,
@@ -201,10 +307,11 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             extra_text: textForType(payout_for, language),
             amount: amount,
             street,
-            holder_name: account_holder || account_owner,
+            holder_name: headerName,
             bank,
             iban,
             bic,
+            all_banks_html: all_banks_html || `<div style="display: table-cell; vertical-align: top; padding-left: 5px; word-break: break-word;">${isGerman ? 'Kontoinhaber' : 'Account holder'}: ${account_holder || account_owner || ''}<br>${isGerman ? 'Bank' : 'Bank'}: ${bank || ''}<br>IBAN: ${iban || ''}<br>BIC: ${bic || ''}</div>`,
             to_company_address,
             date,
             time,
@@ -256,7 +363,6 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             return details.join('<br>');
         };
 
-        const isGerman = language?.includes("de");
         const brokerDetailsHtml = formatBrokerDetails(isGerman);
         let updatedHtmlContent = emailData.htmlContent;
 

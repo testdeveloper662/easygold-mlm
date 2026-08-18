@@ -135,12 +135,16 @@
             margin-top: 10px;
             width: 100%;
             display: table;
-            font-size: 11px;
-            line-height: 16px;
+            table-layout: fixed;
+            font-size: 10px;
+            line-height: 14px;
         }
 
         .bottom_section div {
             display: table-cell;
+            vertical-align: top;
+            padding-right: 5px;
+            word-wrap: break-word;
         }
 
         .section_line {
@@ -289,23 +293,18 @@
 
         <!-- BOTTOM COMPANY FOOTER -->
         <div class="bottom_section">
-            <div style="width:33%;">
+            <div>
                 Email: {{user_email}}<br>
                 Web: {{web_site}}<br>
                 phone: {{phone}}
             </div>
-            <div style="width:33%;">
+            <div>
                 Company: {{company}}<br>
                 Name: {{name}}<br>
                 Street: {{street}}<br>
                 ZIP/City: {{postcode}}/{{city}}
             </div>
-            <div style="width:33%;">
-                Account holder: {{holder_name}}<br>
-                Bank: {{bank}}<br>
-                IBAN: {{iban}}<br>
-                BIC: {{bic}}
-            </div>
+            {{all_banks_html}}
         </div>
 
     </div>

@@ -5,6 +5,8 @@ const jwt = require("jsonwebtoken");
 const { getBrokerLevel } = require("../../utils/brokerLevelHelper");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
+const { parseVatId } = require("../../utils/registerStoreUserHelper");
+const axios = require("axios");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 const ADMIN_REFERRAL_CODE = process.env.ADMIN_REFERRAL_CODE;
@@ -150,6 +152,30 @@ const AffiliateRegistration = async (req, res) => {
     }
 
     // Save metadata
+    let isVatVerified = false;
+    if (vatNo) {
+      try {
+        const parsedVat = parseVatId(vatNo, country);
+        if (parsedVat) {
+          const { countryCode, vatNumber } = parsedVat;
+          const viesUrl = `https://ec.europa.eu/taxation_customs/vies/rest-api/ms/${countryCode}/vat/${vatNumber}`;
+          console.log(`[VIES API - Affiliate] Calling ${viesUrl}`);
+          const response = await axios.get(viesUrl, { timeout: 10000 });
+          if (response.data && response.data.isValid === true) {
+            isVatVerified = true;
+            console.log(`[VIES API - Affiliate] VAT ID ${vatNo} is VALID`);
+          } else {
+            console.log(`[VIES API - Affiliate] VAT ID ${vatNo} is INVALID`);
+          }
+        } else {
+          console.log(`[VIES API - Affiliate] Could not parse VAT ID ${vatNo} for country ${country}`);
+        }
+      } catch (error) {
+        console.error("[VIES API - Affiliate] Error validating VAT:", error.message);
+        isVatVerified = false;
+      }
+    }
+
     const metaEntries = [
       { user_id: newUser.ID, meta_key: "vorname", meta_value: firstName },
       { user_id: newUser.ID, meta_key: "nachname", meta_value: lastName },
@@ -164,6 +190,7 @@ const AffiliateRegistration = async (req, res) => {
       { user_id: newUser.ID, meta_key: "u_role", meta_value: userRole },
       { user_id: newUser.ID, meta_key: "user_role", meta_value: userRole },
       { user_id: newUser.ID, meta_key: "language", meta_value: langValue },
+      { user_id: newUser.ID, meta_key: "is_vat_verified", meta_value: isVatVerified ? "true" : "false" },
     ];
 
     await db.UsersMeta.bulkCreate(metaEntries);

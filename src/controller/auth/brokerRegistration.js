@@ -12,7 +12,7 @@ const { generatePartnerShipPDF } = require("../../utils/partnerShipPdfHelper");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
 const { generatePartnerPDF } = require("../../utils/partnerPdfHelper");
-const { createStoreUser } = require("../../utils/registerStoreUserHelper");
+const { createStoreUser, parseVatId } = require("../../utils/registerStoreUserHelper");
 const { getBrokerLevel } = require("../../utils/brokerLevelHelper");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
@@ -99,6 +99,7 @@ const runBrokerRegisterBackground = async ({
   newReferralCode,
   banks,
   legalStatus,
+  isVatVerified,
 }) => {
 
   try {
@@ -413,6 +414,34 @@ const runBrokerRegisterBackground = async ({
       // Don't fail the registration if language save fails
     }
 
+    // Save is_vat_verified to UsersMeta table
+    try {
+      const existingVatMeta = await db.UsersMeta.findOne({
+        where: {
+          user_id: user_id,
+          meta_key: "is_vat_verified",
+        },
+      });
+
+      const vatValue = isVatVerified ? "true" : "false";
+
+      if (existingVatMeta) {
+        await existingVatMeta.update({
+          meta_value: vatValue,
+        });
+        console.log(`[BrokerRegistration] ✅ Updated is_vat_verified meta: "${vatValue}"`);
+      } else {
+        await db.UsersMeta.create({
+          user_id: user_id,
+          meta_key: "is_vat_verified",
+          meta_value: vatValue,
+        });
+        console.log(`[BrokerRegistration] ✅ Created is_vat_verified meta: "${vatValue}"`);
+      }
+    } catch (vatError) {
+      console.error(`[BrokerRegistration] ❌ Error saving is_vat_verified:`, vatError.message);
+    }
+
     // Create user object for frontend
     const userResponse = {
       ID: user_id,
@@ -485,6 +514,7 @@ const registerViaExternalApi = async (req, fields) => {
   form.append("u_postcode", fields.postalCode);
   form.append("u_country", fields.country);
   form.append("u_vat_no", fields.vatId || "");
+  form.append("is_vat_verified", fields.is_vat_verified || "false");
   form.append("u_tax_no", fields.taxNumber || "");
   form.append("u_email", fields.email);
   form.append("u_landline_number", fields.phone);
@@ -774,6 +804,30 @@ const BrokerRegistration = async (req, res) => {
     }
     console.log("[BrokerRegistration] Language for registration - lang:", lang, "language:", languageParam, "using:", langForApi, "-> Mapped to:", languageForApi);
 
+    let isVatVerified = false;
+    if (vatId) {
+      try {
+        const parsedVat = parseVatId(vatId, country);
+        if (parsedVat) {
+          const { countryCode, vatNumber } = parsedVat;
+          const viesUrl = `https://ec.europa.eu/taxation_customs/vies/rest-api/ms/${countryCode}/vat/${vatNumber}`;
+          console.log(`[VIES API - Broker] Calling ${viesUrl}`);
+          const response = await axios.get(viesUrl, { timeout: 10000 });
+          if (response.data && response.data.isValid === true) {
+            isVatVerified = true;
+            console.log(`[VIES API - Broker] VAT ID ${vatId} is VALID`);
+          } else {
+            console.log(`[VIES API - Broker] VAT ID ${vatId} is INVALID`);
+          }
+        } else {
+          console.log(`[VIES API - Broker] Could not parse VAT ID ${vatId} for country ${country}`);
+        }
+      } catch (error) {
+        console.error("[VIES API - Broker] Error validating VAT:", error.message);
+        isVatVerified = false;
+      }
+    }
+
     const registrationFields = {
       veriffId,
       fullName,
@@ -785,6 +839,7 @@ const BrokerRegistration = async (req, res) => {
       postalCode,
       country,
       vatId,
+      is_vat_verified: isVatVerified ? "true" : "false",
       taxNumber,
       email,
       phone,
@@ -876,6 +931,7 @@ const BrokerRegistration = async (req, res) => {
         newReferralCode,
         banks,
         legalStatus: legalStatus || req.body.person_typ || req.body.legal_status || "",
+        isVatVerified,
       });
     });
 

@@ -14,20 +14,49 @@ const RemoveBrokerImage = async (req, res) => {
             });
         }
 
-        // Find broker
-        const broker = await db.Brokers.findOne({
-            where: { user_id: user.ID },
-        });
+        // Find broker or affiliate
+        let actor = null;
+        let isUserTable = false;
 
-        if (!broker) {
+        if (user?.role === "SUPER_ADMIN") {
+            if (type === "profile") {
+                return res.status(400).json({
+                    success: false,
+                    message: "Admin does not have a profile image to remove",
+                });
+            }
+            actor = await db.Users.findOne({
+                where: { ID: user.ID },
+            });
+            isUserTable = true;
+        } else if (user?.role === "BROKER") {
+            actor = await db.Brokers.findOne({
+                where: { user_id: user.ID },
+            });
+        } else if (user?.role === "AFFILIATE") {
+            actor = await db.Affiliates.findOne({
+                where: { user_id: user.ID },
+            });
+        } else {
+            actor = await db.Brokers.findOne({
+                where: { user_id: user.ID },
+            });
+            if (!actor) {
+                actor = await db.Affiliates.findOne({
+                    where: { user_id: user.ID },
+                });
+            }
+        }
+
+        if (!actor) {
             return res.status(404).json({
                 success: false,
-                message: "Broker not found",
+                message: "Broker, Affiliate or Admin not found",
             });
         }
 
         const field = type === "profile" ? "profile_image" : "logo";
-        const imagePath = broker[field];
+        const imagePath = actor[field];
 
         // Optional: remove file from server if stored in /uploads
         if (imagePath) {
@@ -39,8 +68,8 @@ const RemoveBrokerImage = async (req, res) => {
         }
 
         // Update database
-        broker[field] = null;
-        await broker.save();
+        actor[field] = null;
+        await actor.save();
 
         return res.json({
             success: true,

@@ -24,15 +24,39 @@ const UploadProfileImage = async (req, res) => {
       });
     }
 
-    // ✅ Find broker linked to this user
-    const brokerDetails = await db.Brokers.findOne({
-      where: { user_id: user?.ID },
-    });
+    if (user?.role === "SUPER_ADMIN") {
+      return res.status(400).json({
+        success: false,
+        message: "Profile image upload is not supported for Admin.",
+      });
+    }
 
-    if (!brokerDetails) {
+    // ✅ Find broker or affiliate linked to this user
+    let actorDetails = null;
+
+    if (user?.role === "BROKER") {
+      actorDetails = await db.Brokers.findOne({
+        where: { user_id: user?.ID }
+      });
+    } else if (user?.role === "AFFILIATE") {
+      actorDetails = await db.Affiliates.findOne({
+        where: { user_id: user?.ID }
+      });
+    } else {
+      actorDetails = await db.Brokers.findOne({
+        where: { user_id: user?.ID }
+      });
+      if (!actorDetails) {
+        actorDetails = await db.Affiliates.findOne({
+          where: { user_id: user?.ID }
+        });
+      }
+    }
+
+    if (!actorDetails) {
       return res.status(404).json({
         success: false,
-        message: "Broker not found.",
+        message: "Broker or Affiliate not found.",
       });
     }
 
@@ -49,15 +73,15 @@ const UploadProfileImage = async (req, res) => {
       req.file,
       "profile",                 // folder in /public/uploads
       "profile",
-      brokerDetails.profile_image // delete old file
+      actorDetails.profile_image // delete old file
     );
 
     // Save in DB
     if (uploadedPath) {
-      brokerDetails.profile_image = uploadedPath;
+      actorDetails.profile_image = uploadedPath;
     }
 
-    const updatedBroker = await brokerDetails.save();
+    const updatedActor = await actorDetails.save();
 
     // ✅ Get user details for response
     const userDetails = await db.Users.findOne({
@@ -69,8 +93,8 @@ const UploadProfileImage = async (req, res) => {
       message: "Profile image updated successfully",
       data: {
         ...userDetails.dataValues,
-        profile_image: updatedBroker.profile_image
-          ? await generateImageUrl(updatedBroker.profile_image, "profile")
+        profile_image: updatedActor.profile_image
+          ? await generateImageUrl(updatedActor.profile_image, "profile")
           : "",
       },
     });

@@ -78,6 +78,7 @@ const Login = async (req, res) => {
     if (userRole === "SUPER_ADMIN") {
       const { user_pass: _, ...userData } = user.toJSON();
       userData.role = "SUPER_ADMIN";
+      userData.logo = await generateImageUrl(user.logo, "logo");
 
       const token = jwt.sign({ user: userData }, JWT_ACCESS_TOKEN, {
         expiresIn: process.env.JWT_EXPIRE || "90d",

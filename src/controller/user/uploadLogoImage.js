@@ -6,17 +6,35 @@ const UploadLogoImage = async (req, res) => {
     const token = req.headers.authorization.split(" ")[1];
     const user = await getUserFromToken(token);
 
-    const brokerDetails = await db.Brokers.findOne({
-      where: {
-        user_id: user?.ID
-      }
-    });
-    console.log("============brokerDetails = ", brokerDetails);
+    let actorDetails = null;
 
-    if (!brokerDetails) {
+    if (user?.role === "SUPER_ADMIN") {
+      actorDetails = await db.Users.findOne({
+        where: { ID: user?.ID }
+      });
+    } else if (user?.role === "BROKER") {
+      actorDetails = await db.Brokers.findOne({
+        where: { user_id: user?.ID }
+      });
+    } else if (user?.role === "AFFILIATE") {
+      actorDetails = await db.Affiliates.findOne({
+        where: { user_id: user?.ID }
+      });
+    } else {
+      actorDetails = await db.Brokers.findOne({
+        where: { user_id: user?.ID }
+      });
+      if (!actorDetails) {
+        actorDetails = await db.Affiliates.findOne({
+          where: { user_id: user?.ID }
+        });
+      }
+    }
+
+    if (!actorDetails) {
       return res.status(404).json({
         success: false,
-        message: "Broker not exist.",
+        message: "Broker, Affiliate or Admin not exist.",
       });
     }
 
@@ -26,19 +44,19 @@ const UploadLogoImage = async (req, res) => {
         message: "Image file is required",
       });
     }
-    console.log("brokerDetails && brokerDetails?.logo = ", brokerDetails && brokerDetails?.logo != null);
+    console.log("actorDetails && actorDetails?.logo = ", actorDetails && actorDetails?.logo != null);
 
     const filePath = await uploadProfilePicture(
       req.file,
       "logo",
       "logo",
-      brokerDetails && brokerDetails?.logo
+      actorDetails && actorDetails?.logo
     );
 
     if (filePath) {
-      brokerDetails.logo = filePath;
+      actorDetails.logo = filePath;
     }
-    const updatedBroker = await brokerDetails.save();
+    const updatedActor = await actorDetails.save();
     const userDetails = await db.Users.findOne({
       where: {
         id: user?.ID
@@ -50,8 +68,8 @@ const UploadLogoImage = async (req, res) => {
       message: "Logo image updated successfully",
       data: {
         ...userDetails.dataValues,
-        logo: updatedBroker.logo
-          ? await generateImageUrl(updatedBroker.logo, "logo")
+        logo: updatedActor.logo
+          ? await generateImageUrl(updatedActor.logo, "logo")
           : "",
       },
     });

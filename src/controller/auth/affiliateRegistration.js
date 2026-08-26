@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const { getBrokerLevel } = require("../../utils/brokerLevelHelper");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
-const { parseVatId } = require("../../utils/registerStoreUserHelper");
+const { parseVatId, pullVeriffMedia } = require("../../utils/registerStoreUserHelper");
 const axios = require("axios");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
@@ -27,7 +27,11 @@ const AffiliateRegistration = async (req, res) => {
       u_role,
       empfehlercode,
       language,
+      veriff_session_id,
+      veriffId,
     } = req.body;
+
+    const veriffSessionId = veriff_session_id || veriffId || null;
 
     const firstName = u_fname;
     const lastName = u_lname;
@@ -113,6 +117,9 @@ const AffiliateRegistration = async (req, res) => {
     const newReferralCode = generateReferralCode();
     const createdAt = new Date();
 
+    // When Veriff KYC verification is completed, user is directly active (user_status: 0)
+    const initialUserStatus = veriffSessionId ? 0 : 2;
+
     // Create User record
     const newUser = await db.Users.create({
       user_login: email,
@@ -122,7 +129,7 @@ const AffiliateRegistration = async (req, res) => {
       user_registered: createdAt,
       display_name: fullName,
       user_type: 0,
-      user_status: 2,
+      user_status: initialUserStatus,
       role_id: 3,
     });
 
@@ -137,10 +144,20 @@ const AffiliateRegistration = async (req, res) => {
           referred_by_code: empfehlercode,
           children_count: 0,
           total_commission_amount: 0,
+          veriff_session_id: veriffSessionId || null,
         });
       } catch (affErr) {
         console.error("Error inserting into Affiliates table:", affErr);
         throw affErr;
+      }
+    }
+
+    // Pull Veriff KYC Media if available
+    if (veriffSessionId) {
+      try {
+        await pullVeriffMedia(newUser.ID, veriffSessionId);
+      } catch (veriffErr) {
+        console.error("[AffiliateRegistration] Error pulling Veriff media:", veriffErr.message);
       }
     }
 
@@ -191,6 +208,7 @@ const AffiliateRegistration = async (req, res) => {
       { user_id: newUser.ID, meta_key: "user_role", meta_value: userRole },
       { user_id: newUser.ID, meta_key: "language", meta_value: langValue },
       { user_id: newUser.ID, meta_key: "is_vat_verified", meta_value: isVatVerified ? "true" : "false" },
+      { user_id: newUser.ID, meta_key: "veriff_session_id", meta_value: veriffSessionId || "" },
     ];
 
     await db.UsersMeta.bulkCreate(metaEntries);
@@ -201,6 +219,7 @@ const AffiliateRegistration = async (req, res) => {
       email,
       referral_code: newReferralCode,
       role: "AFFILIATE",
+      user_status: initialUserStatus,
     };
 
     // Update invitation status in db.AffiliateInvitations & db.BrokerInvitations

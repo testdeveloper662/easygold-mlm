@@ -426,4 +426,4 @@ const createStoreUser = async (payload) => {
   return { success: true, message: "Register Successfully", data: { user_id } };
 };
 
-module.exports = { createStoreUser, parseVatId };
+module.exports = { createStoreUser, parseVatId, pullVeriffMedia };

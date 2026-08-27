@@ -245,8 +245,21 @@ const GetDashboardData = async (req, res) => {
       return result;
     };
 
-    const subBrokersWithLevel = findSubNodesWithLevel(currentBroker.id, currentBroker.referral_code, rawBrokers, false);
-    const subAffiliatesWithLevel = findSubNodesWithLevel(currentBroker.id, currentBroker.referral_code, rawAffiliates, true);
+    let currentBrokerRecord = await db.Brokers.findOne({ where: { user_id: targetUserId } });
+    let currentAffiliateRecord = db.Affiliates ? await db.Affiliates.findOne({ where: { user_id: targetUserId } }) : null;
+
+    const subBrokersWithLevel = findSubNodesWithLevel(
+      currentBrokerRecord?.id || null,
+      currentBrokerRecord?.referral_code || currentBroker?.referral_code,
+      rawBrokers,
+      false
+    );
+    const subAffiliatesWithLevel = findSubNodesWithLevel(
+      currentAffiliateRecord?.id || null,
+      currentAffiliateRecord?.referral_code || currentBroker?.referral_code,
+      rawAffiliates,
+      true
+    );
 
     const isAffiliateMode = type === "affiliate";
     const activeSubNodes = isAffiliateMode ? subAffiliatesWithLevel : subBrokersWithLevel;

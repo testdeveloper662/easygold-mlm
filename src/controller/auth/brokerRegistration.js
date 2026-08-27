@@ -281,10 +281,34 @@ const runBrokerRegisterBackground = async ({
     }
     console.log(`[BrokerRegistration] Language mapping - lang: "${lang}", language: "${languageParam}", using: "${langParam}", mapped to: "${languageValue}"`);
 
+    // Safely resolve parent IDs for Brokers and Affiliates tables
+    let brokerParentId = null;
+    let affiliateParentId = null;
+
+    if (!isAdminParent && parentBroker) {
+      const parentInBrokers = await db.Brokers.findOne({
+        where: { referral_code: parentBroker.referral_code },
+      });
+      if (parentInBrokers) {
+        brokerParentId = parentInBrokers.id;
+      }
+
+      if (db.Affiliates) {
+        const parentInAffiliates = await db.Affiliates.findOne({
+          where: { referral_code: parentBroker.referral_code },
+        });
+        if (parentInAffiliates) {
+          affiliateParentId = parentInAffiliates.id;
+        } else if (parentBroker.id) {
+          affiliateParentId = parentBroker.id;
+        }
+      }
+    }
+
     // Create broker entry
     const broker = await db.Brokers.create({
       user_id: user_id,
-      parent_id: isAdminParent ? null : parentBroker?.id || null,
+      parent_id: isAdminParent ? null : brokerParentId,
       referral_code: newReferralCode,
       referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
       children_count: 0,
@@ -308,7 +332,7 @@ const runBrokerRegisterBackground = async ({
       try {
         await db.Affiliates.create({
           user_id: user_id,
-          parent_id: isAdminParent ? null : parentBroker?.id || null,
+          parent_id: isAdminParent ? null : affiliateParentId,
           referral_code: newReferralCode,
           referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
           person_typ: legalStatus || "",
@@ -334,38 +358,58 @@ const runBrokerRegisterBackground = async ({
       }
     }
 
-    const invitation = await db.BrokerInvitations.findOne({
-      where: {
-        email
-      },
-    });
+    // Broker Invitations
+    try {
+      const invitation = await db.BrokerInvitations.findOne({
+        where: {
+          email,
+        },
+      });
 
-    if (invitation) {
-      try {
-        await db.BrokerInvitations.update({
+      if (invitation) {
+        await invitation.update({
           invitation_status: "REGISTERED",
         });
-      } catch (error) {
-        console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
-        console.log("error = ", error);
-        console.log("=========================FAILED TO UPDATE INVITATION RECORD==============");
+      } else if (brokerParentId) {
+        await db.BrokerInvitations.create({
+          email,
+          invitation_status: "REGISTERED",
+          invited_by: brokerParentId,
+          last_invitation_sent: new Date(),
+        });
+        console.log("===================NEW EMAIL WITH BROKER INVITATION=====================");
       }
-    } else {
-      await db.BrokerInvitations.create({
-        email,
-        invitation_status: "REGISTERED",
-        invited_by: parentBroker?.id,
-        last_invitation_sent: new Date(),
-      });
-      console.log("===================NEW EMAIL WITH INVITATION=====================");
+    } catch (error) {
+      console.error("Error updating/creating BrokerInvitations record:", error.message);
     }
 
+    // Affiliate Invitations (if parent is an affiliate)
+    if (db.AffiliateInvitations) {
+      try {
+        const affInv = await db.AffiliateInvitations.findOne({ where: { email } });
+        if (affInv) {
+          await affInv.update({ invitation_status: "REGISTERED" });
+        } else if (affiliateParentId) {
+          await db.AffiliateInvitations.create({
+            email,
+            invitation_status: "REGISTERED",
+            invited_by: affiliateParentId,
+            last_invitation_sent: new Date(),
+          });
+          console.log("===================NEW EMAIL WITH AFFILIATE INVITATION=====================");
+        }
+      } catch (affInvErr) {
+        console.error("Error updating/creating AffiliateInvitations record:", affInvErr.message);
+      }
+    }
 
     // Update parent's children count
     if (!isAdminParent && parentBroker) {
-      await parentBroker.update({
-        children_count: parentBroker.children_count + 1,
-      });
+      if (parentBroker.update) {
+        await parentBroker.update({
+          children_count: (parentBroker.children_count || 0) + 1,
+        });
+      }
     }
 
     // ✅ Save language to UsersMeta table
@@ -463,42 +507,45 @@ const runBrokerRegisterBackground = async ({
       mobile_number: mobile,
     };
 
-    let emailData;
     try {
-      // Template ID 92 used (adjust as required)
-      emailData = await getRenderedEmail(96, parentBroker.language, templateVariables);
+      const emailData = await getRenderedEmail(96, parentBroker?.language || "en", templateVariables);
+      const finalFrom = MAIL_SENDER;
+
+      const mailOptions = {
+        from: finalFrom,
+        to: parentBroker.user?.user_email,
+        subject: emailData?.subject,
+        html: emailData?.htmlContent,
+      };
+
+      if (mailOptions.to && mailOptions.subject && mailOptions.html) {
+        await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to);
+      }
     } catch (templateError) {
-      console.error(templateError);
-      throw new Error(
-        "Email template (ID: 92) not found. Please ensure it exists in 6lwup_email_view table."
-      );
+      console.error("Error sending broker registration email to parent:", templateError.message);
     }
 
-    let finalFrom = MAIL_SENDER; // fallback to verified sender domain
-
-    mailOptions = {
-      from: finalFrom,
-      to: parentBroker.user?.user_email,
-      subject: emailData.subject,
-      html: emailData.htmlContent,
-    };
-
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, null, null, from = null);
-
     console.log(`Broker Registeration Process Completed Successfully for -> ${fullName} ${email}`);
-
-    await db.Users.update(
-      {
-        deleted_at: null,
-      },
-      {
-        where: {
-          ID: apiResponse.data?.data?.user_id,
-        },
-      }
-    );
   } catch (error) {
     console.error("Error in BrokerRegistration:", error);
+  } finally {
+    if (apiResponse?.data?.data?.user_id) {
+      try {
+        await db.Users.update(
+          {
+            deleted_at: null,
+          },
+          {
+            where: {
+              ID: apiResponse.data.data.user_id,
+            },
+          }
+        );
+        console.log(`[BrokerRegistration] Cleared deleted_at lock for user ID ${apiResponse.data.data.user_id}`);
+      } catch (clearLockErr) {
+        console.error("[BrokerRegistration] Error clearing deleted_at lock:", clearLockErr.message);
+      }
+    }
   }
 };
 
@@ -776,14 +823,47 @@ const BrokerRegistration = async (req, res) => {
           }
         ]
       });
+
+      // Fallback: check Affiliates table if not found in Brokers table
+      if (!parentBroker && db.Affiliates) {
+        parentBroker = await db.Affiliates.findOne({
+          where: { referral_code: referralCode },
+          include: [
+            {
+              model: db.Users,
+              as: "user",
+              attributes: [
+                "ID",
+                "display_name",
+                "user_email"
+              ],
+              include: [
+                {
+                  model: db.UsersMeta,
+                  as: "user_meta",
+                  attributes: ["meta_key", "meta_value"],
+                  where: {
+                    meta_key: ["u_street_no",
+                      "u_street",
+                      "u_location",
+                      "u_postcode",
+                      "signatureData",
+                      "language", "u_company", "u_vat_no", "u_tax_no", "u_phone", "u_country", "u_postcode", "u_web_site"]
+                  },
+                  required: false
+                }
+              ]
+            }
+          ]
+        });
+      }
+
       if (!parentBroker) {
         return res.status(400).json({
           success: false,
           message: "Invalid referral code",
         });
       }
-
-      // Level check removed to allow referrals beyond level 5
     }
     console.log("3333333333333333333333333");
 
@@ -878,10 +958,10 @@ const BrokerRegistration = async (req, res) => {
     // =========================================================================
 
     // Method 1: External API Call (axios)
-    apiResponse = await registerViaExternalApi(req, registrationFields);
+    // apiResponse = await registerViaExternalApi(req, registrationFields);
 
     // Method 2: Local API Call (direct database/helper)
-    //apiResponse = await registerViaLocalHelper(req, registrationFields);
+    apiResponse = await registerViaLocalHelper(req, registrationFields);
 
     // =========================================================================
 

@@ -27,12 +27,12 @@ const GetAllAffiliates = async (req, res) => {
 
       const bRec = await db.Brokers.findOne({ where: { user_id: targetUserId } });
       if (bRec) {
-        if (bRec.id) targetParentIds.push(bRec.id);
         if (bRec.referral_code) targetRefCodes.push(bRec.referral_code);
       }
       if (db.Affiliates) {
         const aRec = await db.Affiliates.findOne({ where: { user_id: targetUserId } });
         if (aRec) {
+          // Strictly only include Affiliate table ID for querying db.Affiliates table
           if (aRec.id) targetParentIds.push(aRec.id);
           if (aRec.referral_code) targetRefCodes.push(aRec.referral_code);
         }
@@ -47,10 +47,7 @@ const GetAllAffiliates = async (req, res) => {
       }
 
       if (orConditions.length > 0) {
-        whereClause[Op.and] = [
-          { [Op.or]: orConditions },
-          { parent_id: { [Op.ne]: null } },
-        ];
+        whereClause[Op.or] = orConditions;
       } else {
         whereClause.id = -1;
       }

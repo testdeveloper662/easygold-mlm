@@ -54,14 +54,20 @@ const ReferBroker = async (req, res) => {
       });
     }
 
-    const parentBroker = await db.Brokers.findOne({
+    let parentBroker = await db.Brokers.findOne({
       where: { user_id: user.ID },
     });
+
+    if (!parentBroker && db.Affiliates) {
+      parentBroker = await db.Affiliates.findOne({
+        where: { user_id: user.ID },
+      });
+    }
 
     if (!parentBroker) {
       return res.status(400).json({
         success: false,
-        message: "Parent broker record not found.",
+        message: "Parent broker or affiliate record not found.",
       });
     }
 

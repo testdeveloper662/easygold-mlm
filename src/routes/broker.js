@@ -43,6 +43,7 @@ const UpdateTargetCustomerByEmail = require("../controller/broker/updateTargetCu
 const GetCustomerDetails = require("../controller/broker/getCustomerDetails");
 const CreateReferralTargetCustomer = require("../controller/broker/createReferralTargetCustomer");
 const referNudgeBroker = require("../controller/broker/referNudgeBroker");
+const GetPartnerReferralCode = require("../controller/customer/getPartnerReferralCode");
 const CheckExist = require("../controller/auth/checkExist");
 const GetBrokerOwnContract = require("../controller/broker/getBrokerOwnContract");
 const ReferCustomerMail = require("../controller/broker/referCustomerMail");
@@ -130,5 +131,7 @@ brokerRouter.post("/invitation", InvitationCreateUpdate);
 brokerRouter.get("/invitations", authenticateToken, GetInvitations);
 
 brokerRouter.get("/marketing-materials", authenticateToken, GetMarketingMaterialsForBroker);
+brokerRouter.post("/partner-referral", GetPartnerReferralCode);
+brokerRouter.get("/partner-referral", GetPartnerReferralCode);
 
 module.exports = brokerRouter;

@@ -8,6 +8,7 @@ const ResetPassword = require("../controller/auth/resetPassword");
 const RegisterBroker = require("../controller/broker/verifyBroker");
 const AffiliateRegistration = require("../controller/auth/affiliateRegistration");
 const GetPersonTypes = require("../controller/auth/getPersonTypes");
+const GetPartnerReferralCode = require("../controller/customer/getPartnerReferralCode");
 
 // Auth Routes
 authRouter.get("/auth/person-types", GetPersonTypes);
@@ -17,5 +18,11 @@ authRouter.post("/auth/affiliate-register", AffiliateRegistration);
 authRouter.post("/auth/change-password", ChangePassword);
 authRouter.post("/auth/otp", ValidateOTP);
 authRouter.post("/auth/reset-password", ResetPassword);
+
+// Partner Referral Routes (Add Customer flow)
+authRouter.post("/partner-referral", GetPartnerReferralCode);
+authRouter.get("/partner-referral", GetPartnerReferralCode);
+authRouter.post("/customer/partner-referral", GetPartnerReferralCode);
+authRouter.get("/customer/partner-referral", GetPartnerReferralCode);
 
 module.exports = authRouter;

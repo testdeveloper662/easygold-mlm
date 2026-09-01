@@ -1,5 +1,5 @@
 const db = require("../../models");
-const { getBrokerCommissionTotals } = require("../../utils/getBrokerCommissionTotals");
+const { getBrokerCommissionTotals, getAffiliateCommissionTotals } = require("../../utils/getBrokerCommissionTotals");
 
 const GetBrokerBankDetails = async (req, res) => {
     try {
@@ -133,7 +133,7 @@ const GetBrokerBankDetails = async (req, res) => {
         });
 
         // -------------------------------------
-        // 🔹 Subtract per-wallet
+        // 🔹 Subtract per-wallet for Broker
         // -------------------------------------
         const finalTotals = {
             EASYGOLD_TOKEN: commissionTotals.EASYGOLD_TOKEN - payoutDeductMap.EASYGOLD_TOKEN,
@@ -146,6 +146,48 @@ const GetBrokerBankDetails = async (req, res) => {
         Object.keys(finalTotals).forEach(key => {
             if (finalTotals[key] < 0) finalTotals[key] = 0;
         });
+
+        // -------------------------------------
+        // 🔹 Calculate Affiliate Commissions Totals & Payouts
+        // -------------------------------------
+        let aff_id = user?.affiliate_id;
+        if (!aff_id && targetUserId && db.Affiliates) {
+            const aff = await db.Affiliates.findOne({ where: { user_id: targetUserId }, attributes: ["id"] });
+            if (aff) aff_id = aff.id;
+        }
+        if (!aff_id) aff_id = broker_id;
+
+        const affiliateCommissionTotals = await getAffiliateCommissionTotals({ user: brokerDetails?.user, user_id: targetUserId, id: aff_id });
+        const approvedAffiliatePayouts = (aff_id && db.AffiliatePayoutRequests) ? await db.AffiliatePayoutRequests.findAll({
+            where: {
+                affiliate_id: aff_id,
+                status: "APPROVED"
+            },
+            attributes: [
+                "payout_for",
+                [db.Sequelize.fn("SUM", db.Sequelize.col("amount")), "total_amount"]
+            ],
+            group: ["payout_for"],
+            raw: true
+        }) : [];
+
+        const affiliatePayoutDeductMap = {
+            EASYGOLD_TOKEN: 0,
+            PRIMEINVEST: 0,
+            GOLDFLEX: 0,
+            B2B_DASHBOARD: 0
+        };
+
+        approvedAffiliatePayouts.forEach(p => {
+            affiliatePayoutDeductMap[p.payout_for] = Number(p.total_amount || 0);
+        });
+
+        const finalAffiliateTotals = {
+            EASYGOLD_TOKEN: Math.max(0, affiliateCommissionTotals.EASYGOLD_TOKEN - affiliatePayoutDeductMap.EASYGOLD_TOKEN),
+            PRIMEINVEST: Math.max(0, affiliateCommissionTotals.PRIMEINVEST - affiliatePayoutDeductMap.PRIMEINVEST),
+            GOLDFLEX: Math.max(0, affiliateCommissionTotals.GOLDFLEX - affiliatePayoutDeductMap.GOLDFLEX),
+            B2B_DASHBOARD: Math.max(0, affiliateCommissionTotals.B2B_DASHBOARD - affiliatePayoutDeductMap.B2B_DASHBOARD),
+        };
 
         const bankDataObj = {
             ac_holder_name: brokerBankMeta.holder,
@@ -163,12 +205,16 @@ const GetBrokerBankDetails = async (req, res) => {
             banks: affiliateBankMeta.parsed,
         } : null;
 
+        const isAffiliateUser = user?.role === "AFFILIATE" || (req.query.viewUserId && !brokerDetails?.user_id);
+
         return res.status(200).json({
             success: true,
             data: {
                 ...bankDataObj,
                 affiliate_bank: affiliateBankDataObj,
-                commissions_totals: finalTotals,
+                commissions_totals: isAffiliateUser ? finalAffiliateTotals : finalTotals,
+                affiliate_commissions_totals: finalAffiliateTotals,
+                broker_commissions_totals: finalTotals,
             }
         });
     } catch (error) {

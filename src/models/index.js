@@ -8,6 +8,7 @@ const LpOrderPivots = require("./lpOrderPivots");
 const LpOrderShippingOptions = require("./lpOrderShippingOptions");
 const Brokers = require("./brokers");
 const BrokerCommissionHistory = require("./brokerCommissionHistory");
+const AffiliateCommissionHistory = require("./affiliateCommissionHistory");
 const AdminFixedBrokerCommission = require("./adminFixedBrokerCommission");
 const AdminFixedAffiliateCommission = require("./adminFixedAffiliateCommission");
 const AdminVariableBrokerCommission = require("./adminVariableBrokerCommission");
@@ -63,6 +64,7 @@ db.AffiliateInvitations = AffiliateInvitations;
 db.Seeder = Seeder;
 db.PersonType = PersonType;
 db.BrokerCommissionHistory = BrokerCommissionHistory;
+db.AffiliateCommissionHistory = AffiliateCommissionHistory;
 db.AdminFixedBrokerCommission = AdminFixedBrokerCommission;
 db.AdminFixedAffiliateCommission = AdminFixedAffiliateCommission;
 db.AdminVariableBrokerCommission = AdminVariableBrokerCommission;
@@ -118,6 +120,21 @@ db.Brokers.hasMany(db.TargetCustomers, {
 db.BrokerCommissionHistory.belongsTo(db.Users, {
   foreignKey: "user_id",
   as: "commission_from_user",
+});
+
+db.AffiliateCommissionHistory.belongsTo(db.Users, {
+  foreignKey: "user_id",
+  as: "commission_from_user",
+});
+
+db.AffiliateCommissionHistory.belongsTo(db.Affiliates, {
+  foreignKey: "affiliate_id",
+  as: "affiliate",
+});
+
+db.Affiliates.hasMany(db.AffiliateCommissionHistory, {
+  foreignKey: "affiliate_id",
+  as: "commission_histories",
 });
 
 db.LpOrders.hasOne(db.Brokers, {

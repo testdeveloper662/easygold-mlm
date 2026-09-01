@@ -25,7 +25,7 @@ const EASY_GOLD_SUPPORT_MAIL_FROM_NAME = process.env.EASY_GOLD_SUPPORT_MAIL_FROM
 
 const UpdateBrokerPaymentStatus = async (req, res) => {
   try {
-    const { order_id, order_type, tree } = req.body;
+    const { order_id, order_type, tree, type } = req.body;
 
     if (
       order_id === undefined ||
@@ -37,6 +37,9 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
         message: "order_id is required",
       });
     }
+
+    const isAffiliate = type === "affiliate" || req.query.type === "affiliate";
+    const HistoryModel = isAffiliate && db.AffiliateCommissionHistory ? db.AffiliateCommissionHistory : db.BrokerCommissionHistory;
 
     const normalizedOrderId = String(order_id).trim();
 
@@ -59,7 +62,7 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
 
     // If neither order_type nor tree provided, get order_type from first record
     // if (!order_type && !tree) {
-    firstRecord = await db.BrokerCommissionHistory.findOne({
+    firstRecord = await HistoryModel.findOne({
       where: { order_id: normalizedOrderId },
       attributes: ["order_type", "target_customer_log_id"],
       raw: true,
@@ -72,8 +75,8 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
     }
     // }
 
-    // Update payment status to true for all brokers matching the where clause
-    const [updatedCount] = await db.BrokerCommissionHistory.update(
+    // Update payment status to true for all matching the where clause
+    const [updatedCount] = await HistoryModel.update(
       { is_payment_done: true },
       {
         where: whereClause,

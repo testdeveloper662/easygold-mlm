@@ -25,13 +25,20 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
       ? req.query.is_seller === "true"
       : null;
 
+    const isAffiliate = req.query.type === "affiliate" || req.query.user_type === "affiliate";
+    const HistoryModel = isAffiliate && db.AffiliateCommissionHistory ? db.AffiliateCommissionHistory : db.BrokerCommissionHistory;
+
+    const userOrAffiliateMatch = isAffiliate
+      ? { [Op.or]: [{ user_id: id }, { affiliate_id: id }] }
+      : { user_id: id };
+
     let whereClause;
 
     const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken", "primeinvest"];
 
     if (isSellerFilter === true) {
       whereClause = {
-        user_id: id,
+        ...userOrAffiliateMatch,
         is_seller: true,
         is_deleted: false,
         [Op.or]: [
@@ -80,7 +87,7 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
       };
     } else {
       whereClause = {
-        user_id: id,
+        ...userOrAffiliateMatch,
         is_deleted: false,
         [Op.or]: [
           // Seller logic
@@ -153,12 +160,12 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
     }
 
     // Get total count
-    const totalCount = await db.BrokerCommissionHistory.count({
+    const totalCount = await HistoryModel.count({
       where: whereClause,
     });
 
     // Fetch paginated commission history ordered from latest to oldest
-    const history = await db.BrokerCommissionHistory.findAll({
+    const history = await HistoryModel.findAll({
       where: whereClause,
       order: [["createdAt", "DESC"]],
       limit: limit,
@@ -377,7 +384,9 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Broker commission history fetched successfully.",
+      message: isAffiliate
+        ? "Affiliate direct commission history fetched successfully."
+        : "Broker direct commission history fetched successfully.",
       data: enrichedHistory || [],
       pagination: {
         currentPage: page,

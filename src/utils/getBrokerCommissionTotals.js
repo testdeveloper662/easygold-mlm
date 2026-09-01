@@ -71,4 +71,75 @@ async function getBrokerCommissionTotals(broker) {
     return totals;
 }
 
-module.exports = { getBrokerCommissionTotals };
+async function getAffiliateCommissionTotals(entity) {
+    const totals = {
+        EASYGOLD_TOKEN: 0,
+        PRIMEINVEST: 0,
+        GOLDFLEX: 0,
+        B2B_DASHBOARD: 0,
+    };
+
+    if (!entity) return totals;
+
+    const userId = entity.user ? entity.user.ID : (entity.user_id || entity.ID);
+    const affiliateId = entity.id || entity.affiliate_id;
+
+    if (!userId && !affiliateId) return totals;
+
+    const whereClause = {
+        is_deleted: false,
+        is_payment_done: true,
+    };
+    if (userId && affiliateId) {
+        whereClause[db.Sequelize.Op.or] = [{ user_id: userId }, { affiliate_id: affiliateId }];
+    } else if (userId) {
+        whereClause.user_id = userId;
+    } else {
+        whereClause.affiliate_id = affiliateId;
+    }
+
+    const commissionRows = await db.AffiliateCommissionHistory.findAll({
+        where: whereClause,
+        attributes: ["commission_amount", "order_type", "is_seller", "selected_payment_method"],
+        raw: true,
+    });
+
+    if (!commissionRows.length) return totals;
+
+    const B2B_TYPES = [
+        "my_store",
+        "api",
+        "landing_page",
+        "gold_purchase",
+        "gold_purchase_sell_orders",
+        "goldprice_fixing",
+        "dealer_purchasing",
+        "dealer_purchasing_diamond"
+    ];
+
+    const TYPE_MAPPING = {
+        easygoldtoken: "EASYGOLD_TOKEN",
+        primeinvest: "PRIMEINVEST",
+        goldflex: "GOLDFLEX",
+    };
+
+    commissionRows.forEach((row) => {
+        const amount = Number(row.commission_amount || 0);
+        const orderType = (row.order_type || "").toLowerCase();
+
+        if (B2B_TYPES.includes(orderType)) {
+            totals.B2B_DASHBOARD += roundToTwoDecimalPlaces(amount);
+            return;
+        }
+
+        const mappedKey = TYPE_MAPPING[orderType];
+
+        if (mappedKey && totals[mappedKey] !== undefined) {
+            totals[mappedKey] += roundToTwoDecimalPlaces(amount);
+        }
+    });
+
+    return totals;
+}
+
+module.exports = { getBrokerCommissionTotals, getAffiliateCommissionTotals };

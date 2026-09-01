@@ -218,8 +218,12 @@ const CaptureOrder = async (req, res) => {
 
     // Determine EU vs non-EU from the order's shipping country (s_country meta),
     // not IP-based — used to gate is_payment_done for landing_page/my_store/api orders below.
-    // Also check for a vat_id meta value, which overrides the EU/non-EU result.
+    // Also check for a vat_id meta value, which overrides the EU/non-EU result —
+    // except for Germany itself, where VAT always applies regardless of vat_id
+    // (Hartmann & Benz GmbH, the B2B_DASHBOARD supplying entity, is registered in
+    // Germany, so a German delivery is always domestic, never cross-border reverse charge).
     let isEU = false;
+    let isGermany = false;
     let hasVatId = false;
     const isStandardStoreOrderType = orderType === "landing_page" || orderType === "my_store" || orderType === "api";
 
@@ -231,8 +235,9 @@ const CaptureOrder = async (req, res) => {
       if (shippingCountryRow) {
         const euCountryMatch = await db.TaxCountry.findOne({ where: { Country_name: shippingCountryRow.meta_value } });
         isEU = !!euCountryMatch;
+        isGermany = String(shippingCountryRow.meta_value || "").trim().toLowerCase() === "germany";
       }
-      console.log(` [CAPTURE ORDER] Shipping country: ${shippingCountryRow?.meta_value || "unknown"}, isEU: ${isEU}`);
+      console.log(` [CAPTURE ORDER] Shipping country: ${shippingCountryRow?.meta_value || "unknown"}, isEU: ${isEU}, isGermany: ${isGermany}`);
 
       const vatIdRow = await ShippingOptionsModel.findOne({ where: { [shippingIdField]: orderId, meta_key: "vat_id" } });
       hasVatId = !!(vatIdRow && String(vatIdRow.meta_value || "").trim());
@@ -944,7 +949,7 @@ const CaptureOrder = async (req, res) => {
         if (isAutoConfirmedOrderType) {
           rowIsPaymentDone = true;
         } else if (isStandardStoreOrderType) {
-          rowIsPaymentDone = resolveOrderPaymentDone(selected_payment, choose_payment_option, isSeller, isEU, hasVatId);
+          rowIsPaymentDone = resolveOrderPaymentDone(selected_payment, choose_payment_option, isSeller, isEU, hasVatId, isGermany);
         }
 
         rowsToInsert.push({

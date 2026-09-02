@@ -65,6 +65,8 @@ const Login = async (req, res) => {
     let userRole = "BROKER";
     if (user.user_type === 1) {
       userRole = "SUPER_ADMIN";
+    } else if (user.role_id === 4) {
+      userRole = "private individual";
     } else if (user.role_id === 3) {
       userRole = "AFFILIATE";
     } else if (user.role_id === 2) {
@@ -92,7 +94,7 @@ const Login = async (req, res) => {
     }
 
     // ---------------------
-    // BROKER & AFFILIATE LOGIN LOGIC
+    // BROKER & AFFILIATE / PRIVATE INDIVIDUAL LOGIN LOGIC
     // ---------------------
 
     if (!referral_code || referral_code === null) {
@@ -112,7 +114,7 @@ const Login = async (req, res) => {
           .status(400)
           .json({ success: false, message: "Broker not found" });
       }
-    } else if (userRole === "AFFILIATE") {
+    } else if (userRole === "AFFILIATE" || userRole === "private individual") {
       actor = await db.Affiliates.findOne({
         where: {
           user_id: user.ID,

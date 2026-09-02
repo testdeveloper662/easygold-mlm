@@ -117,8 +117,26 @@ const AffiliateRegistration = async (req, res) => {
     const newReferralCode = generateReferralCode();
     const createdAt = new Date();
 
-    // When Veriff KYC verification is completed, user is directly active (user_status: 0)
-    const initialUserStatus = veriffSessionId ? 0 : 2;
+    // Affiliates and Private Individuals register with pending status (user_status: 2) awaiting admin approval
+    const initialUserStatus = 2;
+
+    // Determine role_id and role string: private individual or affiliate
+    const isPrivateIndividual = personType === "private_individual";
+    let assignedRoleId = 3;
+    let assignedRoleStr = "AFFILIATE";
+
+    if (isPrivateIndividual) {
+      const privRole = await db.Seeder.findOne({
+        where: {
+          user_type: { [db.Sequelize.Op.or]: ["private individual", "private_individual"] },
+        },
+      });
+      assignedRoleId = privRole ? privRole.id : 4;
+      assignedRoleStr = "private individual";
+    } else {
+      assignedRoleId = 3;
+      assignedRoleStr = "AFFILIATE";
+    }
 
     // Create User record
     const newUser = await db.Users.create({
@@ -130,11 +148,10 @@ const AffiliateRegistration = async (req, res) => {
       display_name: fullName,
       user_type: 0,
       user_status: initialUserStatus,
-      role_id: 3,
+      role_id: assignedRoleId,
     });
 
     // Create Affiliate entry (every Broker is an Affiliate, but not every Affiliate is a Broker)
-
     if (db.Affiliates) {
       try {
         await db.Affiliates.create({
@@ -144,20 +161,11 @@ const AffiliateRegistration = async (req, res) => {
           referred_by_code: empfehlercode,
           children_count: 0,
           total_commission_amount: 0,
-          veriff_session_id: veriffSessionId || null,
+          veriff_session_id: null,
         });
       } catch (affErr) {
         console.error("Error inserting into Affiliates table:", affErr);
         throw affErr;
-      }
-    }
-
-    // Pull Veriff KYC Media if available
-    if (veriffSessionId) {
-      try {
-        await pullVeriffMedia(newUser.ID, veriffSessionId);
-      } catch (veriffErr) {
-        console.error("[AffiliateRegistration] Error pulling Veriff media:", veriffErr.message);
       }
     }
 
@@ -204,11 +212,12 @@ const AffiliateRegistration = async (req, res) => {
       { user_id: newUser.ID, meta_key: "u_person_type", meta_value: personType },
       { user_id: newUser.ID, meta_key: "u_country", meta_value: country },
       { user_id: newUser.ID, meta_key: "u_vat_no", meta_value: vatNo },
-      { user_id: newUser.ID, meta_key: "u_role", meta_value: userRole },
-      { user_id: newUser.ID, meta_key: "user_role", meta_value: userRole },
+      { user_id: newUser.ID, meta_key: "role", meta_value: assignedRoleStr },
+      { user_id: newUser.ID, meta_key: "u_role", meta_value: assignedRoleStr },
+      { user_id: newUser.ID, meta_key: "user_role", meta_value: assignedRoleStr },
       { user_id: newUser.ID, meta_key: "language", meta_value: langValue },
       { user_id: newUser.ID, meta_key: "is_vat_verified", meta_value: isVatVerified ? "true" : "false" },
-      { user_id: newUser.ID, meta_key: "veriff_session_id", meta_value: veriffSessionId || "" },
+      { user_id: newUser.ID, meta_key: "veriff_session_id", meta_value: "" },
     ];
 
     await db.UsersMeta.bulkCreate(metaEntries);
@@ -218,7 +227,7 @@ const AffiliateRegistration = async (req, res) => {
       fullName,
       email,
       referral_code: newReferralCode,
-      role: "AFFILIATE",
+      role: assignedRoleStr,
       user_status: initialUserStatus,
     };
 

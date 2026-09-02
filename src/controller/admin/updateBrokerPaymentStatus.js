@@ -55,22 +55,28 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
 
     let firstRecord = null;
 
-    console.log(!order_type && !tree, "!order_type && !tree");
+    // Only auto-detect order_type/tree from the first matching record when the
+    // caller didn't already tell us which one — order_id alone isn't unique
+    // (e.g. a my_store order and a landing_page order can share the same
+    // order_id by coincidence), so overriding an explicitly-provided order_type
+    // can silently point the update at the wrong order entirely.
+    if (!order_type && !tree) {
+      firstRecord = await db.BrokerCommissionHistory.findOne({
+        where: { order_id: normalizedOrderId },
+        attributes: ["order_type", "target_customer_log_id"],
+        raw: true,
+      });
 
-    // If neither order_type nor tree provided, get order_type from first record
-    // if (!order_type && !tree) {
-    firstRecord = await db.BrokerCommissionHistory.findOne({
-      where: { order_id: normalizedOrderId },
-      attributes: ["order_type", "target_customer_log_id"],
-      raw: true,
-    });
-
-    console.log(firstRecord, "this is calling");
-
-    if (firstRecord && firstRecord.order_type) {
-      whereClause.order_type = firstRecord.order_type;
+      if (firstRecord && firstRecord.order_type) {
+        whereClause.order_type = firstRecord.order_type;
+      }
+    } else {
+      firstRecord = await db.BrokerCommissionHistory.findOne({
+        where: whereClause,
+        attributes: ["order_type", "target_customer_log_id"],
+        raw: true,
+      });
     }
-    // }
 
     // Update payment status to true for all brokers matching the where clause
     const [updatedCount] = await db.BrokerCommissionHistory.update(

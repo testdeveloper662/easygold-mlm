@@ -2,6 +2,9 @@ const db = require("../../models");
 const { resolveOrderPaymentDone } = require("../../utils/orderPaymentDoneResolver");
 const ReferralLogs = db.TargetCustomerReferralLogs;
 
+// In-memory concurrency lock to prevent simultaneous duplicate commission calculations
+const processingOrders = new Set();
+
 const getNetAmount = (gross, vatPercent) => {
   if (!vatPercent || vatPercent <= 0) return gross;
   return parseFloat((gross / (1 + vatPercent / 100)).toFixed(2));
@@ -23,6 +26,8 @@ const CaptureOrder = async (req, res) => {
   console.log(`\n [CAPTURE ORDER] ==========================================`);
   console.log(` [CAPTURE ORDER] START TIME: ${startTime.toISOString()}`);
   console.log(` [CAPTURE ORDER] ==========================================\n`);
+
+  let orderLockKey;
 
   try {
     // Log request source information
@@ -55,7 +60,26 @@ const CaptureOrder = async (req, res) => {
 
     console.log(b2bAddress, "b2bAddress");
 
-    const normalizedOrderId = String(orderId).trim();
+    const normalizedOrderId = String(orderId || "").trim();
+
+    if (normalizedOrderId && orderType) {
+      orderLockKey = `${normalizedOrderId}_${orderType}`;
+
+      // 🔒 Concurrency Lock Check: prevent simultaneous requests from calculating twice
+      if (processingOrders.has(orderLockKey)) {
+        console.log(` [CAPTURE ORDER] ⚠️ Order ${orderLockKey} is already being processed. Ignoring duplicate concurrent request.`);
+        return res.status(200).json({
+          success: true,
+          message: "Commission calculation is already in progress for this order",
+          data: {
+            orderId,
+            orderType,
+          },
+        });
+      }
+
+      processingOrders.add(orderLockKey);
+    }
 
     const isDiamondGemstone = orderType == 'diamond_gemstone';
 
@@ -1028,7 +1052,7 @@ const CaptureOrder = async (req, res) => {
       });
     }
 
-    await db.BrokerCommissionHistory.bulkCreate(allRowsToInsert);
+    await db.BrokerCommissionHistory.bulkCreate(allRowsToInsert, { ignoreDuplicates: true });
 
     const endTime = new Date();
     const duration = endTime - startTime;
@@ -1072,6 +1096,11 @@ const CaptureOrder = async (req, res) => {
       success: false,
       message: "Internal server error.",
     });
+  } finally {
+    // 🔓 Always release the order lock when the request finishes
+    if (orderLockKey) {
+      processingOrders.delete(orderLockKey);
+    }
   }
 };
 

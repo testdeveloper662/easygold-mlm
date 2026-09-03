@@ -121,86 +121,95 @@ const GetAllBrokers = async (req, res) => {
     });
 
     // 3️⃣ Combine data
-    const brokerData = brokers.map((broker) => {
-      const u = broker.user;
-      const m = userMetaMap[u?.ID] || {};
+    const brokerData = await Promise.all(
+      brokers.map(async (broker) => {
+        const u = broker.user;
+        const m = userMetaMap[u?.ID] || {};
 
-      const untermaklervertrag_doc = broker.untermaklervertrag_doc !== null ? `${process.env.NODE_URL}${broker.untermaklervertrag_doc}` : null;
-      const maklervertrag_doc = broker.maklervertrag_doc !== null ? `${process.env.NODE_URL}${broker.maklervertrag_doc}` : null;
-      const inc_partnership_doc = broker.inc_partnership_doc !== null ? `${process.env.NODE_URL}${broker.inc_partnership_doc}` : null;
-      const llc_partnership_doc = broker.llc_partnership_doc !== null ? `${process.env.NODE_URL}${broker.llc_partnership_doc}` : null;
-      const goldflex_partnership_doc = broker.goldflex_partnership_doc !== null ? `${process.env.NODE_URL}${broker.goldflex_partnership_doc}` : null;
-      const hartmann_benz_gmbh_doc = broker.hartmann_benz_gmbh_doc !== null ? `${process.env.NODE_URL}${broker.hartmann_benz_gmbh_doc}` : null;
-      const binding_loi_doc = broker.binding_loi_doc !== null ? `${process.env.NODE_URL}${broker.binding_loi_doc}` : null;
-      const partner_tax_billing_doc = broker.partner_tax_billing_doc !== null ? `${process.env.NODE_URL}${broker.partner_tax_billing_doc}` : null;
-      const uk_company_sales_platform_doc = broker.uk_company_sales_platform_doc !== null ? `${process.env.NODE_URL}${broker.uk_company_sales_platform_doc}` : null;
-      const ncnda_doc = broker.ncnda_doc !== null ? `${process.env.NODE_URL}${broker.ncnda_doc}` : null;
-      const option_subscription_doc = broker.option_subscription_doc ? `${process.env.NODE_URL}${broker.option_subscription_doc}` : null;
+        const untermaklervertrag_doc = broker.untermaklervertrag_doc !== null ? `${process.env.NODE_URL}${broker.untermaklervertrag_doc}` : null;
+        const maklervertrag_doc = broker.maklervertrag_doc !== null ? `${process.env.NODE_URL}${broker.maklervertrag_doc}` : null;
+        const inc_partnership_doc = broker.inc_partnership_doc !== null ? `${process.env.NODE_URL}${broker.inc_partnership_doc}` : null;
+        const llc_partnership_doc = broker.llc_partnership_doc !== null ? `${process.env.NODE_URL}${broker.llc_partnership_doc}` : null;
+        const goldflex_partnership_doc = broker.goldflex_partnership_doc !== null ? `${process.env.NODE_URL}${broker.goldflex_partnership_doc}` : null;
+        const hartmann_benz_gmbh_doc = broker.hartmann_benz_gmbh_doc !== null ? `${process.env.NODE_URL}${broker.hartmann_benz_gmbh_doc}` : null;
+        const binding_loi_doc = broker.binding_loi_doc !== null ? `${process.env.NODE_URL}${broker.binding_loi_doc}` : null;
+        const partner_tax_billing_doc = broker.partner_tax_billing_doc !== null ? `${process.env.NODE_URL}${broker.partner_tax_billing_doc}` : null;
+        const uk_company_sales_platform_doc = broker.uk_company_sales_platform_doc !== null ? `${process.env.NODE_URL}${broker.uk_company_sales_platform_doc}` : null;
+        const ncnda_doc = broker.ncnda_doc !== null ? `${process.env.NODE_URL}${broker.ncnda_doc}` : null;
+        const option_subscription_doc = broker.option_subscription_doc ? `${process.env.NODE_URL}${broker.option_subscription_doc}` : null;
 
-      // Construct public URLs if exist
-      const tradeRegisterUrl = m.u_trade_register
-        ? `${process.env.PUBLIC_URL}${m.u_trade_register}`
-        : null;
-      const billUploadUrl = m.bill_upload
-        ? `${process.env.PUBLIC_URL}${m.bill_upload}`
-        : null;
-      const travelIdUrl = m.u_travel_id
-        ? `${process.env.PUBLIC_URL}${m.u_travel_id}`
-        : null;
-      const signatureUrl = m.signatureData
-        ? `${process.env.PUBLIC_URL}${m.signatureData}`
-        : null;
+        // Construct public URLs if exist
+        const tradeRegisterUrl = m.u_trade_register
+          ? `${process.env.PUBLIC_URL}${m.u_trade_register}`
+          : null;
+        const billUploadUrl = m.bill_upload
+          ? `${process.env.PUBLIC_URL}${m.bill_upload}`
+          : null;
+        const travelIdUrl = m.u_travel_id
+          ? `${process.env.PUBLIC_URL}${m.u_travel_id}`
+          : null;
+        const signatureUrl = m.signatureData
+          ? `${process.env.PUBLIC_URL}${m.signatureData}`
+          : null;
 
-      return {
-        broker_id: broker.id,
-        user_id: u?.ID || null,
-        display_name: u?.display_name || null,
-        user_email: u?.user_email || null,
-        referral_code: broker.referral_code || null,
+        const logoUrl = broker.logo
+          ? (broker.logo.startsWith("http")
+              ? broker.logo
+              : `${(process.env.NODE_URL || "").replace(/\/+$/, "")}/public/uploads${broker.logo.startsWith("/") ? broker.logo : `/${broker.logo}`}`)
+          : null;
 
-        // Meta fields
-        company: m.u_company || null,
-        contact_person: m.u_contact_person || null,
-        street_no: m.u_street_no || null,
-        street: m.u_street || null,
-        location: m.u_location || null,
-        postcode: m.u_postcode || null,
-        country: m.u_country || null,
-        vat_no: m.u_vat_no || null,
-        tax_no: m.u_tax_no || null,
-        phone: m.u_phone || null,
-        landline_number: m.u_landline_number || null,
-        language: m.language || null,
-        date: m.date || null,
-        web_site: m.u_web_site || null,
-        bank: m.u_bank || null,
-        iban: m.u_iban || null,
-        bic: m.u_bic || null,
-        bank_address: m.u_bank_address || null,
-        banks: m.banks ? (() => { try { return JSON.parse(m.banks); } catch { return null; } })() : null,
+        return {
+          broker_id: broker.id,
+          user_id: u?.ID || null,
+          display_name: u?.display_name || null,
+          user_email: u?.user_email || null,
+          referral_code: broker.referral_code || null,
+          logo: logoUrl,
 
-        // Document URLs
-        trade_register: tradeRegisterUrl,
-        bill_upload: billUploadUrl,
-        maklervertrag_doc: maklervertrag_doc,
-        untermaklervertrag_doc: untermaklervertrag_doc,
-        inc_partnership_doc: inc_partnership_doc,
-        llc_partnership_doc: llc_partnership_doc,
-        goldflex_partnership_doc: goldflex_partnership_doc,
-        hartmann_benz_gmbh_doc: hartmann_benz_gmbh_doc,
-        binding_loi_doc: binding_loi_doc,
-        partner_tax_billing_doc: partner_tax_billing_doc,
-        uk_company_sales_platform_doc: uk_company_sales_platform_doc,
-        ncnda_doc: ncnda_doc,
-        option_subscription_doc: option_subscription_doc,
+          // Meta fields
+          company: m.u_company || null,
+          contact_person: m.u_contact_person || null,
+          street_no: m.u_street_no || null,
+          street: m.u_street || null,
+          location: m.u_location || null,
+          postcode: m.u_postcode || null,
+          country: m.u_country || null,
+          vat_no: m.u_vat_no || null,
+          tax_no: m.u_tax_no || null,
+          phone: m.u_phone || null,
+          landline_number: m.u_landline_number || null,
+          language: m.language || null,
+          date: m.date || null,
+          web_site: m.u_web_site || null,
+          bank: m.u_bank || null,
+          iban: m.u_iban || null,
+          bic: m.u_bic || null,
+          bank_address: m.u_bank_address || null,
+          banks: m.banks ? (() => { try { return JSON.parse(m.banks); } catch { return null; } })() : null,
 
-        travel_id: travelIdUrl,
-        signature: signatureUrl,
+          // Document URLs
+          trade_register: tradeRegisterUrl,
+          bill_upload: billUploadUrl,
+          maklervertrag_doc: maklervertrag_doc,
+          untermaklervertrag_doc: untermaklervertrag_doc,
+          inc_partnership_doc: inc_partnership_doc,
+          llc_partnership_doc: llc_partnership_doc,
+          goldflex_partnership_doc: goldflex_partnership_doc,
+          hartmann_benz_gmbh_doc: hartmann_benz_gmbh_doc,
+          binding_loi_doc: binding_loi_doc,
+          partner_tax_billing_doc: partner_tax_billing_doc,
+          uk_company_sales_platform_doc: uk_company_sales_platform_doc,
+          ncnda_doc: ncnda_doc,
+          option_subscription_doc: option_subscription_doc,
 
-        createdAt: broker.createdAt,
-        updatedAt: broker.updatedAt,
-      };
-    });
+          travel_id: travelIdUrl,
+          signature: signatureUrl,
+
+          createdAt: broker.createdAt,
+          updatedAt: broker.updatedAt,
+        };
+      })
+    );
 
     // 4️⃣ Response
     return res.status(200).json({

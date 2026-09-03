@@ -201,31 +201,41 @@ const GetAllAffiliates = async (req, res) => {
       userMetaMap[meta.user_id][meta.meta_key] = meta.meta_value;
     });
 
-    const affiliateData = affiliates.map((affiliate) => {
-      const u = affiliate.user || affiliate;
-      const m = userMetaMap[u?.ID || affiliate.user_id] || {};
+    const affiliateData = await Promise.all(
+      affiliates.map(async (affiliate) => {
+        const u = affiliate.user || affiliate;
+        const m = userMetaMap[u?.ID || affiliate.user_id] || {};
 
-      return {
-        affiliate_id: affiliate.id || u?.ID,
-        user_id: u?.ID || affiliate.user_id || null,
-        display_name: u?.display_name || `${m.vorname || m.u_fname || ""} ${m.nachname || m.u_lname || ""}`.trim() || null,
-        user_email: u?.user_email || null,
-        referral_code: affiliate.referral_code || m.referral_code || null,
-        referred_by_code: affiliate.referred_by_code || null,
-        person_typ: affiliate.person_typ || m.person_typ || m.u_person_type || "privatperson",
-        company: m.u_company || null,
-        country: affiliate.land || m.u_country || m.country || null,
-        steuer_id: affiliate.steuer_id || m.steuer_id || m.u_vat_no || m.vat_no || null,
-        phone: m.u_phone || null,
-        language: m.language || null,
-        user_status: u?.user_status !== undefined ? u.user_status : (affiliate.user_status !== undefined ? affiliate.user_status : 2),
-        role_id: u?.role_id || null,
-        role: u?.role_id === 2 ? "BROKER" : "AFFILIATE",
-        total_commission_amount: affiliate.total_commission_amount || 0,
-        createdAt: affiliate.createdAt || u?.user_registered,
-        updatedAt: affiliate.updatedAt || u?.user_registered,
-      };
-    });
+        const rawLogo = affiliate.logo || u?.logo || null;
+        const logoUrl = rawLogo
+          ? (rawLogo.startsWith("http")
+              ? rawLogo
+              : `${(process.env.NODE_URL || "").replace(/\/+$/, "")}/public/uploads${rawLogo.startsWith("/") ? rawLogo : `/${rawLogo}`}`)
+          : null;
+
+        return {
+          affiliate_id: affiliate.id || u?.ID,
+          user_id: u?.ID || affiliate.user_id || null,
+          display_name: u?.display_name || `${m.vorname || m.u_fname || ""} ${m.nachname || m.u_lname || ""}`.trim() || null,
+          user_email: u?.user_email || null,
+          referral_code: affiliate.referral_code || m.referral_code || null,
+          referred_by_code: affiliate.referred_by_code || null,
+          person_typ: affiliate.person_typ || m.person_typ || m.u_person_type || "privatperson",
+          company: m.u_company || null,
+          country: affiliate.land || m.u_country || m.country || null,
+          steuer_id: affiliate.steuer_id || m.steuer_id || m.u_vat_no || m.vat_no || null,
+          phone: m.u_phone || null,
+          language: m.language || null,
+          logo: logoUrl,
+          user_status: u?.user_status !== undefined ? u.user_status : (affiliate.user_status !== undefined ? affiliate.user_status : 2),
+          role_id: u?.role_id || null,
+          role: u?.role_id === 2 ? "BROKER" : "AFFILIATE",
+          total_commission_amount: affiliate.total_commission_amount || 0,
+          createdAt: affiliate.createdAt || u?.user_registered,
+          updatedAt: affiliate.updatedAt || u?.user_registered,
+        };
+      })
+    );
 
     return res.status(200).json({
       success: true,

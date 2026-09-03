@@ -19,7 +19,7 @@ const GetBrokerBankDetails = async (req, res) => {
             });
         }
 
-        const brokerDetails = await db.Brokers.findOne({
+        let brokerDetails = await db.Brokers.findOne({
             where: { id: broker_id },
             include: [
                 {
@@ -29,6 +29,19 @@ const GetBrokerBankDetails = async (req, res) => {
                 },
             ],
         });
+
+        if (!brokerDetails && db.Affiliates) {
+            brokerDetails = await db.Affiliates.findOne({
+                where: { id: broker_id },
+                include: [
+                    {
+                        model: db.Users,
+                        as: "user",
+                        attributes: ["ID", "user_nicename", "user_login", "user_email", "display_name"],
+                    },
+                ],
+            });
+        }
 
         if (!brokerDetails) {
             return res.status(404).json({

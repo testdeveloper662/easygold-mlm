@@ -2,6 +2,9 @@ const db = require("../../models");
 const { resolveOrderPaymentDone } = require("../../utils/orderPaymentDoneResolver");
 const ReferralLogs = db.TargetCustomerReferralLogs;
 
+// In-memory concurrency lock to prevent simultaneous duplicate commission calculations
+const processingOrders = new Set();
+
 const getNetAmount = (gross, vatPercent) => {
   if (!vatPercent || vatPercent <= 0) return gross;
   return parseFloat((gross / (1 + vatPercent / 100)).toFixed(2));
@@ -23,6 +26,8 @@ const CaptureOrder = async (req, res) => {
   console.log(`\n [CAPTURE ORDER] ==========================================`);
   console.log(` [CAPTURE ORDER] START TIME: ${startTime.toISOString()}`);
   console.log(` [CAPTURE ORDER] ==========================================\n`);
+
+  let orderLockKey;
 
   try {
     // Log request source information
@@ -55,7 +60,26 @@ const CaptureOrder = async (req, res) => {
 
     console.log(b2bAddress, "b2bAddress");
 
-    const normalizedOrderId = String(orderId).trim();
+    const normalizedOrderId = String(orderId || "").trim();
+
+    if (normalizedOrderId && orderType) {
+      orderLockKey = `${normalizedOrderId}_${orderType}`;
+
+      // 🔒 Concurrency Lock Check: prevent simultaneous requests from calculating twice
+      if (processingOrders.has(orderLockKey)) {
+        console.log(` [CAPTURE ORDER] ⚠️ Order ${orderLockKey} is already being processed. Ignoring duplicate concurrent request.`);
+        return res.status(200).json({
+          success: true,
+          message: "Commission calculation is already in progress for this order",
+          data: {
+            orderId,
+            orderType,
+          },
+        });
+      }
+
+      processingOrders.add(orderLockKey);
+    }
 
     const isDiamondGemstone = orderType == 'diamond_gemstone';
 
@@ -218,8 +242,12 @@ const CaptureOrder = async (req, res) => {
 
     // Determine EU vs non-EU from the order's shipping country (s_country meta),
     // not IP-based — used to gate is_payment_done for landing_page/my_store/api orders below.
-    // Also check for a vat_id meta value, which overrides the EU/non-EU result.
+    // Also check for a vat_id meta value, which overrides the EU/non-EU result —
+    // except for Germany itself, where VAT always applies regardless of vat_id
+    // (Hartmann & Benz GmbH, the B2B_DASHBOARD supplying entity, is registered in
+    // Germany, so a German delivery is always domestic, never cross-border reverse charge).
     let isEU = false;
+    let isGermany = false;
     let hasVatId = false;
     const isStandardStoreOrderType = orderType === "landing_page" || orderType === "my_store" || orderType === "api";
 
@@ -231,8 +259,9 @@ const CaptureOrder = async (req, res) => {
       if (shippingCountryRow) {
         const euCountryMatch = await db.TaxCountry.findOne({ where: { Country_name: shippingCountryRow.meta_value } });
         isEU = !!euCountryMatch;
+        isGermany = String(shippingCountryRow.meta_value || "").trim().toLowerCase() === "germany";
       }
-      console.log(` [CAPTURE ORDER] Shipping country: ${shippingCountryRow?.meta_value || "unknown"}, isEU: ${isEU}`);
+      console.log(` [CAPTURE ORDER] Shipping country: ${shippingCountryRow?.meta_value || "unknown"}, isEU: ${isEU}, isGermany: ${isGermany}`);
 
       const vatIdRow = await ShippingOptionsModel.findOne({ where: { [shippingIdField]: orderId, meta_key: "vat_id" } });
       hasVatId = !!(vatIdRow && String(vatIdRow.meta_value || "").trim());
@@ -944,7 +973,7 @@ const CaptureOrder = async (req, res) => {
         if (isAutoConfirmedOrderType) {
           rowIsPaymentDone = true;
         } else if (isStandardStoreOrderType) {
-          rowIsPaymentDone = resolveOrderPaymentDone(selected_payment, choose_payment_option, isSeller, isEU, hasVatId);
+          rowIsPaymentDone = resolveOrderPaymentDone(selected_payment, choose_payment_option, isSeller, isEU, hasVatId, isGermany);
         }
 
         rowsToInsert.push({
@@ -1023,7 +1052,7 @@ const CaptureOrder = async (req, res) => {
       });
     }
 
-    await db.BrokerCommissionHistory.bulkCreate(allRowsToInsert);
+    await db.BrokerCommissionHistory.bulkCreate(allRowsToInsert, { ignoreDuplicates: true });
 
     const endTime = new Date();
     const duration = endTime - startTime;
@@ -1067,6 +1096,11 @@ const CaptureOrder = async (req, res) => {
       success: false,
       message: "Internal server error.",
     });
+  } finally {
+    // 🔓 Always release the order lock when the request finishes
+    if (orderLockKey) {
+      processingOrders.delete(orderLockKey);
+    }
   }
 };
 

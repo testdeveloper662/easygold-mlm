@@ -25,7 +25,7 @@ async function getBrokerCommissionTotals(broker) {
             is_deleted: false,
             is_payment_done: true,
         },
-        attributes: ["commission_amount", "order_type", "is_seller", "selected_payment_method"],
+        attributes: ["commission_amount", "order_type", "is_seller", "selected_payment_method", "choose_payment_option"],
         raw: true,
     });
 
@@ -55,7 +55,14 @@ async function getBrokerCommissionTotals(broker) {
 
         // ✅ Handle B2B commissions
         if (B2B_TYPES.includes(orderType)) {
-            if (row.is_seller && orderType !== "goldprice_fixing" && orderType !== "dealer_purchasing" && orderType !== "dealer_purchasing_diamond" && orderType !== "gold_purchase" && orderType !== "gold_purchase_sell_orders" && row.selected_payment_method !== 2) return; // skip seller B2B
+            const isGoldLikeType = ["goldprice_fixing", "dealer_purchasing", "dealer_purchasing_diamond", "gold_purchase", "gold_purchase_sell_orders"].includes(orderType);
+            const method = Number(row.selected_payment_method);
+            const option = Number(row.choose_payment_option);
+            // Crypto(2)/FLIZPay(5) with option 1 or 2, OR option 4 with any method:
+            // Admin pays this seller's Level 1 too, so it counts toward the wallet total.
+            const walletEligibleSeller = ([2, 5].includes(method) && [1, 2].includes(option)) || option === 4;
+
+            if (row.is_seller && !isGoldLikeType && !walletEligibleSeller) return; // skip seller B2B rows that don't qualify
             totals.B2B_DASHBOARD += roundToTwoDecimalPlaces(amount);
             return;
         }

@@ -36,6 +36,21 @@ app.use((req, res, next) => {
   next();
 });
 
+// Security and CSP headers middleware
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'self' http: https: ws: wss:;"
+  );
+  next();
+});
+
+// Chrome DevTools well-known route
+app.get("/.well-known/appspecific/com.chrome.devtools.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.status(200).json({});
+});
+
 app.get("/", (req, res) => {
   res.send("MLM server...");
 });

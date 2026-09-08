@@ -594,10 +594,18 @@ const GetDashboardData = async (req, res) => {
           commission.is_payment_done == 1
         ) ||
 
+        // Crypto(2)/FLIZPay(5) with option 1 or 2, OR option 4 with any
+        // payment method: Admin pays this seller's Level 1 too, so it shows
+        // as wallet rather than "already paid out".
         (
           commission.is_seller == 1 &&
           [1, 2].includes(Number(commission.choose_payment_option)) &&
-          Number(commission.selected_payment_method) == 2
+          [2, 5].includes(Number(commission.selected_payment_method))
+        ) ||
+
+        (
+          commission.is_seller == 1 &&
+          Number(commission.choose_payment_option) == 4
         ) ||
 
         (

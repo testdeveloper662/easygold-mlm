@@ -54,6 +54,10 @@ const ReferBroker = async (req, res) => {
       });
     }
 
+    let userReferral = await db.UserReferrals.findOne({
+      where: { user_id: user.ID },
+    });
+
     let parentBroker = await db.Brokers.findOne({
       where: { user_id: user.ID },
     });
@@ -64,10 +68,12 @@ const ReferBroker = async (req, res) => {
       });
     }
 
-    if (!parentBroker) {
+    const refCode = userReferral?.referral_code || parentBroker?.referral_code;
+
+    if (!refCode) {
       return res.status(400).json({
         success: false,
-        message: "Parent broker or affiliate record not found.",
+        message: "Referral code not found for user.",
       });
     }
 
@@ -99,7 +105,7 @@ const ReferBroker = async (req, res) => {
     // ✅ CASE 2: User does NOT exist → send registration email
     else {
       // Create registration URL with base64 encoded referral code
-      const encodedReferralCode = Buffer.from(parentBroker.referral_code || "").toString("base64");
+      const encodedReferralCode = Buffer.from(refCode || "").toString("base64");
       const registrationUrl = `${FRONTEND_URL}/broker-register/step1/${encodedReferralCode}`;
 
       // Create clickable link text based on language
@@ -108,7 +114,7 @@ const ReferBroker = async (req, res) => {
       // Template variables to replace placeholders
       const templateVariables = {
         email: email,
-        referral_code: parentBroker.referral_code || "",
+        referral_code: refCode || "",
         referal_code_link: `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${linkText}</a>`,
         brokerName: email.split("@")[0],
       };

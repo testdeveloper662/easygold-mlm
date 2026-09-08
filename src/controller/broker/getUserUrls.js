@@ -23,14 +23,22 @@ const GetUserUrls = async (req, res) => {
             },
         });
 
-        if (!brokerDetails) {
+        const userReferral = await db.UserReferrals.findOne({
+            where: {
+                user_id: user.ID,
+            },
+        });
+
+        const refCode = userReferral?.referral_code || brokerDetails?.referral_code;
+
+        if (!refCode) {
             return res.status(404).json({
                 success: false,
-                message: "User not found",
+                message: "Referral code not found",
             });
         }
 
-        let easyGoldReferralCode = Buffer.from(String(brokerDetails?.referral_code), "utf-8").toString("base64")
+        let easyGoldReferralCode = Buffer.from(String(refCode), "utf-8").toString("base64");
 
         let data = {
             goldflexurl: `${process.env.FRONTEND_URL}/customer-referral/${easyGoldReferralCode}/goldflex`,

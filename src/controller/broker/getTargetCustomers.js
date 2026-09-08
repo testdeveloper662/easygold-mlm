@@ -87,7 +87,9 @@ const GetTargetCustomers = async (req, res) => {
       }
     }
 
-    let easyGoldReferralCode = Buffer.from(String(broker.referral_code), "utf-8").toString("base64");
+    const userRefRecord = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
+    const refCode = userRefRecord?.referral_code || broker.referral_code;
+    let easyGoldReferralCode = Buffer.from(String(refCode), "utf-8").toString("base64");
 
     return res.status(200).json({
       success: true,

@@ -358,6 +358,40 @@ const runBrokerRegisterBackground = async ({
       }
     }
 
+    // Create / update UserReferrals entry
+    if (db.UserReferrals) {
+      try {
+        const parentUserId = (!isAdminParent && parentBroker) ? parentBroker.user_id : null;
+        const refByCode = isAdminParent ? process.env.ADMIN_REFERRAL_CODE : (parentBroker ? parentBroker.referral_code : null);
+        
+        const existingRef = await db.UserReferrals.findOne({ where: { user_id: user_id } });
+        if (existingRef) {
+          await existingRef.update({
+            referral_code: newReferralCode,
+            referred_by_code: refByCode,
+            parent_user_id: parentUserId,
+          });
+        } else {
+          await db.UserReferrals.create({
+            user_id: user_id,
+            referral_code: newReferralCode,
+            referred_by_code: refByCode,
+            parent_user_id: parentUserId,
+            children_count: 0,
+          });
+        }
+
+        if (parentUserId) {
+          await db.UserReferrals.increment('children_count', {
+            by: 1,
+            where: { user_id: parentUserId },
+          });
+        }
+      } catch (refErr) {
+        console.error("Error updating UserReferrals table during broker registration:", refErr.message);
+      }
+    }
+
     // Broker Invitations
     try {
       const invitation = await db.BrokerInvitations.findOne({

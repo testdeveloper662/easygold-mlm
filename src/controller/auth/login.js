@@ -153,34 +153,54 @@ const Login = async (req, res) => {
     }
 
     if (isNewUser) {
-      // Find parent (can be Broker or Affiliate)
+      // Find parent in UserReferrals first, fallback to Brokers/Affiliates
+      let parentUserRef = await db.UserReferrals.findOne({
+        where: { referral_code: referral_code },
+      });
+
       let parent = await db.Brokers.findOne({
-        where: {
-          referral_code: referral_code,
-        },
+        where: { referral_code: referral_code },
       });
 
       if (!parent && db.Affiliates) {
         parent = await db.Affiliates.findOne({
-          where: {
-            referral_code: referral_code,
-          },
+          where: { referral_code: referral_code },
         });
       }
 
-      if (!parent) {
+      if (!parentUserRef && !parent) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid referral code" });
       }
 
-      actor.referred_by_code = parent.referral_code;
-      actor.parent_id = parent.id || null;
+      const parentUserId = parentUserRef ? parentUserRef.user_id : (parent ? parent.user_id : null);
+      const parentCode = parentUserRef ? parentUserRef.referral_code : (parent ? parent.referral_code : referral_code);
+
+      actor.referred_by_code = parentCode;
+      actor.parent_id = parent?.id || null;
       await actor.save();
 
-      // increment count of parent's children_count
-      parent.children_count = (parent.children_count || 0) + 1;
-      await parent.save();
+      if (db.UserReferrals) {
+        const userRef = await db.UserReferrals.findOne({ where: { user_id: user.ID } });
+        if (userRef) {
+          await userRef.update({
+            referred_by_code: parentCode,
+            parent_user_id: parentUserId,
+          });
+        }
+        if (parentUserId) {
+          await db.UserReferrals.increment('children_count', {
+            by: 1,
+            where: { user_id: parentUserId },
+          });
+        }
+      }
+
+      if (parent) {
+        parent.children_count = (parent.children_count || 0) + 1;
+        await parent.save();
+      }
     } else {
       if (!actor.referred_by_code) {
         return res

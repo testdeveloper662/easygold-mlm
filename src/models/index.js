@@ -46,6 +46,7 @@ const Affiliates = require("./affiliates");
 const AffiliateInvitations = require("./affiliateInvitations");
 const Seeder = require("./seeder");
 const PersonType = require("./personType");
+const UserReferrals = require("./userReferrals");
 
 const db = {};
 
@@ -53,6 +54,7 @@ db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
 db.Users = Users;
+db.UserReferrals = UserReferrals;
 db.UsersMeta = UsersMeta;
 db.LpOrders = LpOrders;
 db.LpOrderCarts = LpOrderCarts;
@@ -151,6 +153,21 @@ db.DiamondOrder.hasOne(db.Brokers, {
   foreignKey: "user_id",
   sourceKey: "user_id",
   as: "user_broker",
+});
+
+db.Users.hasOne(db.UserReferrals, {
+  foreignKey: "user_id",
+  as: "referral_info",
+});
+
+db.UserReferrals.belongsTo(db.Users, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+db.UserReferrals.belongsTo(db.Users, {
+  foreignKey: "parent_user_id",
+  as: "parent_user",
 });
 
 db.Users.hasMany(db.UsersMeta, {

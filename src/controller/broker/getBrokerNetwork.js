@@ -28,6 +28,10 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {},
       return bRefCode === parentRefCode;
     }
 
+    if (b.parent_user_id && parentUserId && Number(b.parent_user_id) === Number(parentUserId)) {
+      return true;
+    }
+
     // Only fallback to parent_id if referred_by_code is absent, and must match parent table type
     if (parentId && b.parent_id && Number(b.parent_id) === Number(parentId)) {
       const isChildAffiliate = Boolean(b.is_affiliate);

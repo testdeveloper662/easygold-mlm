@@ -80,15 +80,25 @@ const AffiliateRegistration = async (req, res) => {
       cleanCode === "ADMINISTRATOR";
 
     let parentBroker = null;
+    let parentUserRef = null;
 
     if (!isAdminParent) {
-      // 1. Search in Brokers table
-      parentBroker = await db.Brokers.findOne({
-        where: { referral_code: empfehlercode },
-      });
+      // 1. Search in UserReferrals table first
+      if (db.UserReferrals) {
+        parentUserRef = await db.UserReferrals.findOne({
+          where: { referral_code: empfehlercode },
+        });
+      }
 
-      // 2. Search in Affiliates table if not found in Brokers
-      if (!parentBroker && db.Affiliates) {
+      // 2. Search in Brokers table
+      if (!parentUserRef) {
+        parentBroker = await db.Brokers.findOne({
+          where: { referral_code: empfehlercode },
+        });
+      }
+
+      // 3. Search in Affiliates table if not found in Brokers
+      if (!parentUserRef && !parentBroker && db.Affiliates) {
         const parentAffiliate = await db.Affiliates.findOne({
           where: { referral_code: empfehlercode },
         });
@@ -97,14 +107,12 @@ const AffiliateRegistration = async (req, res) => {
         }
       }
 
-      if (!parentBroker) {
+      if (!parentUserRef && !parentBroker) {
         return res.status(400).json({
           success: false,
           message: "Invalid referral code.",
         });
       }
-
-      // Level check removed to allow referrals beyond level 5
     }
 
     // Hash password
@@ -151,6 +159,10 @@ const AffiliateRegistration = async (req, res) => {
       role_id: assignedRoleId,
     });
 
+    const parentUserId = isAdminParent
+      ? null
+      : (parentUserRef ? parentUserRef.user_id : (parentBroker ? parentBroker.user_id : null));
+
     // Create Affiliate entry (every Broker is an Affiliate, but not every Affiliate is a Broker)
     if (db.Affiliates) {
       try {
@@ -166,6 +178,29 @@ const AffiliateRegistration = async (req, res) => {
       } catch (affErr) {
         console.error("Error inserting into Affiliates table:", affErr);
         throw affErr;
+      }
+    }
+
+    // Create UserReferrals entry
+    if (db.UserReferrals) {
+      try {
+        await db.UserReferrals.create({
+          user_id: newUser.ID,
+          referral_code: newReferralCode,
+          referred_by_code: empfehlercode || null,
+          parent_user_id: parentUserId,
+          children_count: 0,
+        });
+
+        // Increment parent's children_count in UserReferrals
+        if (parentUserId) {
+          await db.UserReferrals.increment('children_count', {
+            by: 1,
+            where: { user_id: parentUserId },
+          });
+        }
+      } catch (refErr) {
+        console.error("Error inserting into UserReferrals table:", refErr);
       }
     }
 

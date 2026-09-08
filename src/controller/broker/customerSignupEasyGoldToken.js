@@ -101,17 +101,39 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         else if (type === "BROKER") {
             console.log("Resolving BROKER referral");
-            const broker = await db.Brokers.findOne({
+            let broker = null;
+            const userRef = await db.UserReferrals.findOne({
                 where: { referral_code: decoded_referred_by_code },
-                include: [
-                    {
-                        model: db.Users, // 👈 your user model
-                        as: "user",      // 👈 must match association
-                        attributes: ["user_email", "display_name"]
-                    }
-                ],
                 transaction,
             });
+
+            if (userRef) {
+                broker = await db.Brokers.findOne({
+                    where: { user_id: userRef.user_id },
+                    include: [
+                        {
+                            model: db.Users,
+                            as: "user",
+                            attributes: ["user_email", "display_name"]
+                        }
+                    ],
+                    transaction,
+                });
+            }
+
+            if (!broker) {
+                broker = await db.Brokers.findOne({
+                    where: { referral_code: decoded_referred_by_code },
+                    include: [
+                        {
+                            model: db.Users,
+                            as: "user",
+                            attributes: ["user_email", "display_name"]
+                        }
+                    ],
+                    transaction,
+                });
+            }
 
             if (!broker) {
                 console.log("Invalid broker referral code");

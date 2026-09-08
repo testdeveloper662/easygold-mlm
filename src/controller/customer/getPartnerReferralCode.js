@@ -60,20 +60,23 @@ const GetPartnerReferralCode = async (req, res) => {
     // 3. Find parent referral code
     let rawReferralCode = customer.referred_by_code;
 
-    // If referred_by_code is not set, look up broker or affiliate
+    // If referred_by_code is not set, look up broker/affiliate via user_referrals table
     if (!rawReferralCode && customer.broker_id) {
       const broker = await db.Brokers.findByPk(customer.broker_id, {
-        attributes: ["id", "referral_code"],
+        attributes: ["id", "user_id", "referral_code"],
       });
-      if (broker?.referral_code) {
-        rawReferralCode = broker.referral_code;
-      } else if (db.Affiliates) {
-        const affiliate = await db.Affiliates.findByPk(customer.broker_id, {
-          attributes: ["id", "referral_code"],
+      if (broker?.user_id) {
+        const userRef = await db.UserReferrals.findOne({
+          where: { user_id: broker.user_id },
+          attributes: ["referral_code"],
         });
-        if (affiliate?.referral_code) {
-          rawReferralCode = affiliate.referral_code;
+        if (userRef?.referral_code) {
+          rawReferralCode = userRef.referral_code;
+        } else if (broker.referral_code) {
+          rawReferralCode = broker.referral_code;
         }
+      } else if (broker?.referral_code) {
+        rawReferralCode = broker.referral_code;
       }
     }
 

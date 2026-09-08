@@ -247,16 +247,19 @@ const GetDashboardData = async (req, res) => {
 
     let currentBrokerRecord = await db.Brokers.findOne({ where: { user_id: targetUserId } });
     let currentAffiliateRecord = db.Affiliates ? await db.Affiliates.findOne({ where: { user_id: targetUserId } }) : null;
+    let userReferralRecord = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
+
+    const primaryReferralCode = userReferralRecord?.referral_code || currentBrokerRecord?.referral_code || currentAffiliateRecord?.referral_code || currentBroker?.referral_code;
 
     const subBrokersWithLevel = findSubNodesWithLevel(
       currentBrokerRecord?.id || null,
-      currentBrokerRecord?.referral_code || currentBroker?.referral_code,
+      primaryReferralCode,
       rawBrokers,
       false
     );
     const subAffiliatesWithLevel = findSubNodesWithLevel(
       currentAffiliateRecord?.id || null,
-      currentAffiliateRecord?.referral_code || currentBroker?.referral_code,
+      primaryReferralCode,
       rawAffiliates,
       true
     );

@@ -16,8 +16,13 @@ async function generatePDF(data, templateName, outputfolder, outputFileName) {
             html = html.replace(regex, data[key] ?? "");
         });
 
+        // Explicit executablePath avoids Puppeteer's own auto-detection, which was
+        // failing with "Could not find Chrome" in production. Overridable via
+        // PUPPETEER_EXECUTABLE_PATH in .env if Chrome ever gets reinstalled at a
+        // different version, without needing another code change.
         browser = await puppeteer.launch({
             headless: true,
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/root/.cache/puppeteer/chrome/linux-145.0.7632.67/chrome-linux64/chrome",
             args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",

@@ -4,6 +4,7 @@ const { generateTargetCustomerPDF } = require("../../utils/targetCustomerPdfHelp
 const { generateImageUrl } = require("../../utils/Helper");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
+const { registerCustomerUser } = require("../../utils/registerCustomerUserHelper");
 
 const MAIL_SENDER = process.env.MAIL_SENDER;
 const EASY_GOLD_CUSTOMER_SUPPORT_EMAIL = process.env.EASY_GOLD_CUSTOMER_SUPPORT_EMAIL;
@@ -464,6 +465,8 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       consent_at: new Date(consent_at),
       pdf_url: `uploads/agreements/${partnerDocsData.pdf_doc}`
     });
+
+    await registerCustomerUser(targetCustomer);
 
     return res.status(200).json({
       success: true,

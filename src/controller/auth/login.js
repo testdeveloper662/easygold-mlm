@@ -65,6 +65,8 @@ const Login = async (req, res) => {
     let userRole = "BROKER";
     if (user.user_type === 1) {
       userRole = "SUPER_ADMIN";
+    } else if (user.role_id === 5) {
+      userRole = "CUSTOMER";
     } else if (user.role_id === 4) {
       userRole = "private individual";
     } else if (user.role_id === 3) {

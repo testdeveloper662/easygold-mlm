@@ -2,6 +2,7 @@ const db = require("../../models");
 const { sequelize } = require("../../config/database");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
+const { registerCustomerUser } = require("../../utils/registerCustomerUserHelper");
 const ReferralLogs = db.TargetCustomerReferralLogs;
 
 const MAIL_SENDER = process.env.MAIL_SENDER;
@@ -51,7 +52,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
 
         /** 1️⃣ Check if customer already exists */
         let customer = await db.TargetCustomers.findOne({
-            where: { customer_email, interest_in: product_type },
+            where: { customer_email },
             transaction,
         });
 
@@ -60,209 +61,248 @@ const customerSignupEasyGoldToken = async (req, res) => {
         let decoded_referred_by_code = null;
 
         let parentBroker = null;
-
         if (type == "BROKER") {
-            decoded_referred_by_code = Buffer.from(referred_by_code, "base64").toString("utf-8");
+            try {
+                const decoded = Buffer.from(referred_by_code, "base64").toString("utf-8");
+                if (decoded && /^[A-Za-z0-9_-]+$/.test(decoded)) {
+                    decoded_referred_by_code = decoded;
+                } else {
+                    decoded_referred_by_code = referred_by_code;
+                }
+            } catch (e) {
+                decoded_referred_by_code = referred_by_code;
+            }
         } else {
             decoded_referred_by_code = referred_by_code;
         }
 
-        /** 2️⃣ Resolve referral */
-        if (type === "CUSTOMER") {
-            const normalizedReferralCode = String(decoded_referred_by_code).trim();
-            console.log(`---------${normalizedReferralCode}------`, "normalizedReferralCode");
+        const normalizedCode = String(decoded_referred_by_code).trim();
+        console.log("Centralized referral search for code:", normalizedCode);
 
-            parentCustomer = await db.TargetCustomers.findOne({
-                where: { referral_code: normalizedReferralCode, interest_in: product_type },
-                raw: true,
-                transaction,
-            });
+        // 2️⃣ Centralized Referral System Lookup
+        // Check UserReferrals -> Brokers -> Affiliates -> TargetCustomers -> Admin Referral Code
+        let userRef = await db.UserReferrals.findOne({
+            where: { referral_code: normalizedCode },
+            transaction,
+        });
 
-            console.log(parentCustomer, "parentCustomer");
-
-            if (!parentCustomer) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Invalid customer referral code",
-                });
-            }
-
-            console.log("Parent customer found:", parentCustomer.referral_code !== normalizedReferralCode);
-
-            if (parentCustomer.referral_code !== normalizedReferralCode) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Referral code does not match parent customer's code",
-                });
-            }
-
-            finalBrokerId = parentCustomer.broker_id;
-        }
-
-        else if (type === "BROKER") {
-            console.log("Resolving BROKER referral");
-            let broker = null;
-            const userRef = await db.UserReferrals.findOne({
-                where: { referral_code: decoded_referred_by_code },
-                transaction,
-            });
-
-            if (userRef) {
-                broker = await db.Brokers.findOne({
-                    where: { user_id: userRef.user_id },
-                    include: [
-                        {
-                            model: db.Users,
-                            as: "user",
-                            attributes: ["user_email", "display_name"]
-                        }
-                    ],
-                    transaction,
-                });
-            }
-
-            if (!broker) {
-                broker = await db.Brokers.findOne({
-                    where: { referral_code: decoded_referred_by_code },
-                    include: [
-                        {
-                            model: db.Users,
-                            as: "user",
-                            attributes: ["user_email", "display_name"]
-                        }
-                    ],
-                    transaction,
-                });
-            }
-
-            if (!broker) {
-                console.log("Invalid broker referral code");
-                return res.status(400).json({
-                    success: false,
-                    message: "Invalid broker referral code",
-                });
-            }
-
-            parentBroker = broker;
-
-            finalBrokerId = broker.id;
-        }
-
-        else {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid referral type",
-            });
-        }
-
-        /** 3️⃣ Update invited customer */
-        if (customer) {
-            if (customer.status === "REGISTERED") {
-                console.log("Customer already registered");
-
-                console.log("Checking if we need to send email to broker for existing customer registration");
-                console.log("Type:", type);
-                console.log("parentBroker?.email:", parentBroker?.user?.user_email);
-                console.log("parentBroker:", parentBroker);
-
-                if (type === "BROKER" && parentBroker?.user?.user_email) {
-                    try {
-
-                        let address = "";
-
-                        let mailConfig = {};
-                        let finalFrom;
-
-                        const senderEmailConfig = {
-                            easygold: {
-                                user: EASY_GOLD_SUPPORT_MAIL_SENDER,
-                                pass: EASY_GOLD_SUPPORT_MAIL_PASSWORD,
-                            },
-                            goldflex: {
-                                user: GOLD_FLEX_SUPPORT_MAIL_SENDER,
-                                pass: GOLD_FLEX_SUPPORT_MAIL_PASSWORD,
-                            },
-                            primeinvest: {
-                                user: PRIME_INVEST_SUPPORT_MAIL_SENDER,
-                                pass: PRIME_INVEST_SUPPORT_MAIL_PASSWORD,
-                            }
-                        };
-
-                        let host = MAIL_HOST;
-
-                        if (product_type == "easygold Token") {
-                            host = MAIL_HOST;
-                            finalFrom = `"${EASY_GOLD_SUPPORT_MAIL_FROM_NAME}" <${EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS}>`;
-                            mailConfig = senderEmailConfig.easygold;
-
-                            address = "HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.easygold.io<br>support@easygold.io";
-                        } else if (product_type == "Primeinvest") {
-                            host = MAIL_HOST;
-                            finalFrom = `"${PRIME_INVEST_SUPPORT_MAIL_FROM_NAME}" <${PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS}>`;
-                            mailConfig = senderEmailConfig.primeinvest;
-
-                            address = "Hartmann & Benz Inc<br>8 The Green, Suite A<br>19901 Dover Kent County<br>United States of America (USA)<br>support@hbprimeinvest.com";
-                        } else if (product_type == "goldflex") {
-                            host = GOLDFLEX_MAIL_HOST;
-                            finalFrom = `"${GOLD_FLEX_SUPPORT_MAIL_FROM_NAME}" <${GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS}>`;
-                            mailConfig = senderEmailConfig.goldflex;
-
-                            address = "Service in NGR – U.S. headquarters.<br><br>HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.goldflex.io<br>support@goldflex.io";
-                        }
-
-                        const templateVariables = {
-                            customer_name: customer_name,
-                            b2b_partner: "",
-                            sending_link: "",
-                            b2b_info: "",
-                            address: address,
-                        };
-
-                        const customerEmailData = await getRenderedEmail(107, "en", templateVariables);
-
-                        const customerMailOptions = {
-                            from: finalFrom,
-                            to: parentBroker?.user?.user_email,
-                            subject: customerEmailData.subject,
-                            html: customerEmailData.htmlContent,
-                        };
-
-                        await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig, host);
-
-                    } catch (mailError) {
-                        console.error("Error sending broker email:", mailError);
-                        // don't fail API if email fails
+        if (userRef) {
+            parentBroker = await db.Brokers.findOne({
+                where: { user_id: userRef.user_id },
+                include: [
+                    {
+                        model: db.Users,
+                        as: "user",
+                        attributes: ["user_email", "display_name"]
                     }
-                }
+                ],
+                transaction,
+            });
 
-                if (product_type === customer.interest_in && (product_type === "easygold Token" || product_type === "Primeinvest" || product_type === "goldflex")) {
-                    customer = await customer.update(
+            if (!parentBroker) {
+                const createdBroker = await db.Brokers.create(
+                    {
+                        user_id: userRef.user_id,
+                        referral_code: userRef.referral_code,
+                        referred_by_code: userRef.referred_by_code,
+                        children_count: 0,
+                    },
+                    { transaction }
+                );
+                parentBroker = await db.Brokers.findOne({
+                    where: { id: createdBroker.id },
+                    include: [
                         {
-                            referral_code: referral_code,
-                            interest_in: product_type,
+                            model: db.Users,
+                            as: "user",
+                            attributes: ["user_email", "display_name"]
+                        }
+                    ],
+                    transaction,
+                });
+            }
+            finalBrokerId = parentBroker?.id || null;
+        }
+
+        if (!parentBroker) {
+            parentBroker = await db.Brokers.findOne({
+                where: { referral_code: normalizedCode },
+                include: [
+                    {
+                        model: db.Users,
+                        as: "user",
+                        attributes: ["user_email", "display_name"]
+                    }
+                ],
+                transaction,
+            });
+            if (parentBroker) {
+                finalBrokerId = parentBroker.id;
+            }
+        }
+
+        if (!parentBroker && db.Affiliates) {
+            const affiliate = await db.Affiliates.findOne({
+                where: { referral_code: normalizedCode },
+                transaction,
+            });
+            if (affiliate) {
+                parentBroker = await db.Brokers.findOne({
+                    where: { user_id: affiliate.user_id },
+                    include: [
+                        {
+                            model: db.Users,
+                            as: "user",
+                            attributes: ["user_email", "display_name"]
+                        }
+                    ],
+                    transaction,
+                });
+                if (!parentBroker) {
+                    const createdBroker = await db.Brokers.create(
+                        {
+                            user_id: affiliate.user_id,
+                            referral_code: affiliate.referral_code,
+                            referred_by_code: affiliate.referred_by_code,
+                            children_count: 0,
                         },
                         { transaction }
                     );
-                } else {
-
-                    return res.status(400).json({
-                        success: false,
-                        message: "Customer already registered",
+                    parentBroker = await db.Brokers.findOne({
+                        where: { id: createdBroker.id },
+                        include: [
+                            {
+                                model: db.Users,
+                                as: "user",
+                                attributes: ["user_email", "display_name"]
+                            }
+                        ],
+                        transaction,
                     });
+                }
+                finalBrokerId = parentBroker?.id || null;
+            }
+        }
+
+        if (!parentBroker && !parentCustomer) {
+            parentCustomer = await db.TargetCustomers.findOne({
+                where: { referral_code: normalizedCode },
+                raw: true,
+                transaction,
+            });
+            if (parentCustomer) {
+                finalBrokerId = parentCustomer.broker_id;
+            }
+        }
+
+        const adminCode = (process.env.ADMIN_REFERRAL_CODE || "ADMIN").trim().toUpperCase();
+        if (!parentBroker && !parentCustomer && (normalizedCode.toUpperCase() === adminCode || normalizedCode.toUpperCase() === "ESYGOLD916")) {
+            parentBroker = await db.Brokers.findOne({
+                include: [
+                    {
+                        model: db.Users,
+                        as: "user",
+                        attributes: ["user_email", "display_name"]
+                    }
+                ],
+                transaction,
+            });
+            finalBrokerId = parentBroker?.id || null;
+        }
+
+        if (!parentBroker && !parentCustomer) {
+            console.log("Invalid referral code across centralized system:", normalizedCode);
+            return res.status(400).json({
+                success: false,
+                message: "Invalid broker referral code",
+            });
+        }
+
+        // Auto-generate referral_code if not passed from external system
+        const generateCode = () => "ref" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        const activeReferralCode = referral_code || generateCode();
+
+        /** 3️⃣ Update existing customer */
+        if (customer) {
+            console.log("Existing customer found for signup:", customer.customer_email);
+
+            if (type === "BROKER" && parentBroker?.user?.user_email) {
+                try {
+                    let address = "";
+                    let mailConfig = {};
+                    let finalFrom;
+
+                    const senderEmailConfig = {
+                        easygold: {
+                            user: EASY_GOLD_SUPPORT_MAIL_SENDER,
+                            pass: EASY_GOLD_SUPPORT_MAIL_PASSWORD,
+                        },
+                        goldflex: {
+                            user: GOLD_FLEX_SUPPORT_MAIL_SENDER,
+                            pass: GOLD_FLEX_SUPPORT_MAIL_PASSWORD,
+                        },
+                        primeinvest: {
+                            user: PRIME_INVEST_SUPPORT_MAIL_SENDER,
+                            pass: PRIME_INVEST_SUPPORT_MAIL_PASSWORD,
+                        }
+                    };
+
+                    let host = MAIL_HOST;
+
+                    if (product_type == "easygold Token") {
+                        host = MAIL_HOST;
+                        finalFrom = `"${EASY_GOLD_SUPPORT_MAIL_FROM_NAME}" <${EASY_GOLD_SUPPORT_MAIL_FROM_ADDRESS}>`;
+                        mailConfig = senderEmailConfig.easygold;
+                        address = "HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.easygold.io<br>support@easygold.io";
+                    } else if (product_type == "Primeinvest") {
+                        host = MAIL_HOST;
+                        finalFrom = `"${PRIME_INVEST_SUPPORT_MAIL_FROM_NAME}" <${PRIME_INVEST_SUPPORT_MAIL_FROM_ADDRESS}>`;
+                        mailConfig = senderEmailConfig.primeinvest;
+                        address = "Hartmann & Benz Inc<br>8 The Green, Suite A<br>19901 Dover Kent County<br>United States of America (USA)<br>support@hbprimeinvest.com";
+                    } else if (product_type == "goldflex") {
+                        host = GOLDFLEX_MAIL_HOST;
+                        finalFrom = `"${GOLD_FLEX_SUPPORT_MAIL_FROM_NAME}" <${GOLD_FLEX_SUPPORT_MAIL_FROM_ADDRESS}>`;
+                        mailConfig = senderEmailConfig.goldflex;
+                        address = "Service in NGR – U.S. headquarters.<br><br>HARTMANN & BENZ, LLC<br>a District of Columbia limited liability company<br>1717 N Street, NW STE 1<br>Washington, DC 20036<br>www.goldflex.io<br>support@goldflex.io";
+                    }
+
+                    const templateVariables = {
+                        customer_name: customer_name || customer.customer_name,
+                        b2b_partner: "",
+                        sending_link: "",
+                        b2b_info: "",
+                        address: address,
+                    };
+
+                    const customerEmailData = await getRenderedEmail(107, "en", templateVariables);
+
+                    const customerMailOptions = {
+                        from: finalFrom,
+                        to: parentBroker?.user?.user_email,
+                        subject: customerEmailData.subject,
+                        html: customerEmailData.htmlContent,
+                    };
+
+                    await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig, host);
+                } catch (mailError) {
+                    console.error("Error sending broker email:", mailError);
                 }
             }
 
-            await db.TargetCustomers.update(
+            const newReferralCode = referral_code || customer.referral_code || activeReferralCode;
+            const newReferredByCode = decoded_referred_by_code || customer.referred_by_code || null;
+
+            await customer.update(
                 {
-                    customer_name,
-                    broker_id: finalBrokerId,
-                    parent_customer_id: parentCustomer?.id || null,
-                    referred_by_code: decoded_referred_by_code,
+                    customer_name: customer_name || customer.customer_name,
+                    broker_id: finalBrokerId || customer.broker_id,
+                    parent_customer_id: parentCustomer?.id || customer.parent_customer_id,
+                    referred_by_code: newReferredByCode,
                     status: "REGISTERED",
-                    referral_code: referral_code,
-                    interest_in: product_type,
+                    referral_code: newReferralCode,
+                    interest_in: product_type || customer.interest_in,
                 },
-                { where: { id: customer.id }, transaction }
+                { transaction }
             );
         }
 
@@ -276,7 +316,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     interest_in: product_type,
                     parent_customer_id: parentCustomer?.id || null,
                     referred_by_code: decoded_referred_by_code,
-                    referral_code: referral_code,
+                    referral_code: activeReferralCode,
                     status: "REGISTERED",
                 },
                 { transaction }
@@ -306,6 +346,11 @@ const customerSignupEasyGoldToken = async (req, res) => {
                 },
                 { transaction }
             );
+        }
+
+        /** 6️⃣ Ensure customer entry in 6LWUP_users & user_referrals */
+        if (customer) {
+            await registerCustomerUser(customer, transaction);
         }
 
         await transaction.commit();

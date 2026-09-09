@@ -97,47 +97,85 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     const parentEmail = targetCustomer?.parent?.customer_email;
 
-    let parentBroker = await db.Brokers.findOne({
-      where: { id: targetCustomer.broker_id },
+    let targetUserId = null;
+    let refCode = targetCustomer.referred_by_code || "";
+
+    if (targetCustomer.refer_id) {
+      const userRef = await db.UserReferrals.findOne({
+        where: { id: targetCustomer.refer_id },
+        raw: true,
+      });
+      targetUserId = userRef?.user_id;
+      if (userRef?.referral_code) refCode = userRef.referral_code;
+    }
+
+    if (!targetUserId && targetCustomer.broker_id) {
+      const broker = await db.Brokers.findOne({
+        where: { id: targetCustomer.broker_id },
+        raw: true,
+      });
+      targetUserId = broker?.user_id;
+      if (broker?.referral_code) refCode = broker.referral_code;
+    }
+
+    if (!targetUserId && targetCustomer.referred_by_code) {
+      const userRef = await db.UserReferrals.findOne({
+        where: { referral_code: targetCustomer.referred_by_code },
+        raw: true,
+      });
+      targetUserId = userRef?.user_id;
+
+      if (!targetUserId) {
+        const broker = await db.Brokers.findOne({
+          where: { referral_code: targetCustomer.referred_by_code },
+          raw: true,
+        });
+        targetUserId = broker?.user_id;
+      }
+
+      if (!targetUserId && db.Affiliates) {
+        const affiliate = await db.Affiliates.findOne({
+          where: { referral_code: targetCustomer.referred_by_code },
+          raw: true,
+        });
+        targetUserId = affiliate?.user_id;
+      }
+    }
+
+    let parentUser = targetUserId ? await db.Users.findOne({
+      where: { ID: targetUserId },
       include: [
         {
-          model: db.Users,
-          as: "user",
-          attributes: [
-            "ID",
-            "display_name",
-            "user_email"
-          ],
-          include: [
-            {
-              model: db.UsersMeta,
-              as: "user_meta",
-              attributes: ["meta_key", "meta_value"],
-              where: {
-                meta_key: ["u_street_no",
-                  "u_street",
-                  "u_location",
-                  "u_postcode",
-                  "signatureData",
-                  "language", "u_company", "u_phone"]
-              },
-              required: false
-            }
-          ]
+          model: db.UsersMeta,
+          as: "user_meta",
+          attributes: ["meta_key", "meta_value"],
+          where: {
+            meta_key: [
+              "u_street_no",
+              "u_street",
+              "u_location",
+              "u_postcode",
+              "signatureData",
+              "language",
+              "u_company",
+              "u_phone"
+            ]
+          },
+          required: false
         }
       ]
-    });
+    }) : null;
 
-    const parent_name = parentBroker?.user?.display_name;
-    const parent_email = parentBroker?.user?.user_email;
-    const streetNo = getMeta(parentBroker.user, "u_street_no");
-    const street = getMeta(parentBroker.user, "u_street");
-    const location = getMeta(parentBroker.user, "u_location");
-    const postcode = getMeta(parentBroker.user, "u_postcode");
-    const parent_company = getMeta(parentBroker.user, "u_company");
-    const parent_language = getMeta(parentBroker.user, "language");
-    const parent_telephone = getMeta(parentBroker.user, "u_phone")
-    const parent_signaturedata = getMeta(parentBroker.user, "signatureData");
+    const parent_name = parentUser?.display_name || "";
+    const parent_email = parentUser?.user_email || "";
+    const streetNo = getMeta(parentUser, "u_street_no");
+    const street = getMeta(parentUser, "u_street");
+    const location = getMeta(parentUser, "u_location");
+    const postcode = getMeta(parentUser, "u_postcode");
+    const parent_company = getMeta(parentUser, "u_company");
+    const parent_language = getMeta(parentUser, "language");
+    const parent_telephone = getMeta(parentUser, "u_phone");
+    const parent_signaturedata = getMeta(parentUser, "signatureData");
 
     const addressParts = [u_street_no, u_street, city, state, country, postalCode]
       .map(v => v?.toString().trim())                                          // remove spaces
@@ -207,10 +245,10 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
       brokerLanguage = "en";
     }
 
-    let easyGoldReferralCode = Buffer.from(String(parentBroker.referral_code), "utf-8").toString("base64");
+    let easyGoldReferralCode = Buffer.from(String(refCode || ""), "utf-8").toString("base64");
 
     if (interest_in === "Landingpage") {
-      const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
+      const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${parentUser?.mystorekey || ""}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
     } else if (interest_in === "easygold Token") {
       const registrationUrl = `${process.env.EASY_GOLD_FRONTEND_URL}/${brokerLanguage}/broker/${easyGoldReferralCode}`;
@@ -403,13 +441,19 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
 
     let brokerAttachmentPath = `${process.env.NODE_URL}public/uploads/agreements/${partnerDocsData.pdf_doc}`;
 
-    await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom, mailConfig, host);
+    try {
+      await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to, attachmentPath, null, finalFrom, mailConfig, host);
+    } catch (mailErr) {
+      console.error("Warning: Could not send customer email due to SMTP auth error:", mailErr.message);
+    }
 
-    // if (customerMailOptions) {
-    //   await SendEmailHelper(customerMailOptions.subject, customerMailOptions.html, customerMailOptions.to, null, null, finalFrom, mailConfig, host);
-    // }
-
-    await SendEmailHelper(brokermailOptions.subject, brokermailOptions.html, brokermailOptions.to, brokerAttachmentPath, null, null);
+    if (brokermailOptions.to) {
+      try {
+        await SendEmailHelper(brokermailOptions.subject, brokermailOptions.html, brokermailOptions.to, brokerAttachmentPath, null, null);
+      } catch (mailErr) {
+        console.error("Warning: Could not send broker email due to SMTP auth error:", mailErr.message);
+      }
+    }
 
     await targetCustomer.update({
       status: "REGISTERED",

@@ -109,6 +109,16 @@ db.TargetCustomers.belongsTo(db.Brokers, {
   as: "broker",
 });
 
+db.TargetCustomers.belongsTo(db.UserReferrals, {
+  foreignKey: "refer_id",
+  as: "user_referral",
+});
+
+db.UserReferrals.hasMany(db.TargetCustomers, {
+  foreignKey: "refer_id",
+  as: "target_customers",
+});
+
 db.TargetCustomerReferralLogs.belongsTo(db.Brokers, {
   foreignKey: "broker_id",
   as: "broker",

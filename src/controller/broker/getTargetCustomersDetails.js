@@ -54,22 +54,59 @@ const GetTargetCustomersDetails = async (req, res) => {
       });
     }
 
-    const broker = await db.Brokers.findOne({
-      where: { id: targetCustomer.broker_id },
-      raw: true,
-    });
+    let targetUserId = null;
+
+    if (targetCustomer.refer_id) {
+      const userRef = await db.UserReferrals.findOne({
+        where: { id: targetCustomer.refer_id },
+        raw: true,
+      });
+      targetUserId = userRef?.user_id;
+    }
+
+    if (!targetUserId && targetCustomer.broker_id) {
+      const broker = await db.Brokers.findOne({
+        where: { id: targetCustomer.broker_id },
+        raw: true,
+      });
+      targetUserId = broker?.user_id;
+    }
+
+    if (!targetUserId && targetCustomer.referred_by_code) {
+      const userRef = await db.UserReferrals.findOne({
+        where: { referral_code: targetCustomer.referred_by_code },
+        raw: true,
+      });
+      targetUserId = userRef?.user_id;
+
+      if (!targetUserId) {
+        const broker = await db.Brokers.findOne({
+          where: { referral_code: targetCustomer.referred_by_code },
+          raw: true,
+        });
+        targetUserId = broker?.user_id;
+      }
+
+      if (!targetUserId && db.Affiliates) {
+        const affiliate = await db.Affiliates.findOne({
+          where: { referral_code: targetCustomer.referred_by_code },
+          raw: true,
+        });
+        targetUserId = affiliate?.user_id;
+      }
+    }
 
     /** 🔹 Get WordPress User */
-    const user = await db.Users.findOne({
-      where: { ID: broker.user_id },
+    const user = targetUserId ? await db.Users.findOne({
+      where: { ID: targetUserId },
       raw: true,
-    });
+    }) : null;
 
     /** 🔹 Get WordPress User Meta */
-    const userMetaRows = await db.UsersMeta.findAll({
-      where: { user_id: broker.user_id },
+    const userMetaRows = targetUserId ? await db.UsersMeta.findAll({
+      where: { user_id: targetUserId },
       raw: true,
-    });
+    }) : [];
 
     // Convert meta rows into key/value object
     const userMeta = {};
@@ -113,11 +150,11 @@ const GetTargetCustomersDetails = async (req, res) => {
       message: "Target customer retrieved successfully",
       country,
       language,
-      companyname: userMeta.u_company,
-      display_name: user.display_name || "",
+      companyname: userMeta.u_company || "",
+      display_name: user?.display_name || "",
       street_house: street_house,
       postalcode_city: postalcode_city,
-      email_address: user.user_email,
+      email_address: user?.user_email || "",
       phone: userMeta.u_phone || "",
       english_pdf_file: contracts?.english_pdf_file ? `${process.env.NODE_URL}public/uploads/contracts/${contracts?.english_pdf_file}` : `${process.env.NODE_URL}public/uploads/contracts/${contracts?.german_pdf_file}`,
       german_pdf_file: contracts?.german_pdf_file ? `${process.env.NODE_URL}public/uploads/contracts/${contracts?.german_pdf_file}` : `${process.env.NODE_URL}public/uploads/contracts/${contracts?.english_pdf_file}`

@@ -1,4 +1,5 @@
 const db = require("../../models");
+const { Op } = require("sequelize");
 
 const GetTargetCustomerStats = async (req, res) => {
   try {
@@ -8,31 +9,47 @@ const GetTargetCustomerStats = async (req, res) => {
       ? parseInt(req.query.viewUserId)
       : user.ID;
 
-    // Get broker details
-    const broker = await db.Brokers.findOne({
-      where: { user_id: targetUserId },
-    });
+    const userRecord = await db.Users.findOne({ where: { ID: targetUserId } });
+    const userRefRecord = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
+    const broker = await db.Brokers.findOne({ where: { user_id: targetUserId } });
+    let affiliate = null;
+    if (!broker && db.Affiliates) {
+      affiliate = await db.Affiliates.findOne({ where: { user_id: targetUserId } });
+    }
 
-    if (!broker) {
+    if (!userRecord && !userRefRecord && !broker && !affiliate) {
       return res.status(404).json({
         success: false,
-        message: "Broker not found",
+        message: "User not found",
       });
     }
 
+    const referId = userRefRecord ? userRefRecord.id : null;
+    const brokerId = broker?.id || affiliate?.id;
+
+    const ownerConditions = [];
+    if (referId) {
+      ownerConditions.push({ refer_id: referId });
+    }
+    if (brokerId) {
+      ownerConditions.push({ broker_id: brokerId });
+    }
+
+    const whereClause = ownerConditions.length > 0 ? { [Op.or]: ownerConditions } : {};
+
     // Get total customers
     const totalCustomers = await db.TargetCustomers.count({
-      where: { broker_id: broker.id },
+      where: whereClause,
     });
 
     // Get active customers
     const activeCustomers = await db.TargetCustomers.count({
-      where: { broker_id: broker.id, is_active: true },
+      where: { ...whereClause, is_active: true },
     });
 
     // Get customers by status
     const statusCounts = await db.TargetCustomers.findAll({
-      where: { broker_id: broker.id },
+      where: whereClause,
       attributes: [
         "status",
         [db.sequelize.fn("COUNT", db.sequelize.col("id")), "count"],
@@ -43,7 +60,7 @@ const GetTargetCustomerStats = async (req, res) => {
 
     // Get customers by interest level
     const interestLevelCounts = await db.TargetCustomers.findAll({
-      where: { broker_id: broker.id },
+      where: whereClause,
       attributes: [
         "interest_level",
         [db.sequelize.fn("COUNT", db.sequelize.col("id")), "count"],
@@ -54,7 +71,7 @@ const GetTargetCustomerStats = async (req, res) => {
 
     // Get total estimated value
     const totalEstimatedValue = await db.TargetCustomers.sum("estimated_value", {
-      where: { broker_id: broker.id },
+      where: whereClause,
     });
 
     // Get customers added this month
@@ -64,9 +81,9 @@ const GetTargetCustomerStats = async (req, res) => {
 
     const customersThisMonth = await db.TargetCustomers.count({
       where: {
-        broker_id: broker.id,
+        ...whereClause,
         createdAt: {
-          [db.Sequelize.Op.gte]: startOfMonth,
+          [Op.gte]: startOfMonth,
         },
       },
     });
@@ -78,9 +95,9 @@ const GetTargetCustomerStats = async (req, res) => {
 
     const upcomingFollowups = await db.TargetCustomers.count({
       where: {
-        broker_id: broker.id,
+        ...whereClause,
         next_followup_date: {
-          [db.Sequelize.Op.between]: [today, nextWeek],
+          [Op.between]: [today, nextWeek],
         },
       },
     });
@@ -110,4 +127,3 @@ const GetTargetCustomerStats = async (req, res) => {
 };
 
 module.exports = GetTargetCustomerStats;
-

@@ -1,27 +1,42 @@
 const db = require("../../models");
+const { Op } = require("sequelize");
 
 const DeleteTargetCustomer = async (req, res) => {
   try {
     const { user } = req.user;
     const { id } = req.params;
 
-    // Get broker details
-    const broker = await db.Brokers.findOne({
-      where: { user_id: user.ID },
-    });
+    const userRecord = await db.Users.findOne({ where: { ID: user.ID } });
+    const userRefRecord = await db.UserReferrals.findOne({ where: { user_id: user.ID } });
+    const broker = await db.Brokers.findOne({ where: { user_id: user.ID } });
+    let affiliate = null;
+    if (!broker && db.Affiliates) {
+      affiliate = await db.Affiliates.findOne({ where: { user_id: user.ID } });
+    }
 
-    if (!broker) {
+    if (!userRecord && !userRefRecord && !broker && !affiliate) {
       return res.status(404).json({
         success: false,
-        message: "Broker not found",
+        message: "User not found",
       });
+    }
+
+    const referId = userRefRecord ? userRefRecord.id : null;
+    const brokerId = broker?.id || affiliate?.id;
+
+    const ownerConditions = [];
+    if (referId) {
+      ownerConditions.push({ refer_id: referId });
+    }
+    if (brokerId) {
+      ownerConditions.push({ broker_id: brokerId });
     }
 
     // Get target customer
     const targetCustomer = await db.TargetCustomers.findOne({
       where: {
         id: id,
-        broker_id: broker.id, // Ensure broker can only delete their own customers
+        ...(ownerConditions.length > 0 ? { [Op.or]: ownerConditions } : {}),
       },
     });
 
@@ -50,4 +65,3 @@ const DeleteTargetCustomer = async (req, res) => {
 };
 
 module.exports = DeleteTargetCustomer;
-

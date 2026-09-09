@@ -12,12 +12,14 @@ const TargetCustomers = sequelize.define(
     /** 🔗 Broker who owns this customer */
     broker_id: {
       type: Sequelize.INTEGER.UNSIGNED,
-      allowNull: false,
-      references: {
-        model: "brokers",
-        key: "id",
-      },
-      onDelete: "CASCADE",
+      allowNull: true,
+    },
+
+    /** 🔗 ID from user_referrals table */
+    refer_id: {
+      type: Sequelize.BIGINT.UNSIGNED,
+      allowNull: true,
+      comment: "ID from user_referrals table",
     },
 
     /** 🔗 Customer → Customer referral */
@@ -99,6 +101,7 @@ const TargetCustomers = sequelize.define(
     timestamps: true,
     indexes: [
       { fields: ["broker_id"] },
+      { fields: ["refer_id"] },
       { fields: ["parent_customer_id"] },
       { fields: ["referral_code"] }
     ],

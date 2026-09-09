@@ -1,5 +1,6 @@
 require("dotenv").config();
 const db = require("../../models");
+const { Op } = require("sequelize");
 
 const CreateReferralTargetCustomer = async (req, res) => {
   try {
@@ -14,42 +15,131 @@ const CreateReferralTargetCustomer = async (req, res) => {
       interest_in = "goldflex";
     }
 
-    // Get broker details
-    const broker = await db.Brokers.findOne({
-      where: { referral_code: referral_code },
-      attributes: ["id", "referral_code"],
-      include: [
-        {
-          model: db.Users,
-          as: "user",
-          attributes: ["ID", "display_name", "landing_page", "mystorekey", "user_email"]
+    let decodedCode = referral_code;
+    if (referral_code) {
+      try {
+        const decoded = Buffer.from(referral_code, "base64").toString("utf-8");
+        if (decoded && decoded.trim() !== "") {
+          decodedCode = decoded;
         }
-      ]
-    });
+      } catch (e) {}
+    }
 
-    if (!broker) {
-      return res.status(404).json({
-        success: false,
-        message: "Broker not found",
+    // 1. Search in UserReferrals table first
+    let userRef = null;
+    if (db.UserReferrals && referral_code) {
+      userRef = await db.UserReferrals.findOne({
+        where: {
+          [Op.or]: [
+            { referral_code: referral_code },
+            { referral_code: decodedCode }
+          ]
+        }
       });
     }
 
-    const brokerMeta = await db.UsersMeta.findAll({
-      where: {
-        user_id: broker.user.ID,
-        meta_key: [
-          "u_company",
-          "u_street_no",
-          "u_street",
-          "u_location",
-          "u_postcode",
-          "u_country",
-          "u_phone",
-          "language"
+    // 2. Search in Brokers table
+    let broker = null;
+    if (referral_code) {
+      broker = await db.Brokers.findOne({
+        where: {
+          [Op.or]: [
+            { referral_code: referral_code },
+            { referral_code: decodedCode }
+          ]
+        },
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "display_name", "landing_page", "mystorekey", "user_email"]
+          }
         ]
-      },
-      attributes: ["meta_key", "meta_value"]
-    });
+      });
+    }
+
+    // 3. Search in Affiliates table
+    let affiliate = null;
+    if (!broker && db.Affiliates && referral_code) {
+      affiliate = await db.Affiliates.findOne({
+        where: {
+          [Op.or]: [
+            { referral_code: referral_code },
+            { referral_code: decodedCode }
+          ]
+        },
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "display_name", "landing_page", "mystorekey", "user_email"]
+          }
+        ]
+      });
+    }
+
+    // Determine target user ID
+    const targetUserId = userRef?.user_id || broker?.user_id || affiliate?.user_id;
+
+    // Get user from Users table
+    let userRecord = null;
+    if (targetUserId) {
+      userRecord = await db.Users.findOne({
+        where: { ID: targetUserId },
+        attributes: ["ID", "display_name", "landing_page", "mystorekey", "user_email"]
+      });
+    }
+
+    const userObj = broker?.user || affiliate?.user || userRecord;
+
+    if (!userObj && !broker && !affiliate && !userRef) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const userIdForMeta = userObj?.ID || targetUserId;
+    const refCode = userRef?.referral_code || broker?.referral_code || affiliate?.referral_code || referral_code;
+
+    // Get refer_id from user_referrals table (without creating broker table entry)
+    if (!userRef && targetUserId) {
+      userRef = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
+
+      if (!userRef && db.UserReferrals) {
+        try {
+          userRef = await db.UserReferrals.create({
+            user_id: targetUserId,
+            referral_code: refCode || null,
+          });
+        } catch (err) {
+          console.error("Error creating UserReferrals record:", err.message);
+          userRef = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
+        }
+      }
+    }
+
+    const referId = userRef ? userRef.id : null;
+
+    let brokerMeta = [];
+    if (userIdForMeta) {
+      brokerMeta = await db.UsersMeta.findAll({
+        where: {
+          user_id: userIdForMeta,
+          meta_key: [
+            "u_company",
+            "u_street_no",
+            "u_street",
+            "u_location",
+            "u_postcode",
+            "u_country",
+            "u_phone",
+            "language"
+          ]
+        },
+        attributes: ["meta_key", "meta_value"]
+      });
+    }
 
     const sanitizeValue = (val) => {
       if (!val) return false;
@@ -93,32 +183,21 @@ const CreateReferralTargetCustomer = async (req, res) => {
       });
     }
 
-    // Check if customer email already exists for this broker
-    // const existingCustomer = await db.TargetCustomers.findOne({
-    //   where: {
-    //     broker_id: broker.id,
-    //     customer_email: customer_email,
-    //   },
-    // });
-
-    // if (existingCustomer) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Customer with this email already exists in your target list",
-    //   });
-    // }
-
     let existingCustomer;
+
+    const uniquenessOrClause = [
+      ...(referId ? [{ refer_id: referId }] : [])
+    ];
 
     switch (interest_in) {
       case "easygold Token":
-        // 🌍 Global uniqueness
+        // Global uniqueness
         existingCustomer = await db.TargetCustomers.findOne({
           where: {
             customer_email,
             interest_in: "easygold Token",
           },
-          attributes: ["id", "broker_id", "status"],
+          attributes: ["id", "broker_id", "refer_id", "status"],
           raw: true
         });
         break;
@@ -129,7 +208,7 @@ const CreateReferralTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "goldflex",
           },
-          attributes: ["id", "broker_id", "status"],
+          attributes: ["id", "broker_id", "refer_id", "status"],
           raw: true
         });
         break;
@@ -140,16 +219,16 @@ const CreateReferralTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "Primeinvest",
           },
-          attributes: ["id", "broker_id", "status"],
+          attributes: ["id", "broker_id", "refer_id", "status"],
           raw: true
         });
         break;
 
       default:
-        // 🧑‍💼 Broker-level uniqueness
+        // Referral-level uniqueness
         existingCustomer = await db.TargetCustomers.findOne({
           where: {
-            broker_id: broker.id,
+            ...(uniquenessOrClause.length > 0 ? { [Op.or]: uniquenessOrClause } : {}),
             customer_email,
             interest_in,
           },
@@ -166,7 +245,6 @@ const CreateReferralTargetCustomer = async (req, res) => {
           message: "You already submitted form for this product",
           data: existingCustomer
         });
-
       }
 
       return res.status(200).json({
@@ -177,14 +255,15 @@ const CreateReferralTargetCustomer = async (req, res) => {
       });
     }
 
-    // Create target customer
+    // Create target customer with refer_id and broker_id as null
     const targetCustomer = await db.TargetCustomers.create({
-      broker_id: broker.id,
+      broker_id: null,
+      refer_id: referId,
       customer_name,
       customer_email,
       referral_code: null,
       interest_in: interest_in || null,
-      referred_by_code: broker.referral_code,
+      referred_by_code: refCode,
       status: "INVITED",
       children_count: 0,
       bonus_points: 0,

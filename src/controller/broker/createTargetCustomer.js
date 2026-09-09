@@ -29,8 +29,13 @@ const CreateTargetCustomer = async (req, res) => {
   try {
     const { user } = req.user;
 
-    // Get broker details
-    const broker = await db.Brokers.findOne({
+    // Get user details
+    const userRecord = await db.Users.findOne({
+      where: { ID: user.ID },
+      attributes: ["ID", "display_name", "landing_page", "mystorekey", "user_email"]
+    });
+
+    let broker = await db.Brokers.findOne({
       where: { user_id: user.ID },
       attributes: ["id", "referral_code"],
       include: [
@@ -42,12 +47,46 @@ const CreateTargetCustomer = async (req, res) => {
       ]
     });
 
-    if (!broker) {
-      return res.status(404).json({
-        success: false,
-        message: "Broker not found",
+    let affiliate = null;
+    if (!broker && db.Affiliates) {
+      affiliate = await db.Affiliates.findOne({
+        where: { user_id: user.ID },
+        attributes: ["id", "referral_code"],
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["display_name", "landing_page", "mystorekey", "user_email"]
+          }
+        ]
       });
     }
+
+    let userRefRecord = await db.UserReferrals.findOne({ where: { user_id: user.ID } });
+    const userObj = broker?.user || affiliate?.user || userRecord;
+
+    if (!userObj && !broker && !affiliate && !userRefRecord) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const refCode = userRefRecord?.referral_code || broker?.referral_code || affiliate?.referral_code || "";
+
+    if (!userRefRecord && db.UserReferrals && user.ID) {
+      try {
+        userRefRecord = await db.UserReferrals.create({
+          user_id: user.ID,
+          referral_code: refCode || null,
+        });
+      } catch (err) {
+        console.error("Error creating UserReferrals record in createTargetCustomer:", err.message);
+        userRefRecord = await db.UserReferrals.findOne({ where: { user_id: user.ID } });
+      }
+    }
+
+    const referId = userRefRecord ? userRefRecord.id : null;
 
     const brokerMeta = await db.UsersMeta.findAll({
       where: {
@@ -110,29 +149,18 @@ const CreateTargetCustomer = async (req, res) => {
       });
     }
 
-    if (broker.user?.landing_page == 0 && interest_in == "Landingpage") {
+    if (userObj?.landing_page == 0 && interest_in == "Landingpage") {
       return res.status(400).json({
         success: false,
         message: "Your landing page not activate yet, Please activate first on B2B dashboard.",
       });
     }
 
-    // Check if customer email already exists for this broker
-    // const existingCustomer = await db.TargetCustomers.findOne({
-    //   where: {
-    //     broker_id: broker.id,
-    //     customer_email: customer_email,
-    //   },
-    // });
-
-    // if (existingCustomer) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Customer with this email already exists in your target list",
-    //   });
-    // }
-
     let existingCustomer;
+
+    const uniquenessOrClause = [
+      ...(referId ? [{ refer_id: referId }] : [])
+    ];
 
     switch (interest_in) {
       case "easygold Token":
@@ -142,7 +170,7 @@ const CreateTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "easygold Token",
           },
-          attributes: ["id", "broker_id"],
+          attributes: ["id", "broker_id", "refer_id"],
         });
         break;
 
@@ -152,7 +180,7 @@ const CreateTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "goldflex",
           },
-          attributes: ["id", "broker_id"],
+          attributes: ["id", "broker_id", "refer_id"],
         });
         break;
 
@@ -162,15 +190,15 @@ const CreateTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "Primeinvest",
           },
-          attributes: ["id", "broker_id"],
+          attributes: ["id", "broker_id", "refer_id"],
         });
         break;
 
       default:
-        // 🧑‍💼 Broker-level uniqueness
+        // Referral-level uniqueness
         existingCustomer = await db.TargetCustomers.findOne({
           where: {
-            broker_id: broker.id,
+            ...(uniquenessOrClause.length > 0 ? { [Op.or]: uniquenessOrClause } : {}),
             customer_email,
             interest_in,
           },
@@ -183,7 +211,7 @@ const CreateTargetCustomer = async (req, res) => {
 
       if (interest_in === "easygold Token" || interest_in === "goldflex") {
         message =
-          existingCustomer.broker_id == broker.id
+          (existingCustomer.refer_id && existingCustomer.refer_id == referId)
             ? "Customer already registered with this Product"
             : "This customer already connected to other organization";
       }
@@ -194,14 +222,15 @@ const CreateTargetCustomer = async (req, res) => {
       });
     }
 
-    // Create target customer
+    // Create target customer with refer_id and broker_id: null
     const targetCustomer = await db.TargetCustomers.create({
-      broker_id: broker.id,
+      broker_id: null,
+      refer_id: referId,
       customer_name,
       customer_email,
       referral_code: null,
       interest_in: interest_in || null,
-      referred_by_code: broker.referral_code,
+      referred_by_code: refCode,
       status: "INVITED",
       children_count: 0,
       bonus_points: 0,
@@ -240,12 +269,12 @@ const CreateTargetCustomer = async (req, res) => {
 
     let host = MAIL_HOST;
 
-    let easyGoldReferralCode = Buffer.from(String(broker.referral_code), "utf-8").toString("base64");
+    let easyGoldReferralCode = Buffer.from(String(refCode), "utf-8").toString("base64");
 
     if (interest_in === "Landingpage") {
       host = MAIL_HOST;
       finalFrom = EASY_GOLD_CUSTOMER_SUPPORT_EMAIL;
-      const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${broker.user?.mystorekey}`;
+      const registrationUrl = `${process.env.EASY_GOLD_URL}/landingpage/${userObj?.mystorekey}`;
       sending_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">link</a>`;
       contract_link = `<a href="${registrationUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">here</a>`;
       document_link = "";
@@ -280,7 +309,7 @@ const CreateTargetCustomer = async (req, res) => {
     }
 
     const brokerCompany = sanitizeValue(metaMap.u_company);
-    const brokerName = sanitizeValue(broker.user?.display_name);
+    const brokerName = sanitizeValue(userObj?.display_name);
 
     const brokerStreet = [
       sanitizeValue(metaMap.u_street),
@@ -293,7 +322,7 @@ const CreateTargetCustomer = async (req, res) => {
     ].filter(Boolean).join("/");
 
     const brokerPhone = sanitizeValue(metaMap.u_phone);
-    const brokerEmail = sanitizeValue(broker.user?.user_email);
+    const brokerEmail = sanitizeValue(userObj?.user_email);
 
     const b2bInfoFormatted = [
       brokerCompany,

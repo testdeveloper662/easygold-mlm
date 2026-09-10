@@ -363,7 +363,7 @@ const runBrokerRegisterBackground = async ({
       try {
         const parentUserId = (!isAdminParent && parentBroker) ? parentBroker.user_id : null;
         const refByCode = isAdminParent ? process.env.ADMIN_REFERRAL_CODE : (parentBroker ? parentBroker.referral_code : null);
-        
+
         const existingRef = await db.UserReferrals.findOne({ where: { user_id: user_id } });
         if (existingRef) {
           await existingRef.update({
@@ -992,10 +992,10 @@ const BrokerRegistration = async (req, res) => {
     // =========================================================================
 
     // Method 1: External API Call (axios)
-    // apiResponse = await registerViaExternalApi(req, registrationFields);
+    apiResponse = await registerViaExternalApi(req, registrationFields);
 
     // Method 2: Local API Call (direct database/helper)
-    apiResponse = await registerViaLocalHelper(req, registrationFields);
+    //apiResponse = await registerViaLocalHelper(req, registrationFields);
 
     // =========================================================================
 

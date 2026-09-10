@@ -16,7 +16,9 @@ const GetAllAffiliates = async (req, res) => {
       targetUserId = user.ID || user.id;
     }
 
-    const whereClause = {};
+    const whereClause = {
+      parent_id: { [Op.not]: null }
+    };
 
     if (targetUserId) {
       const targetParentIds = [];

@@ -157,6 +157,10 @@ const GetDashboardData = async (req, res) => {
           model: db.Users,
           as: "user",
           attributes: ["ID", "user_email", "display_name"],
+          where: {
+            [Op.or]: [{ role_id: { [Op.notIn]: [4, 5] } }, { role_id: null }]
+          },
+          required: true,
         },
       ],
     });
@@ -187,28 +191,38 @@ const GetDashboardData = async (req, res) => {
 
     const GOLD_ORDER_TYPES = ["goldflex", "easygoldtoken", "primeinvest"];
 
-    const findSubNodesWithLevel = (parentId, parentRefCode, list, isAffiliate = false) => {
+    const findSubNodesWithLevel = (parentNode, list, isAffiliate = false) => {
       const result = [];
-      if (!parentId && !parentRefCode) return result;
-      if (!list || list.length === 0) return result;
+      if (!parentNode) return result;
 
-      const visited = new Set();
-      if (parentId) visited.add(parentId);
+      const parentId = parentNode.id || parentNode.dataValues?.id;
+      const parentRefCode = (parentNode.referral_code || parentNode.dataValues?.referral_code || "").trim().toUpperCase();
+      const parentUserId = parentNode.user_id || parentNode.dataValues?.user_id;
 
-      // Level 1: Direct children of current user
-      let currentLevelNodes = list.filter(item => {
-        if (item.id === parentId || (item.user_id && currentBroker.user_id && Number(item.user_id) === Number(currentBroker.user_id))) return false;
+      const assignedUserIds = new Set();
+      if (parentUserId) assignedUserIds.add(Number(parentUserId));
 
-        if (isAffiliate && (item.parent_id === null || item.parent_id === undefined || item.parent_id === "")) {
-          return false;
+      let currentLevelNodes = list.filter((b) => {
+        const bUserId = b.user_id || b.user?.ID;
+        if (!bUserId || Number(bUserId) === Number(parentUserId)) return false;
+        if (assignedUserIds.has(Number(bUserId))) return false;
+
+        if (isAffiliate && (b.parent_id === null || b.parent_id === undefined || b.parent_id === "")) return false;
+
+        const bRefCode = (b.referred_by_code || "").trim().toUpperCase();
+        if (parentRefCode && bRefCode) {
+          return bRefCode === parentRefCode;
         }
 
-        if (parentRefCode && item.referred_by_code) {
-          return item.referred_by_code === parentRefCode;
+        if (b.parent_user_id && parentUserId && Number(b.parent_user_id) === Number(parentUserId)) {
+          return true;
         }
 
-        const isParentIdMatch = Number(item.parent_id) === Number(parentId);
-        return isParentIdMatch;
+        if (parentId && b.parent_id && Number(b.parent_id) === Number(parentId)) {
+          return true;
+        }
+
+        return false;
       });
 
       for (let level = 1; level <= MAX_LEVEL; level++) {
@@ -216,27 +230,40 @@ const GetDashboardData = async (req, res) => {
 
         const nextLevelNodes = [];
         currentLevelNodes.forEach(child => {
-          if (!visited.has(child.id)) {
-            visited.add(child.id);
-            result.push({ broker: child, level });
+          const bUserId = child.user_id || child.user?.ID;
+          if (bUserId && assignedUserIds.has(Number(bUserId))) return;
+          if (bUserId) assignedUserIds.add(Number(bUserId));
+          
+          result.push({ broker: child, level });
 
-            // Find children of this node for the next level
-            const childChildren = list.filter(item => {
-              if (visited.has(item.id)) return false;
+          const childRefCode = (child.referral_code || "").trim().toUpperCase();
+          const childUserId = child.user_id || child.user?.ID;
+          const childId = child.id;
 
-              if (isAffiliate && (item.parent_id === null || item.parent_id === undefined || item.parent_id === "")) {
-                return false;
-              }
+          const childChildren = list.filter(item => {
+            const itemUserId = item.user_id || item.user?.ID;
+            if (!itemUserId || Number(itemUserId) === Number(childUserId)) return false;
+            if (assignedUserIds.has(Number(itemUserId))) return false;
 
-              if (child.referral_code && item.referred_by_code) {
-                return item.referred_by_code === child.referral_code;
-              }
+            if (isAffiliate && (item.parent_id === null || item.parent_id === undefined || item.parent_id === "")) return false;
 
-              const isParentIdMatch = Number(item.parent_id) === Number(child.id);
-              return isParentIdMatch;
-            });
-            nextLevelNodes.push(...childChildren);
-          }
+            const itemRefCode = (item.referred_by_code || "").trim().toUpperCase();
+            if (childRefCode && itemRefCode) {
+              return itemRefCode === childRefCode;
+            }
+
+            if (item.parent_user_id && childUserId && Number(item.parent_user_id) === Number(childUserId)) {
+              return true;
+            }
+
+            if (childId && item.parent_id && Number(item.parent_id) === Number(childId)) {
+              return true;
+            }
+
+            return false;
+          });
+          
+          nextLevelNodes.push(...childChildren);
         });
 
         currentLevelNodes = nextLevelNodes;
@@ -252,14 +279,12 @@ const GetDashboardData = async (req, res) => {
     const primaryReferralCode = userReferralRecord?.referral_code || currentBrokerRecord?.referral_code || currentAffiliateRecord?.referral_code || currentBroker?.referral_code;
 
     const subBrokersWithLevel = findSubNodesWithLevel(
-      currentBrokerRecord?.id || null,
-      primaryReferralCode,
+      currentBrokerRecord || currentBroker,
       rawBrokers,
       false
     );
     const subAffiliatesWithLevel = findSubNodesWithLevel(
-      currentAffiliateRecord?.id || null,
-      primaryReferralCode,
+      currentAffiliateRecord || currentBroker,
       rawAffiliates,
       true
     );

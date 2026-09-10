@@ -102,6 +102,8 @@ const GetBrokerNetwork = async (req, res) => {
 
     // Find current broker or affiliate node
     let currentBroker = null;
+    let isAffiliateNode = false;
+    
     if (req.query.type === "affiliate" && db.Affiliates) {
       currentBroker = await db.Affiliates.findOne({
         where: { user_id: targetUserId },
@@ -114,6 +116,7 @@ const GetBrokerNetwork = async (req, res) => {
           },
         ],
       });
+      if (currentBroker) isAffiliateNode = true;
     }
 
     if (!currentBroker) {
@@ -128,6 +131,7 @@ const GetBrokerNetwork = async (req, res) => {
           },
         ],
       });
+      if (currentBroker) isAffiliateNode = false;
     }
 
     if (!currentBroker && db.Affiliates) {
@@ -142,6 +146,7 @@ const GetBrokerNetwork = async (req, res) => {
           },
         ],
       });
+      if (currentBroker) isAffiliateNode = true;
     }
 
     if (!currentBroker) {
@@ -168,35 +173,55 @@ const GetBrokerNetwork = async (req, res) => {
       }
     }
 
-    // Fetch all brokers and affiliates with user details for the network tree graph
+    // Fetch all brokers and affiliates with user details for the network tree graph.
+    // Private individuals (role_id 4) belong to the affiliate network only and must never appear in the broker network.
+    const isAffiliateNetwork = isAffiliateNode || req.query.type === "affiliate";
+    const defaultRoleWhere = isAffiliateNetwork
+      ? { [Op.or]: [{ role_id: { [Op.notIn]: [5] } }, { role_id: null }] }
+      : { [Op.or]: [{ role_id: { [Op.notIn]: [4, 5] } }, { role_id: null }] };
+
     const brokerUserWhere = (filterRoleId === 5)
       ? { role_id: 5 }
       : (filterRoleId && filterRoleId !== "all"
           ? { role_id: filterRoleId }
-          : { [Op.or]: [{ role_id: { [Op.ne]: 5 } }, { role_id: null }] });
+          : defaultRoleWhere);
 
-    const brokersRaw = await db.Brokers.findAll({
-      include: [
-        {
-          model: db.Users,
-          as: "user",
-          attributes: ["ID", "user_email", "display_name", "role_id"],
-          where: brokerUserWhere,
-          required: true,
-        },
-      ],
-    });
-    const brokersFormatted = brokersRaw.map(b => ({ ...b.toJSON(), is_affiliate: false }));
+    let brokersFormatted = [];
+    if (!isAffiliateNode) {
+      const brokersRaw = await db.Brokers.findAll({
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name", "role_id"],
+            where: brokerUserWhere,
+            required: true,
+          },
+        ],
+      });
+      brokersFormatted = brokersRaw.map(b => ({ ...b.toJSON(), is_affiliate: false }));
+    }
 
     let affiliatesFormatted = [];
-    if (db.Affiliates) {
+    if (isAffiliateNode && db.Affiliates) {
       const affiliatesRaw = await db.Affiliates.findAll({
+        where: { parent_id: { [Op.not]: null } },
         include: [
           {
             model: db.Users,
             as: "user",
             attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
-            where: brokerUserWhere,
+            where: {
+              [Op.and]: [
+                brokerUserWhere,
+                {
+                  [Op.or]: [
+                    { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+                    { role_id: 2, user_status: 0 }
+                  ]
+                }
+              ]
+            },
             required: true,
           },
         ],
@@ -206,8 +231,9 @@ const GetBrokerNetwork = async (req, res) => {
 
     // Fetch customer users (role_id = 5) only when explicitly requested.
     // The default network tree shows brokers/affiliates/private individuals (role_id 2, 3, 4) and never customers.
+    // For Affiliate networks, customers are strictly excluded.
     let customerFormatted = [];
-    if (filterRoleId === 5 || req.query.include_customers === "true") {
+    if (!isAffiliateNode && (filterRoleId === 5 || req.query.include_customers === "true")) {
       const customerRefs = await db.UserReferrals.findAll({
         include: [
           {
@@ -324,7 +350,6 @@ const GetBrokerNetwork = async (req, res) => {
     // Build hierarchy using strictly matching database table nodes
     const children = await buildBrokerTree(nodesToUse, currentBroker, 2, commissionMap);
     // Response
-    const isAffiliateNode = currentBroker.is_affiliate !== undefined ? Boolean(currentBroker.is_affiliate) : (req.query.type === "affiliate");
     const network = {
       broker_id: currentBroker.id || currentBroker.dataValues?.id,
       user_id: currentBroker.user?.ID || currentBroker.user_id || currentBroker.dataValues?.user_id || null,

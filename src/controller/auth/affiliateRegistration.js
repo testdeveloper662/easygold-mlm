@@ -181,6 +181,38 @@ const AffiliateRegistration = async (req, res) => {
       }
     }
 
+    // Every affiliate is also registered in the Brokers table so they exist in the broker network too.
+    // Private individuals (role_id 4) are excluded — they belong to the affiliate network only.
+    if (db.Brokers && !isPrivateIndividual) {
+      try {
+        let brokerParentId = null;
+        if (!isAdminParent && parentUserId) {
+          const parentInBrokers = await db.Brokers.findOne({
+            where: { user_id: parentUserId },
+          });
+          if (parentInBrokers) brokerParentId = parentInBrokers.id;
+        }
+
+        await db.Brokers.create({
+          user_id: newUser.ID,
+          parent_id: brokerParentId,
+          referral_code: newReferralCode,
+          referred_by_code: empfehlercode || null,
+          children_count: 0,
+          total_commission_amount: 0,
+        });
+
+        if (brokerParentId) {
+          await db.Brokers.increment("children_count", {
+            by: 1,
+            where: { id: brokerParentId },
+          });
+        }
+      } catch (brokErr) {
+        console.error("Error inserting into Brokers table:", brokErr);
+      }
+    }
+
     // Create UserReferrals entry
     if (db.UserReferrals) {
       try {

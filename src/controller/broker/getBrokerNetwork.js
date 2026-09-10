@@ -182,7 +182,7 @@ const GetBrokerNetwork = async (req, res) => {
           as: "user",
           attributes: ["ID", "user_email", "display_name", "role_id"],
           where: brokerUserWhere,
-          required: false,
+          required: true,
         },
       ],
     });
@@ -197,16 +197,17 @@ const GetBrokerNetwork = async (req, res) => {
             as: "user",
             attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
             where: brokerUserWhere,
-            required: false,
+            required: true,
           },
         ],
       });
       affiliatesFormatted = affiliatesRaw.map(a => ({ ...a.toJSON(), is_affiliate: true }));
     }
 
-    // Fetch customer users (role_id = 5) if role_id filter includes 5 or all, or for super admin view
+    // Fetch customer users (role_id = 5) only when explicitly requested.
+    // The default network tree shows brokers/affiliates/private individuals (role_id 2, 3, 4) and never customers.
     let customerFormatted = [];
-    if (filterRoleId === 5 || filterRoleId === "all" || user.role === "SUPER_ADMIN" || req.query.include_customers === "true") {
+    if (filterRoleId === 5 || req.query.include_customers === "true") {
       const customerRefs = await db.UserReferrals.findAll({
         include: [
           {
@@ -236,7 +237,8 @@ const GetBrokerNetwork = async (req, res) => {
     const existingUserIds = new Set([...brokerUserIds, ...uniqueAffiliates.map(a => a.user_id)]);
     const uniqueCustomers = customerFormatted.filter(c => !existingUserIds.has(c.user_id));
 
-    const nodesToUse = [...brokersFormatted, ...uniqueAffiliates, ...uniqueCustomers];
+    // Drop any node whose linked user could not be resolved (e.g. filtered-out customer rows) so the tree never shows "Unknown" placeholders
+    const nodesToUse = [...brokersFormatted, ...uniqueAffiliates, ...uniqueCustomers].filter(n => n.user && (n.user.ID || n.user.id));
 
     const whereClause = {
       user_id: targetUserId,

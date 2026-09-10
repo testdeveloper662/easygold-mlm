@@ -222,6 +222,36 @@ const customerSignupEasyGoldToken = async (req, res) => {
         const generateCode = () => "ref" + Math.random().toString(36).substring(2, 8).toUpperCase();
         const activeReferralCode = referral_code || generateCode();
 
+        let finalReferId = userRef?.id || null;
+        if (!finalReferId && parentBroker?.user_id) {
+            let pRef = await db.UserReferrals.findOne({
+                where: { user_id: parentBroker.user_id },
+                transaction,
+            });
+            if (!pRef && db.UserReferrals) {
+                try {
+                    pRef = await db.UserReferrals.create(
+                        {
+                            user_id: parentBroker.user_id,
+                            referral_code: parentBroker.referral_code || normalizedCode,
+                            referred_by_code: parentBroker.referred_by_code || null,
+                        },
+                        { transaction }
+                    );
+                } catch (e) {
+                    pRef = await db.UserReferrals.findOne({
+                        where: { user_id: parentBroker.user_id },
+                        transaction,
+                    });
+                }
+            }
+            if (pRef) finalReferId = pRef.id;
+        }
+
+        if (!finalReferId && parentCustomer?.referral_code_id) {
+            finalReferId = parentCustomer.referral_code_id;
+        }
+
         /** 3️⃣ Update existing customer */
         if (customer) {
             console.log("Existing customer found for signup:", customer.customer_email);
@@ -296,6 +326,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                 {
                     customer_name: customer_name || customer.customer_name,
                     broker_id: finalBrokerId || customer.broker_id,
+                    referral_code_id: finalReferId || customer.referral_code_id,
                     parent_customer_id: parentCustomer?.id || customer.parent_customer_id,
                     referred_by_code: newReferredByCode,
                     status: "REGISTERED",
@@ -313,6 +344,7 @@ const customerSignupEasyGoldToken = async (req, res) => {
                     customer_name,
                     customer_email,
                     broker_id: finalBrokerId,
+                    referral_code_id: finalReferId,
                     interest_in: product_type,
                     parent_customer_id: parentCustomer?.id || null,
                     referred_by_code: decoded_referred_by_code,

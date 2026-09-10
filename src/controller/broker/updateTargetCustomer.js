@@ -7,11 +7,23 @@ const UpdateTargetCustomer = async (req, res) => {
     const { id } = req.params;
 
     const userRecord = await db.Users.findOne({ where: { ID: user.ID } });
-    const userRefRecord = await db.UserReferrals.findOne({ where: { user_id: user.ID } });
+    let userRefRecord = await db.UserReferrals.findOne({ where: { user_id: user.ID } });
     const broker = await db.Brokers.findOne({ where: { user_id: user.ID } });
     let affiliate = null;
     if (!broker && db.Affiliates) {
       affiliate = await db.Affiliates.findOne({ where: { user_id: user.ID } });
+    }
+
+    if (!userRefRecord && db.UserReferrals && user.ID) {
+      try {
+        const refCode = broker?.referral_code || affiliate?.referral_code || null;
+        userRefRecord = await db.UserReferrals.create({
+          user_id: user.ID,
+          referral_code: refCode,
+        });
+      } catch (err) {
+        userRefRecord = await db.UserReferrals.findOne({ where: { user_id: user.ID } });
+      }
     }
 
     if (!userRecord && !userRefRecord && !broker && !affiliate) {
@@ -21,22 +33,42 @@ const UpdateTargetCustomer = async (req, res) => {
       });
     }
 
-    const referId = userRefRecord ? userRefRecord.id : null;
-    const brokerId = broker?.id || affiliate?.id;
+    const childUserRefs = await db.UserReferrals.findAll({
+      where: { parent_user_id: user.ID },
+      attributes: ["id"],
+      raw: true,
+    });
 
+    const referralCodeIds = [];
+    if (userRefRecord?.id) {
+      referralCodeIds.push(userRefRecord.id);
+    }
+    if (childUserRefs && childUserRefs.length > 0) {
+      childUserRefs.forEach((r) => {
+        if (r.id && !referralCodeIds.includes(r.id)) {
+          referralCodeIds.push(r.id);
+        }
+      });
+    }
+
+    const brokerId = broker?.id || affiliate?.id;
     const ownerConditions = [];
-    if (referId) {
-      ownerConditions.push({ refer_id: referId });
+    if (referralCodeIds.length > 0) {
+      ownerConditions.push({ referral_code_id: { [Op.in]: referralCodeIds } });
     }
     if (brokerId) {
       ownerConditions.push({ broker_id: brokerId });
     }
 
+    const referralCondition = ownerConditions.length > 0
+      ? { [Op.or]: ownerConditions }
+      : {};
+
     // Get target customer
     const targetCustomer = await db.TargetCustomers.findOne({
       where: {
         id: id,
-        ...(ownerConditions.length > 0 ? { [Op.or]: ownerConditions } : {}),
+        ...referralCondition,
       },
     });
 
@@ -53,7 +85,7 @@ const UpdateTargetCustomer = async (req, res) => {
     if (customer_email && customer_email !== targetCustomer.customer_email) {
       const existingCustomer = await db.TargetCustomers.findOne({
         where: {
-          ...(ownerConditions.length > 0 ? { [Op.or]: ownerConditions } : {}),
+          ...referralCondition,
           customer_email: customer_email,
           id: { [Op.ne]: id }, // Exclude current customer
         },

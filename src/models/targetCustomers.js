@@ -16,7 +16,7 @@ const TargetCustomers = sequelize.define(
     },
 
     /** 🔗 ID from user_referrals table */
-    refer_id: {
+    referral_code_id: {
       type: Sequelize.BIGINT.UNSIGNED,
       allowNull: true,
       comment: "ID from user_referrals table",
@@ -101,7 +101,7 @@ const TargetCustomers = sequelize.define(
     timestamps: true,
     indexes: [
       { fields: ["broker_id"] },
-      { fields: ["refer_id"] },
+      { fields: ["referral_code_id"] },
       { fields: ["parent_customer_id"] },
       { fields: ["referral_code"] }
     ],

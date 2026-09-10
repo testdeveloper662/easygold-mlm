@@ -159,7 +159,7 @@ const CreateTargetCustomer = async (req, res) => {
     let existingCustomer;
 
     const uniquenessOrClause = [
-      ...(referId ? [{ refer_id: referId }] : [])
+      ...(referId ? [{ referral_code_id: referId }] : [])
     ];
 
     switch (interest_in) {
@@ -170,7 +170,7 @@ const CreateTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "easygold Token",
           },
-          attributes: ["id", "broker_id", "refer_id"],
+          attributes: ["id", "broker_id", "referral_code_id"],
         });
         break;
 
@@ -180,7 +180,7 @@ const CreateTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "goldflex",
           },
-          attributes: ["id", "broker_id", "refer_id"],
+          attributes: ["id", "broker_id", "referral_code_id"],
         });
         break;
 
@@ -190,7 +190,7 @@ const CreateTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "Primeinvest",
           },
-          attributes: ["id", "broker_id", "refer_id"],
+          attributes: ["id", "broker_id", "referral_code_id"],
         });
         break;
 
@@ -211,7 +211,7 @@ const CreateTargetCustomer = async (req, res) => {
 
       if (interest_in === "easygold Token" || interest_in === "goldflex") {
         message =
-          (existingCustomer.refer_id && existingCustomer.refer_id == referId)
+          (existingCustomer.referral_code_id && existingCustomer.referral_code_id == referId)
             ? "Customer already registered with this Product"
             : "This customer already connected to other organization";
       }
@@ -222,10 +222,10 @@ const CreateTargetCustomer = async (req, res) => {
       });
     }
 
-    // Create target customer with refer_id and broker_id: null
+    // Create target customer with referral_code_id and broker_id: null
     const targetCustomer = await db.TargetCustomers.create({
       broker_id: null,
-      refer_id: referId,
+      referral_code_id: referId,
       customer_name,
       customer_email,
       referral_code: null,

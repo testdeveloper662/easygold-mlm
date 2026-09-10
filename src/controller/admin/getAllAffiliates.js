@@ -90,6 +90,7 @@ const GetAllAffiliates = async (req, res) => {
               attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
               required: true,
               where: {
+                role_id: { [Op.ne]: 5 },
                 [Op.or]: [
                   { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
                   { role_id: 2, user_status: 0 }
@@ -127,6 +128,7 @@ const GetAllAffiliates = async (req, res) => {
       if (affiliateUserIds.length > 0) {
         const userWhere = {
           ID: { [Op.in]: affiliateUserIds },
+          role_id: { [Op.ne]: 5 },
           [Op.or]: [
             { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
             { role_id: 2, user_status: 0 }

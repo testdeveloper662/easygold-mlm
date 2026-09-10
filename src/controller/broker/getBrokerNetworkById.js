@@ -77,6 +77,11 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {},
       );
 
       const commissionAmount = b.is_affiliate ? 0 : roundToTwoDecimalPlaces(commissionMap[b.id] || 0);
+      const bRoleId = b.user?.role_id || b.role_id || (b.is_affiliate ? 3 : 2);
+      let roleName = "BROKER";
+      if (bRoleId === 5) roleName = "CUSTOMER";
+      else if (bRoleId === 3 || b.is_affiliate) roleName = "AFFILIATE";
+      else if (bRoleId === 2) roleName = "BROKER";
 
       return {
         broker_id: b.id,
@@ -85,6 +90,8 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {},
         user_email: b.user?.user_email || null,
         display_name: b.user?.display_name || null,
         referral_code: b.referral_code || null,
+        role_id: bRoleId,
+        role_name: roleName,
         is_affiliate: b.is_affiliate || false,
         commission_amount: commissionAmount,
         level,
@@ -205,13 +212,37 @@ const GetBrokerNetworkById = async (req, res) => {
       });
     }
 
+    // Determine requested role_id filter parameter
+    const rawRoleId = req.query.role_id || req.query.role;
+    let filterRoleId = null;
+    if (rawRoleId) {
+      if (rawRoleId === "all" || rawRoleId === "ALL") {
+        filterRoleId = "all";
+      } else if (rawRoleId === "CUSTOMER" || rawRoleId === "customer" || String(rawRoleId) === "5") {
+        filterRoleId = 5;
+      } else if (rawRoleId === "AFFILIATE" || rawRoleId === "affiliate" || String(rawRoleId) === "3") {
+        filterRoleId = 3;
+      } else if (rawRoleId === "BROKER" || rawRoleId === "broker" || String(rawRoleId) === "2") {
+        filterRoleId = 2;
+      } else if (!isNaN(parseInt(rawRoleId))) {
+        filterRoleId = parseInt(rawRoleId);
+      }
+    }
+
+    const brokerUserWhere = (filterRoleId === 5)
+      ? { role_id: 5 }
+      : (filterRoleId && filterRoleId !== "all"
+          ? { role_id: filterRoleId }
+          : { [Op.or]: [{ role_id: { [Op.ne]: 5 } }, { role_id: null }] });
+
     // 2️⃣ Fetch all brokers and affiliates with user details for network tree
     const brokersRaw = await db.Brokers.findAll({
       include: [
         {
           model: db.Users,
           as: "user",
-          attributes: ["ID", "user_email", "display_name"],
+          attributes: ["ID", "user_email", "display_name", "role_id"],
+          where: brokerUserWhere,
         },
       ],
     });
@@ -225,15 +256,45 @@ const GetBrokerNetworkById = async (req, res) => {
             model: db.Users,
             as: "user",
             attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
+            where: brokerUserWhere,
           },
         ],
       });
       affiliatesFormatted = affiliatesRaw.map((a) => ({ ...a.toJSON(), is_affiliate: true }));
     }
 
+    let customerFormatted = [];
+    const reqUserObj = req.user?.user || req.user;
+    if (filterRoleId === 5 || filterRoleId === "all" || reqUserObj?.role === "SUPER_ADMIN" || req.query.include_customers === "true") {
+      const customerRefs = await db.UserReferrals.findAll({
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name", "role_id"],
+            where: { role_id: 5 },
+            required: true,
+          },
+        ],
+      });
+      customerFormatted = customerRefs.map(c => ({
+        id: `cust_${c.id}`,
+        user_id: c.user_id,
+        parent_user_id: c.parent_user_id,
+        referred_by_code: c.referred_by_code,
+        referral_code: c.referral_code,
+        user: c.user,
+        role_id: 5,
+        is_affiliate: false,
+      }));
+    }
+
     const brokerUserIds = new Set(brokersFormatted.map((b) => b.user_id));
     const uniqueAffiliates = affiliatesFormatted.filter((a) => !brokerUserIds.has(a.user_id));
-    const nodesToUse = [...brokersFormatted, ...uniqueAffiliates];
+    const existingUserIds = new Set([...brokerUserIds, ...uniqueAffiliates.map((a) => a.user_id)]);
+    const uniqueCustomers = customerFormatted.filter((c) => !existingUserIds.has(c.user_id));
+
+    const nodesToUse = [...brokersFormatted, ...uniqueAffiliates, ...uniqueCustomers];
 
     // Authorization check: non-super admin users can only view their own node or downline nodes
     const reqUser = req.user?.user || req.user;

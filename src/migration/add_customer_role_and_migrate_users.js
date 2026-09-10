@@ -30,7 +30,22 @@ async function up() {
       console.log(`Found existing role 'customer' with ID: ${customerRole.id}`);
     }
 
-    // 2. Fetch all registered TargetCustomers and create 6LWUP_users & user_referrals entries
+    // 2. Ensure referral_code_id column exists on target_customers table before model querying
+    try {
+      const [cols] = await db.sequelize.query(
+        "SHOW COLUMNS FROM `target_customers` LIKE 'referral_code_id';"
+      );
+      if (cols.length === 0) {
+        console.log("Adding missing column referral_code_id to target_customers table...");
+        await db.sequelize.query(
+          "ALTER TABLE `target_customers` ADD COLUMN `referral_code_id` BIGINT UNSIGNED NULL AFTER `broker_id`;"
+        );
+      }
+    } catch (colErr) {
+      console.warn("Notice checking/adding referral_code_id column:", colErr.message);
+    }
+
+    // 3. Fetch all registered TargetCustomers and create 6LWUP_users & user_referrals entries
     console.log("Fetching registered target customers to backfill users & user_referrals...");
     const registeredCustomers = await db.TargetCustomers.findAll({
       where: { status: "REGISTERED" },

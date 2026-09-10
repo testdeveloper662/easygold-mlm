@@ -102,7 +102,7 @@ const CreateReferralTargetCustomer = async (req, res) => {
     const userIdForMeta = userObj?.ID || targetUserId;
     const refCode = userRef?.referral_code || broker?.referral_code || affiliate?.referral_code || referral_code;
 
-    // Get refer_id from user_referrals table (without creating broker table entry)
+    // Get referral_code_id from user_referrals table (without creating broker table entry)
     if (!userRef && targetUserId) {
       userRef = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
 
@@ -186,7 +186,7 @@ const CreateReferralTargetCustomer = async (req, res) => {
     let existingCustomer;
 
     const uniquenessOrClause = [
-      ...(referId ? [{ refer_id: referId }] : [])
+      ...(referId ? [{ referral_code_id: referId }] : [])
     ];
 
     switch (interest_in) {
@@ -197,7 +197,7 @@ const CreateReferralTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "easygold Token",
           },
-          attributes: ["id", "broker_id", "refer_id", "status"],
+          attributes: ["id", "broker_id", "referral_code_id", "status"],
           raw: true
         });
         break;
@@ -208,7 +208,7 @@ const CreateReferralTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "goldflex",
           },
-          attributes: ["id", "broker_id", "refer_id", "status"],
+          attributes: ["id", "broker_id", "referral_code_id", "status"],
           raw: true
         });
         break;
@@ -219,7 +219,7 @@ const CreateReferralTargetCustomer = async (req, res) => {
             customer_email,
             interest_in: "Primeinvest",
           },
-          attributes: ["id", "broker_id", "refer_id", "status"],
+          attributes: ["id", "broker_id", "referral_code_id", "status"],
           raw: true
         });
         break;
@@ -255,10 +255,10 @@ const CreateReferralTargetCustomer = async (req, res) => {
       });
     }
 
-    // Create target customer with refer_id and broker_id as null
+    // Create target customer with referral_code_id and broker_id as null
     const targetCustomer = await db.TargetCustomers.create({
       broker_id: null,
-      refer_id: referId,
+      referral_code_id: referId,
       customer_name,
       customer_email,
       referral_code: null,

@@ -101,9 +101,9 @@ const UpdateTargetCustomerByEmail = async (req, res) => {
     let targetUserId = null;
     let refCode = targetCustomer.referred_by_code || "";
 
-    if (targetCustomer.refer_id) {
+    if (targetCustomer.referral_code_id) {
       const userRef = await db.UserReferrals.findOne({
-        where: { id: targetCustomer.refer_id },
+        where: { id: targetCustomer.referral_code_id },
         raw: true,
       });
       targetUserId = userRef?.user_id;

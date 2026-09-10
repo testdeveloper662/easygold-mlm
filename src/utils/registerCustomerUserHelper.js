@@ -59,8 +59,36 @@ const registerCustomerUser = async (targetCustomer, transaction = null) => {
     let parentBrokerId = null;
 
     // A: Resolve parent broker ID from referred_by_code if available
-    const referralCode = targetCustomer.referral_code || null;
+    let referralCode = targetCustomer.referral_code || null;
     const referredByCode = targetCustomer.referred_by_code || null;
+
+    const generateUniqueCode = async () => {
+      let code;
+      let attempts = 0;
+      while (attempts < 10) {
+        attempts++;
+        code = "ref" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        const existingRef = await db.UserReferrals.findOne({
+          where: { referral_code: code },
+          ...options,
+        });
+        if (!existingRef) return code;
+      }
+      return "ref" + Date.now().toString(36).toUpperCase();
+    };
+
+    if (!referralCode) {
+      referralCode = await generateUniqueCode();
+      if (typeof targetCustomer.update === "function") {
+        await targetCustomer.update({ referral_code: referralCode }, options);
+      } else if (targetCustomer.id) {
+        await db.TargetCustomers.update(
+          { referral_code: referralCode },
+          { where: { id: targetCustomer.id }, ...options }
+        );
+        targetCustomer.referral_code = referralCode;
+      }
+    }
 
     if (referredByCode) {
       const pBroker = await db.Brokers.findOne({
@@ -100,10 +128,10 @@ const registerCustomerUser = async (targetCustomer, transaction = null) => {
       }
     }
 
-    // C: If refer_id is set on targetCustomer (id in user_referrals table)
-    if (!parentUserId && targetCustomer.refer_id) {
+    // C: If referral_code_id is set on targetCustomer (id in user_referrals table)
+    if (!parentUserId && targetCustomer.referral_code_id) {
       const userRef = await db.UserReferrals.findOne({
-        where: { id: targetCustomer.refer_id },
+        where: { id: targetCustomer.referral_code_id },
         raw: true,
         ...options,
       });
@@ -212,6 +240,31 @@ const registerCustomerUser = async (targetCustomer, transaction = null) => {
         },
         options
       );
+    }
+
+    // 5. Ensure targetCustomer has ITS OWN referral_code_id pointing to ITS OWN user_referrals record
+    if (userRefRecord && userRefRecord.id) {
+      const selfRefId = userRefRecord.id;
+      const selfRefCode = userRefRecord.referral_code || referralCode;
+      if (typeof targetCustomer.update === "function") {
+        await targetCustomer.update(
+          {
+            referral_code_id: selfRefId,
+            referral_code: selfRefCode,
+          },
+          options
+        );
+      } else if (targetCustomer.id) {
+        await db.TargetCustomers.update(
+          {
+            referral_code_id: selfRefId,
+            referral_code: selfRefCode,
+          },
+          { where: { id: targetCustomer.id }, ...options }
+        );
+        targetCustomer.referral_code_id = selfRefId;
+        targetCustomer.referral_code = selfRefCode;
+      }
     }
 
     return { user, brokerRecord, userRefRecord };

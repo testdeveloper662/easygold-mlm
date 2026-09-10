@@ -44,7 +44,39 @@ const GetTargetCustomers = async (req, res) => {
     }
 
     // Get referral code from UserReferrals table first
-    const userRefRecord = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
+    let userRefRecord = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
+
+    // Auto-create UserReferrals record if missing for existing user
+    if (!userRefRecord && db.UserReferrals && targetUserId) {
+      try {
+        const refCode = broker?.referral_code || affiliate?.referral_code || null;
+        userRefRecord = await db.UserReferrals.create({
+          user_id: targetUserId,
+          referral_code: refCode,
+        });
+      } catch (err) {
+        userRefRecord = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
+      }
+    }
+
+    // Fetch child user_referrals where parent_user_id = targetUserId
+    const childUserRefs = await db.UserReferrals.findAll({
+      where: { parent_user_id: targetUserId },
+      attributes: ["id"],
+      raw: true,
+    });
+
+    const referralCodeIds = [];
+    if (userRefRecord?.id) {
+      referralCodeIds.push(userRefRecord.id);
+    }
+    if (childUserRefs && childUserRefs.length > 0) {
+      childUserRefs.forEach((r) => {
+        if (r.id && !referralCodeIds.includes(r.id)) {
+          referralCodeIds.push(r.id);
+        }
+      });
+    }
 
     // Fallback for referral code: UserReferrals -> Brokers -> Affiliates
     const refCode = userRefRecord?.referral_code || broker?.referral_code || affiliate?.referral_code;
@@ -65,39 +97,28 @@ const GetTargetCustomers = async (req, res) => {
     const offset = (page - 1) * limit;
     const search = req.query.search || "";
 
-    // Build where clause using refer_id (from user_referrals) and/or broker_id
-    const referId = userRefRecord ? userRefRecord.id : null;
+    // Build where clause using referral_code_id (with parent_user_id children) & broker_id fallback
     const brokerId = broker?.id || affiliate?.id;
-    const whereClause = {};
-
     const ownerConditions = [];
-    if (referId) {
-      ownerConditions.push({ refer_id: referId });
+
+    if (referralCodeIds.length > 0) {
+      ownerConditions.push({ referral_code_id: { [Op.in]: referralCodeIds } });
     }
     if (brokerId) {
       ownerConditions.push({ broker_id: brokerId });
     }
 
-    if (ownerConditions.length > 0) {
-      whereClause[Op.or] = ownerConditions;
-    }
+    const whereClause = ownerConditions.length > 0 ? { [Op.or]: ownerConditions } : {};
 
     // Add search filter
     if (search) {
-      const searchCondition = [
-        { customer_name: { [Op.like]: `%${search}%` } },
-        { customer_email: { [Op.like]: `%${search}%` } },
-      ];
-
-      if (whereClause[Op.or]) {
-        whereClause[Op.and] = [
-          { [Op.or]: whereClause[Op.or] },
-          { [Op.or]: searchCondition }
-        ];
-        delete whereClause[Op.or];
-      } else {
-        whereClause[Op.or] = searchCondition;
-      }
+      const searchCondition = {
+        [Op.or]: [
+          { customer_name: { [Op.like]: `%${search}%` } },
+          { customer_email: { [Op.like]: `%${search}%` } },
+        ],
+      };
+      whereClause[Op.and] = [searchCondition];
     }
 
     // Get total count

@@ -10,11 +10,24 @@ const GetTargetCustomerStats = async (req, res) => {
       : user.ID;
 
     const userRecord = await db.Users.findOne({ where: { ID: targetUserId } });
-    const userRefRecord = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
+    let userRefRecord = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
     const broker = await db.Brokers.findOne({ where: { user_id: targetUserId } });
     let affiliate = null;
     if (!broker && db.Affiliates) {
       affiliate = await db.Affiliates.findOne({ where: { user_id: targetUserId } });
+    }
+
+    // Auto-create UserReferrals if missing for existing user
+    if (!userRefRecord && db.UserReferrals && targetUserId) {
+      try {
+        const refCode = broker?.referral_code || affiliate?.referral_code || null;
+        userRefRecord = await db.UserReferrals.create({
+          user_id: targetUserId,
+          referral_code: refCode,
+        });
+      } catch (err) {
+        userRefRecord = await db.UserReferrals.findOne({ where: { user_id: targetUserId } });
+      }
     }
 
     if (!userRecord && !userRefRecord && !broker && !affiliate) {
@@ -24,12 +37,28 @@ const GetTargetCustomerStats = async (req, res) => {
       });
     }
 
-    const referId = userRefRecord ? userRefRecord.id : null;
-    const brokerId = broker?.id || affiliate?.id;
+    const childUserRefs = await db.UserReferrals.findAll({
+      where: { parent_user_id: targetUserId },
+      attributes: ["id"],
+      raw: true,
+    });
 
+    const referralCodeIds = [];
+    if (userRefRecord?.id) {
+      referralCodeIds.push(userRefRecord.id);
+    }
+    if (childUserRefs && childUserRefs.length > 0) {
+      childUserRefs.forEach((r) => {
+        if (r.id && !referralCodeIds.includes(r.id)) {
+          referralCodeIds.push(r.id);
+        }
+      });
+    }
+
+    const brokerId = broker?.id || affiliate?.id;
     const ownerConditions = [];
-    if (referId) {
-      ownerConditions.push({ refer_id: referId });
+    if (referralCodeIds.length > 0) {
+      ownerConditions.push({ referral_code_id: { [Op.in]: referralCodeIds } });
     }
     if (brokerId) {
       ownerConditions.push({ broker_id: brokerId });

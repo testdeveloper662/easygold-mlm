@@ -52,7 +52,14 @@ const GetAllBrokers = async (req, res) => {
         {
           model: db.Users,
           as: "user",
-          attributes: ["ID", "user_email", "display_name"],
+          attributes: ["ID", "user_email", "display_name", "role_id"],
+          where: {
+            [Op.or]: [
+              { role_id: { [Op.ne]: 5 } },
+              { role_id: null },
+            ],
+          },
+          required: true,
           include: [
             {
               model: db.UsersMeta,

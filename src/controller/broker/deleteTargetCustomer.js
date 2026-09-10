@@ -21,22 +21,31 @@ const DeleteTargetCustomer = async (req, res) => {
       });
     }
 
-    const referId = userRefRecord ? userRefRecord.id : null;
-    const brokerId = broker?.id || affiliate?.id;
+    const childUserRefs = await db.UserReferrals.findAll({
+      where: { parent_user_id: user.ID },
+      attributes: ["id"],
+      raw: true,
+    });
 
-    const ownerConditions = [];
-    if (referId) {
-      ownerConditions.push({ refer_id: referId });
+    const referralCodeIds = [];
+    if (userRefRecord?.id) {
+      referralCodeIds.push(userRefRecord.id);
     }
-    if (brokerId) {
-      ownerConditions.push({ broker_id: brokerId });
+    if (childUserRefs && childUserRefs.length > 0) {
+      childUserRefs.forEach((r) => {
+        if (r.id && !referralCodeIds.includes(r.id)) {
+          referralCodeIds.push(r.id);
+        }
+      });
     }
 
     // Get target customer
     const targetCustomer = await db.TargetCustomers.findOne({
       where: {
         id: id,
-        ...(ownerConditions.length > 0 ? { [Op.or]: ownerConditions } : {}),
+        ...(referralCodeIds.length > 0
+          ? { referral_code_id: { [Op.in]: referralCodeIds } }
+          : { referral_code_id: null }),
       },
     });
 

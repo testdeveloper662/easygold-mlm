@@ -88,7 +88,7 @@ const GetAllAffiliates = async (req, res) => {
         { role_id: 2, user_status: 0 }
       ]
     };
-    const affiliateUserFilter = isSuperAdmin ? baseRoleFilter : strictRoleFilter;
+    const affiliateUserFilter = (isSuperAdmin && !targetUserId) ? baseRoleFilter : strictRoleFilter;
 
     // 1️⃣ Try fetching from db.Affiliates if available
     let primaryQueried = false;

@@ -276,17 +276,7 @@ const GetBrokerNetworkById = async (req, res) => {
             model: db.Users,
             as: "user",
             attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
-            where: {
-              [Op.and]: [
-                brokerUserWhere,
-                {
-                  [Op.or]: [
-                    { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
-                    { role_id: 2, user_status: 0 }
-                  ]
-                }
-              ]
-            },
+            where: brokerUserWhere,
             required: true,
           },
         ],

@@ -16,9 +16,11 @@ const GetAllAffiliates = async (req, res) => {
       targetUserId = user.ID || user.id;
     }
 
-    const whereClause = {
-      parent_id: { [Op.not]: null }
-    };
+    const isSuperAdmin = user.role === "SUPER_ADMIN";
+    const whereClause = {};
+    if (!isSuperAdmin || targetUserId) {
+      whereClause.parent_id = { [Op.not]: null };
+    }
 
     if (targetUserId) {
       const targetParentIds = [];
@@ -78,6 +80,16 @@ const GetAllAffiliates = async (req, res) => {
     let count = 0;
     let affiliates = [];
 
+    const baseRoleFilter = { role_id: { [Op.ne]: 5 } };
+    const strictRoleFilter = {
+      role_id: { [Op.ne]: 5 },
+      [Op.or]: [
+        { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+        { role_id: 2, user_status: 0 }
+      ]
+    };
+    const affiliateUserFilter = isSuperAdmin ? baseRoleFilter : strictRoleFilter;
+
     // 1️⃣ Try fetching from db.Affiliates if available
     let primaryQueried = false;
     try {
@@ -91,13 +103,7 @@ const GetAllAffiliates = async (req, res) => {
               as: "user",
               attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
               required: true,
-              where: {
-                role_id: { [Op.ne]: 5 },
-                [Op.or]: [
-                  { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
-                  { role_id: 2, user_status: 0 }
-                ]
-              }
+              where: affiliateUserFilter
             },
           ],
           distinct: true,
@@ -130,11 +136,7 @@ const GetAllAffiliates = async (req, res) => {
       if (affiliateUserIds.length > 0) {
         const userWhere = {
           ID: { [Op.in]: affiliateUserIds },
-          role_id: { [Op.ne]: 5 },
-          [Op.or]: [
-            { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
-            { role_id: 2, user_status: 0 }
-          ]
+          ...affiliateUserFilter
         };
 
         if (search && search.trim() !== "") {

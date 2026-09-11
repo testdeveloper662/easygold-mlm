@@ -80,7 +80,13 @@ const GetAllAffiliates = async (req, res) => {
     let count = 0;
     let affiliates = [];
 
-    const baseRoleFilter = { role_id: { [Op.ne]: 5 } };
+    const baseRoleFilter = {
+      role_id: { [Op.ne]: 5 },
+      [Op.or]: [
+        { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+        { role_id: 2, user_status: { [Op.ne]: 2 } }
+      ]
+    };
     const strictRoleFilter = {
       role_id: { [Op.ne]: 5 },
       [Op.or]: [

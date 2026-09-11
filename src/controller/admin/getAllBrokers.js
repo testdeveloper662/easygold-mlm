@@ -174,7 +174,7 @@ const GetAllBrokers = async (req, res) => {
           logo: logoUrl,
 
           // Meta fields
-          company: m.u_company || null,
+          company: m.u_company || "-",
           contact_person: m.u_contact_person || null,
           street_no: m.u_street_no || null,
           street: m.u_street || null,
@@ -183,7 +183,7 @@ const GetAllBrokers = async (req, res) => {
           country: m.u_country || null,
           vat_no: m.u_vat_no || null,
           tax_no: m.u_tax_no || null,
-          phone: m.u_phone || null,
+          phone: m.u_phone || "-",
           landline_number: m.u_landline_number || null,
           language: m.language || null,
           date: m.date || null,

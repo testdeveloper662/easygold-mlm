@@ -270,7 +270,6 @@ const GetBrokerNetworkById = async (req, res) => {
     let affiliatesFormatted = [];
     if (isAffiliateNode && db.Affiliates) {
       const affiliatesRaw = await db.Affiliates.findAll({
-        where: { parent_id: { [Op.not]: null } },
         include: [
           {
             model: db.Users,
@@ -326,6 +325,25 @@ const GetBrokerNetworkById = async (req, res) => {
     const uniqueAffiliates = affiliatesFormatted.filter((a) => !brokerUserIds.has(a.user_id));
     const existingUserIds = new Set([...brokerUserIds, ...uniqueAffiliates.map((a) => a.user_id)]);
     const uniqueCustomers = customerFormatted.filter((c) => !existingUserIds.has(c.user_id));
+
+    // Fetch UserReferrals to populate parent_user_id for all nodes
+    const allUserRefs = await db.UserReferrals.findAll({
+      attributes: ["user_id", "parent_user_id"],
+      raw: true
+    });
+    const parentUserIdMap = {};
+    allUserRefs.forEach(r => {
+      parentUserIdMap[r.user_id] = r.parent_user_id;
+    });
+
+    brokersFormatted = brokersFormatted.map(b => ({
+      ...b,
+      parent_user_id: parentUserIdMap[b.user_id] || b.parent_user_id
+    }));
+    
+    uniqueAffiliates.forEach(a => {
+      a.parent_user_id = parentUserIdMap[a.user_id] || a.parent_user_id;
+    });
 
     // Drop any node whose linked user could not be resolved (e.g. filtered-out customer rows) so the tree never shows "Unknown" placeholders
     const nodesToUse = [...brokersFormatted, ...uniqueAffiliates, ...uniqueCustomers].filter((n) => n.user && (n.user.ID || n.user.id));

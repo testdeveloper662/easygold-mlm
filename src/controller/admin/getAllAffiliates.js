@@ -18,9 +18,6 @@ const GetAllAffiliates = async (req, res) => {
 
     const isSuperAdmin = user.role === "SUPER_ADMIN";
     const whereClause = {};
-    if (!isSuperAdmin || targetUserId) {
-      whereClause.parent_id = { [Op.not]: null };
-    }
 
     if (targetUserId) {
       const targetParentIds = [];
@@ -230,10 +227,10 @@ const GetAllAffiliates = async (req, res) => {
           referral_code: affiliate.referral_code || m.referral_code || null,
           referred_by_code: affiliate.referred_by_code || null,
           person_typ: affiliate.person_typ || m.person_typ || m.u_person_type || "privatperson",
-          company: m.u_company || null,
+          company: m.u_company || "-",
           country: affiliate.land || m.u_country || m.country || null,
           steuer_id: affiliate.steuer_id || m.steuer_id || m.u_vat_no || m.vat_no || null,
-          phone: m.u_phone || null,
+          phone: m.u_phone || "-",
           language: m.language || null,
           logo: logoUrl,
           user_status: u?.user_status !== undefined ? u.user_status : (affiliate.user_status !== undefined ? affiliate.user_status : 2),

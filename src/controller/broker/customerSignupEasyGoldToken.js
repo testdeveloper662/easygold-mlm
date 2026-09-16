@@ -99,28 +99,8 @@ const customerSignupEasyGoldToken = async (req, res) => {
                 transaction,
             });
 
-            if (!parentBroker) {
-                const createdBroker = await db.Brokers.create(
-                    {
-                        user_id: userRef.user_id,
-                        referral_code: userRef.referral_code,
-                        referred_by_code: userRef.referred_by_code,
-                        children_count: 0,
-                    },
-                    { transaction }
-                );
-                parentBroker = await db.Brokers.findOne({
-                    where: { id: createdBroker.id },
-                    include: [
-                        {
-                            model: db.Users,
-                            as: "user",
-                            attributes: ["user_email", "display_name"]
-                        }
-                    ],
-                    transaction,
-                });
-            }
+            // If no parentBroker is found, it means the referring user is a customer, not a broker.
+            // We should NOT create a broker for them.
             finalBrokerId = parentBroker?.id || null;
         }
 

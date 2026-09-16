@@ -9,11 +9,13 @@ const CheckExist = async (req, res) => {
         });
 
         if (existingUserByEmail) {
-            return res.status(200).json({
-                success: false,
-                field: "email",
-                message: "A user with this email already exists. Please use a different email address.",
-            });
+            if (existingUserByEmail.role_id !== 5) {
+                return res.status(200).json({
+                    success: false,
+                    field: "email",
+                    message: "A user with this email already exists. Please use a different email address.",
+                });
+            }
         }
 
         // // Check if username already exists
@@ -22,11 +24,13 @@ const CheckExist = async (req, res) => {
         });
 
         if (existingUserByUsername) {
-            return res.status(200).json({
-                success: false,
-                field: "username",
-                message: "This username is already taken. Please choose a different username.",
-            });
+            if (existingUserByUsername.role_id !== 5) {
+                return res.status(200).json({
+                    success: false,
+                    field: "username",
+                    message: "This username is already taken. Please choose a different username.",
+                });
+            }
         }
 
         // // Check if mystorekey already exists
@@ -35,11 +39,13 @@ const CheckExist = async (req, res) => {
         });
 
         if (existingUserByMyStore) {
-            return res.status(200).json({
-                success: false,
-                field: "company",
-                message: "This company name is already taken. Please choose a different company name.",
-            });
+            if (existingUserByMyStore.role_id !== 5) {
+                return res.status(200).json({
+                    success: false,
+                    field: "company",
+                    message: "This company name is already taken. Please choose a different company name.",
+                });
+            }
         }
 
         return res.status(200).json({

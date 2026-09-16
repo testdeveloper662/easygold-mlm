@@ -179,40 +179,8 @@ const registerCustomerUser = async (targetCustomer, transaction = null) => {
       parentUserId = null;
     }
 
-    // 3. Create or update Brokers record for customer if referral code / referred_by code exists
     let brokerRecord = null;
-    if (referralCode || referredByCode || targetCustomer.broker_id) {
-      brokerRecord = await db.Brokers.findOne({
-        where: { user_id: userId },
-        ...options,
-      });
-
-      if (brokerRecord && parentBrokerId === brokerRecord.id) {
-        parentBrokerId = null; // prevent self-referral in Brokers table
-      }
-
-      if (!brokerRecord) {
-        brokerRecord = await db.Brokers.create(
-          {
-            user_id: userId,
-            referral_code: referralCode,
-            referred_by_code: referredByCode,
-            parent_id: parentBrokerId,
-            children_count: 0,
-          },
-          options
-        );
-      } else {
-        await brokerRecord.update(
-          {
-            referral_code: referralCode || brokerRecord.referral_code,
-            referred_by_code: referredByCode || brokerRecord.referred_by_code,
-            parent_id: parentBrokerId || brokerRecord.parent_id,
-          },
-          options
-        );
-      }
-    }
+    // Removed: Customer should not be inserted into Brokers table
 
     // 4. Create or update UserReferrals record for customer
     let userRefRecord = await db.UserReferrals.findOne({

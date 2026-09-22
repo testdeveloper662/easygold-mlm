@@ -27,27 +27,43 @@ const MAX_LEVEL = 5;
 //       };
 //     });
 // };
-const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {}) => {
+const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {}, assignedUserIds = new Set()) => {
   if (level > MAX_LEVEL || !parentNode) return [];
 
   const parentId = parentNode.id;
-  const parentRefCode = parentNode.referral_code;
+  const parentRefCode = (parentNode.referral_code || "").trim().toUpperCase();
+  const parentUserId = parentNode.user_id || parentNode.user?.ID;
+  const isParentAffiliate = Boolean(parentNode.is_affiliate !== undefined ? parentNode.is_affiliate : parentNode.dataValues?.is_affiliate);
+
+  if (parentUserId) {
+    assignedUserIds.add(Number(parentUserId));
+  }
 
   const filtered = nodes.filter((b) => {
-    if (Number(b.user_id) === Number(parentNode.user_id)) return false;
+    const bUserId = b.user_id || b.user?.ID;
+    if (!bUserId || Number(bUserId) === Number(parentUserId)) return false;
 
-    // For affiliates, if parent_id is null/falsy, do not show in the network tree
-    if (b.is_affiliate && (b.parent_id === null || b.parent_id === undefined || b.parent_id === "")) {
-      return false;
+    // A single child user must never be connected to multiple parents in the tree
+    if (assignedUserIds.has(Number(bUserId))) return false;
+
+    const bRefCode = (b.referred_by_code || "").trim().toUpperCase();
+    if (parentRefCode && bRefCode) {
+      return bRefCode === parentRefCode;
     }
 
-    if (parentRefCode && b.referred_by_code) {
-      return b.referred_by_code === parentRefCode;
+    // Only fallback to parent_id if referred_by_code is absent, and must match parent table type
+    if (parentId && b.parent_id && Number(b.parent_id) === Number(parentId)) {
+      const isChildAffiliate = Boolean(b.is_affiliate);
+      return isChildAffiliate === isParentAffiliate;
     }
 
-    const matchesParentId = Number(b.parent_id) === Number(parentId);
-    const matchesType = Boolean(b.is_affiliate) === Boolean(parentNode.is_affiliate);
-    return matchesParentId && matchesType;
+    return false;
+  });
+
+  // Mark all matched children as assigned before recursion
+  filtered.forEach((b) => {
+    const bUserId = b.user_id || b.user?.ID;
+    if (bUserId) assignedUserIds.add(Number(bUserId));
   });
 
   const result = await Promise.all(
@@ -56,18 +72,27 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {})
         nodes,
         b,
         level + 1,
-        commissionMap
+        commissionMap,
+        assignedUserIds
       );
 
       const commissionAmount = b.is_affiliate ? 0 : roundToTwoDecimalPlaces(commissionMap[b.id] || 0);
+      const bRoleId = b.user?.role_id || b.role_id || (b.is_affiliate ? 3 : 2);
+      let roleName = "BROKER";
+      if (bRoleId === 5) roleName = "CUSTOMER";
+      else if (bRoleId === 3 || b.is_affiliate) roleName = "AFFILIATE";
+      else if (bRoleId === 2) roleName = "BROKER";
 
       return {
         broker_id: b.id,
-        user_id: b.user?.ID || null,
+        user_id: b.user?.ID || b.user_id || null,
         profile_image: await generateImageUrl(b.profile_image, "profile"),
         user_email: b.user?.user_email || null,
         display_name: b.user?.display_name || null,
         referral_code: b.referral_code || null,
+        role_id: bRoleId,
+        role_name: roleName,
+        is_affiliate: b.is_affiliate || false,
         commission_amount: commissionAmount,
         level,
         children,
@@ -80,27 +105,37 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {})
 };
 
 
-const checkIsDownline = (nodes, parentNode, targetNode) => {
+const checkIsDownline = (nodes, parentNode, targetNode, visited = new Set()) => {
   const parentId = parentNode.id;
-  const parentRefCode = parentNode.referral_code;
+  const parentRefCode = (parentNode.referral_code || "").trim().toUpperCase();
+  const parentUserId = parentNode.user_id || parentNode.user?.ID;
+  const isParentAffiliate = Boolean(parentNode.is_affiliate !== undefined ? parentNode.is_affiliate : parentNode.dataValues?.is_affiliate);
+
+  if (parentUserId) visited.add(Number(parentUserId));
 
   const filtered = nodes.filter((b) => {
-    if (Number(b.user_id) === Number(parentNode.user_id)) return false;
+    const bUserId = b.user_id || b.user?.ID;
+    if (!bUserId || Number(bUserId) === Number(parentUserId)) return false;
+    if (visited.has(Number(bUserId))) return false;
 
-    if (parentRefCode && b.referred_by_code) {
-      return b.referred_by_code === parentRefCode;
+    const bRefCode = (b.referred_by_code || "").trim().toUpperCase();
+    if (parentRefCode && bRefCode) {
+      return bRefCode === parentRefCode;
     }
 
-    const matchesParentId = Number(b.parent_id) === Number(parentId);
-    const matchesType = Boolean(b.is_affiliate) === Boolean(parentNode.is_affiliate);
-    return matchesParentId && matchesType;
+    if (parentId && b.parent_id && Number(b.parent_id) === Number(parentId)) {
+      const isChildAffiliate = Boolean(b.is_affiliate);
+      return isChildAffiliate === isParentAffiliate;
+    }
+
+    return false;
   });
 
   for (const child of filtered) {
     if (Number(child.id) === Number(targetNode.id) && Number(child.user_id) === Number(targetNode.user_id)) {
       return true;
     }
-    if (checkIsDownline(nodes, child, targetNode)) {
+    if (checkIsDownline(nodes, child, targetNode, visited)) {
       return true;
     }
   }
@@ -121,6 +156,7 @@ const GetBrokerNetworkById = async (req, res) => {
     const type = req.query.type || (req.query.is_affiliate === "true" ? "affiliate" : null);
 
     let targetBroker = null;
+    let isAffiliateNode = false;
 
     if (type === "affiliate") {
       if (db.Affiliates) {
@@ -134,6 +170,7 @@ const GetBrokerNetworkById = async (req, res) => {
             },
           ],
         });
+        if (targetBroker) isAffiliateNode = true;
       }
     } else if (type === "broker") {
       targetBroker = await db.Brokers.findOne({
@@ -146,6 +183,7 @@ const GetBrokerNetworkById = async (req, res) => {
           },
         ],
       });
+      if (targetBroker) isAffiliateNode = false;
     }
 
     if (!targetBroker) {
@@ -158,16 +196,22 @@ const GetBrokerNetworkById = async (req, res) => {
             attributes: ["ID", "user_email", "display_name"],
           },
         ],
-      }) || (db.Affiliates ? await db.Affiliates.findOne({
-        where: { [Op.or]: [{ id: broker_id }, { user_id: broker_id }] },
-        include: [
-          {
-            model: db.Users,
-            as: "user",
-            attributes: ["ID", "user_email", "display_name"],
-          },
-        ],
-      }) : null);
+      });
+      if (targetBroker) {
+        isAffiliateNode = false;
+      } else if (db.Affiliates) {
+        targetBroker = await db.Affiliates.findOne({
+          where: { [Op.or]: [{ id: broker_id }, { user_id: broker_id }] },
+          include: [
+            {
+              model: db.Users,
+              as: "user",
+              attributes: ["ID", "user_email", "display_name"],
+            },
+          ],
+        });
+        if (targetBroker) isAffiliateNode = true;
+      }
     }
 
     if (!targetBroker) {
@@ -177,51 +221,132 @@ const GetBrokerNetworkById = async (req, res) => {
       });
     }
 
+    // Determine requested role_id filter parameter
+    const rawRoleId = req.query.role_id || req.query.role;
+    let filterRoleId = null;
+    if (rawRoleId) {
+      if (rawRoleId === "all" || rawRoleId === "ALL") {
+        filterRoleId = "all";
+      } else if (rawRoleId === "CUSTOMER" || rawRoleId === "customer" || String(rawRoleId) === "5") {
+        filterRoleId = 5;
+      } else if (rawRoleId === "AFFILIATE" || rawRoleId === "affiliate" || String(rawRoleId) === "3") {
+        filterRoleId = 3;
+      } else if (rawRoleId === "BROKER" || rawRoleId === "broker" || String(rawRoleId) === "2") {
+        filterRoleId = 2;
+      } else if (!isNaN(parseInt(rawRoleId))) {
+        filterRoleId = parseInt(rawRoleId);
+      }
+    }
+
+    // Private individuals (role_id 4) belong to the affiliate network only and must never appear in the broker network.
+    const isAffiliateNetwork = isAffiliateNode || type === "affiliate";
+    const defaultRoleWhere = isAffiliateNetwork
+      ? { [Op.or]: [{ role_id: { [Op.notIn]: [5] } }, { role_id: null }] }
+      : { [Op.or]: [{ role_id: { [Op.notIn]: [4, 5] } }, { role_id: null }] };
+
+    const brokerUserWhere = (filterRoleId === 5)
+      ? { role_id: 5 }
+      : (filterRoleId && filterRoleId !== "all"
+          ? { role_id: filterRoleId }
+          : defaultRoleWhere);
+
     // 2️⃣ Fetch all brokers and affiliates with user details for network tree
-    const brokersRaw = await db.Brokers.findAll({
-      include: [
-        {
-          model: db.Users,
-          as: "user",
-          attributes: ["ID", "user_email", "display_name"],
-        },
-      ],
-    });
-    const brokersFormatted = brokersRaw.map((b) => ({ ...b.toJSON(), is_affiliate: false }));
+    let brokersFormatted = [];
+    if (!isAffiliateNode) {
+      const brokersRaw = await db.Brokers.findAll({
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name", "role_id"],
+            where: brokerUserWhere,
+            required: true,
+          },
+        ],
+      });
+      brokersFormatted = brokersRaw.map((b) => ({ ...b.toJSON(), is_affiliate: false }));
+    }
 
     let affiliatesFormatted = [];
-    if (db.Affiliates) {
+    if (isAffiliateNode && db.Affiliates) {
       const affiliatesRaw = await db.Affiliates.findAll({
-        where: {
-          parent_id: { [Op.ne]: null },
-        },
         include: [
           {
             model: db.Users,
             as: "user",
             attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
             where: {
-              [Op.or]: [
-                { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
-                { role_id: 2, user_status: 0 }
+              [Op.and]: [
+                brokerUserWhere,
+                {
+                  [Op.or]: [
+                    { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+                    { role_id: 2, user_status: 0 }
+                  ]
+                }
               ]
-            }
+            },
+            required: true,
           },
         ],
       });
       affiliatesFormatted = affiliatesRaw.map((a) => ({ ...a.toJSON(), is_affiliate: true }));
     }
 
-    let nodesToUse = [];
-    if (type === "broker") {
-      nodesToUse = brokersFormatted;
-    } else if (type === "affiliate") {
-      nodesToUse = affiliatesFormatted;
-    } else {
-      const brokerUserIds = new Set(brokersFormatted.map((b) => b.user_id));
-      const uniqueAffiliates = affiliatesFormatted.filter((a) => !brokerUserIds.has(a.user_id));
-      nodesToUse = [...brokersFormatted, ...uniqueAffiliates];
+    // Fetch customer users (role_id = 5) only when explicitly requested.
+    // The default network tree shows brokers/affiliates/private individuals (role_id 2, 3, 4) and never customers.
+    // For Affiliate networks, customers are strictly excluded.
+    let customerFormatted = [];
+    if (!isAffiliateNode && (filterRoleId === 5 || req.query.include_customers === "true")) {
+      const customerRefs = await db.UserReferrals.findAll({
+        include: [
+          {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_email", "display_name", "role_id"],
+            where: { role_id: 5 },
+            required: true,
+          },
+        ],
+      });
+      customerFormatted = customerRefs.map(c => ({
+        id: `cust_${c.id}`,
+        user_id: c.user_id,
+        parent_user_id: c.parent_user_id,
+        referred_by_code: c.referred_by_code,
+        referral_code: c.referral_code,
+        user: c.user,
+        role_id: 5,
+        is_affiliate: false,
+      }));
     }
+
+    const brokerUserIds = new Set(brokersFormatted.map((b) => b.user_id));
+    const uniqueAffiliates = affiliatesFormatted.filter((a) => !brokerUserIds.has(a.user_id));
+    const existingUserIds = new Set([...brokerUserIds, ...uniqueAffiliates.map((a) => a.user_id)]);
+    const uniqueCustomers = customerFormatted.filter((c) => !existingUserIds.has(c.user_id));
+
+    // Fetch UserReferrals to populate parent_user_id for all nodes
+    const allUserRefs = await db.UserReferrals.findAll({
+      attributes: ["user_id", "parent_user_id"],
+      raw: true
+    });
+    const parentUserIdMap = {};
+    allUserRefs.forEach(r => {
+      parentUserIdMap[r.user_id] = r.parent_user_id;
+    });
+
+    brokersFormatted = brokersFormatted.map(b => ({
+      ...b,
+      parent_user_id: parentUserIdMap[b.user_id] || b.parent_user_id
+    }));
+    
+    uniqueAffiliates.forEach(a => {
+      a.parent_user_id = parentUserIdMap[a.user_id] || a.parent_user_id;
+    });
+
+    // Drop any node whose linked user could not be resolved (e.g. filtered-out customer rows) so the tree never shows "Unknown" placeholders
+    const nodesToUse = [...brokersFormatted, ...uniqueAffiliates, ...uniqueCustomers].filter((n) => n.user && (n.user.ID || n.user.id));
 
     // Authorization check: non-super admin users can only view their own node or downline nodes
     const reqUser = req.user?.user || req.user;

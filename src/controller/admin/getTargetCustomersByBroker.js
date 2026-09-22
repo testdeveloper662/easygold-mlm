@@ -80,10 +80,33 @@ const GetTargetCustomersByBroker = async (req, res) => {
       offset: offset,
     });
 
+    const personName = broker.user?.display_name || "";
+    const personEmail = broker.user?.user_email || "";
+
+    const customersWithPerson = targetCustomers.map((c) => {
+      const customer = typeof c.toJSON === "function" ? c.toJSON() : { ...c };
+      customer.person_name = personName;
+      customer.person_email = personEmail;
+      customer.broker_name = personName;
+      customer.person = {
+        name: personName,
+        email: personEmail,
+        referral_code: customer.referred_by_code || broker.referral_code || null,
+      };
+      return customer;
+    });
+
     return res.status(200).json({
       success: true,
       message: "Broker's target customers retrieved successfully",
       data: {
+        person: {
+          name: personName,
+          email: personEmail,
+          broker_id: broker.id,
+          user_id: broker.user_id,
+          referral_code: broker.referral_code,
+        },
         broker: {
           id: broker.id,
           user_id: broker.user_id,
@@ -91,7 +114,7 @@ const GetTargetCustomersByBroker = async (req, res) => {
           display_name: broker.user?.display_name,
           referral_code: broker.referral_code,
         },
-        customers: targetCustomers,
+        customers: customersWithPerson,
         total: totalCount,
         currentPage: page,
         totalPages: Math.ceil(totalCount / limit),

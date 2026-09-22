@@ -1,0 +1,105 @@
+const { Sequelize, sequelize } = require("../config/database");
+
+const AffiliateCommissionHistory = sequelize.define(
+  "affiliate_commission_histories",
+  {
+    id: {
+      type: Sequelize.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    affiliate_id: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
+    user_id: {
+      type: Sequelize.BIGINT.UNSIGNED,
+      allowNull: false,
+    },
+    order_id: {
+      type: Sequelize.STRING(255),
+      allowNull: false,
+    },
+    order_type: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    order_amount: {
+      type: Sequelize.FLOAT,
+      allowNull: false,
+    },
+    profit_amount: {
+      type: Sequelize.FLOAT,
+      allowNull: false,
+    },
+    commission_percent: {
+      type: Sequelize.FLOAT,
+      allowNull: false,
+    },
+    commission_amount: {
+      type: Sequelize.FLOAT,
+      allowNull: false,
+    },
+    tree: {
+      type: Sequelize.STRING(255),
+      allowNull: false,
+      comment: "Affiliate hierarchy, e.g. 1->2->3",
+    },
+    is_seller: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+    },
+    is_payment_done: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+    },
+    is_payment_declined: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+    },
+    selected_payment_method: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      comment: "1 - bank, 2 - crypto, 3-cash, 4-card, 5-FLIZPay",
+    },
+    choose_payment_option: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+      defaultValue: 1,
+      comment: "1 - option-1, 2 - option-2, 3 - option-3, 4 - option-4",
+    },
+    target_customer_log_id: {
+      type: Sequelize.INTEGER,
+      allowNull: true, // or false if required
+    },
+    is_send_bonus: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+    },
+    is_deleted: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+    },
+    commission_type: {
+      type: Sequelize.STRING(255),
+      allowNull: true,
+    },
+    notes: {
+      type: Sequelize.TEXT,
+      allowNull: true,
+    },
+    product_type: {
+      type: Sequelize.STRING(50),
+      allowNull: true,
+      defaultValue: "product",
+      comment: "product, diamond or gemstone",
+    },
+  },
+  {
+    timestamps: true,
+    tableName: "affiliate_commission_histories",
+  }
+);
+
+module.exports = AffiliateCommissionHistory;

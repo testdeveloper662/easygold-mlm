@@ -317,36 +317,40 @@ const CreateBrokerPayoutRequest = async (req, res) => {
             time,
         };
 
-        const outputFileName = `payout_${paylodForMailPDF.payout_request_id}.pdf`;
-
         let relativeInvoicePath = null;
+        let pdfResult = null;
+        const isAffiliate = user_type === "affiliate";
 
-        const pdfResult = await generatePDF(
-            paylodForMailPDF,
-            language?.includes("de")
-                ? "payout_template_de.html"
-                : "payout_template_en.html",
-            "payouts",
-            outputFileName
-        );
+        if (!isAffiliate) {
+            const outputFileName = `payout_${paylodForMailPDF.payout_request_id}.pdf`;
 
-        // ✅ CHECK PDF SUCCESS FIRST
-        if (pdfResult?.success && pdfResult?.filePath) {
-            relativeInvoicePath = pdfResult.filePath.split("uploads")[1];
-            relativeInvoicePath = relativeInvoicePath.replace("\\uploads", "");
-            relativeInvoicePath = relativeInvoicePath.replace(/\\/g, "/");
+            pdfResult = await generatePDF(
+                paylodForMailPDF,
+                language?.includes("de")
+                    ? "payout_template_de.html"
+                    : "payout_template_en.html",
+                "payouts",
+                outputFileName
+            );
 
-            if (!relativeInvoicePath.startsWith("/")) {
-                relativeInvoicePath = "/" + relativeInvoicePath;
+            // ✅ CHECK PDF SUCCESS FIRST
+            if (pdfResult?.success && pdfResult?.filePath) {
+                relativeInvoicePath = pdfResult.filePath.split("uploads")[1];
+                relativeInvoicePath = relativeInvoicePath.replace("\\uploads", "");
+                relativeInvoicePath = relativeInvoicePath.replace(/\\/g, "/");
+
+                if (!relativeInvoicePath.startsWith("/")) {
+                    relativeInvoicePath = "/" + relativeInvoicePath;
+                }
+
+                console.log("relativeInvoicePath:", relativeInvoicePath);
+
+                await newRequest.update({
+                    invoice: relativeInvoicePath
+                });
+            } else {
+                console.error("PDF generation failed:", pdfResult);
             }
-
-            console.log("relativeInvoicePath:", relativeInvoicePath);
-
-            await newRequest.update({
-                invoice: relativeInvoicePath
-            });
-        } else {
-            console.error("PDF generation failed:", pdfResult);
         }
 
         const templateVariables = {

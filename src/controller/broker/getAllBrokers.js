@@ -26,13 +26,13 @@ const GetAllBrokers = async (req, res) => {
 
             const bRec = await db.Brokers.findOne({ where: { user_id: targetUserId } });
             if (bRec) {
+                // Strictly only include Broker table ID for querying db.Brokers table
                 if (bRec.id) targetParentIds.push(bRec.id);
                 if (bRec.referral_code) targetRefCodes.push(bRec.referral_code);
             }
             if (db.Affiliates) {
                 const aRec = await db.Affiliates.findOne({ where: { user_id: targetUserId } });
                 if (aRec) {
-                    if (aRec.id) targetParentIds.push(aRec.id);
                     if (aRec.referral_code) targetRefCodes.push(aRec.referral_code);
                 }
             }
@@ -67,7 +67,14 @@ const GetAllBrokers = async (req, res) => {
                 {
                     model: db.Users,
                     as: "user",
-                    attributes: ["ID", "user_email", "display_name"],
+                    attributes: ["ID", "user_email", "display_name", "role_id"],
+                    where: {
+                        [Op.or]: [
+                            { role_id: { [Op.ne]: 5 } },
+                            { role_id: null },
+                        ],
+                    },
+                    required: true,
                     include: [
                         {
                             model: db.UsersMeta,

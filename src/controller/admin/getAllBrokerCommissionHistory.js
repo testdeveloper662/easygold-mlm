@@ -3,24 +3,38 @@ const { sequelize } = require("../../config/database");
 
 const GetAllBrokerCommissionHistory = async (req, res) => {
   try {
+    const isAffiliate = req.query.type === "affiliate" || req.query.user_type === "affiliate";
+    const tableName = isAffiliate ? "affiliate_commission_histories" : "broker_commission_histories";
+    const entityIdColumn = isAffiliate ? "affiliate_id" : "broker_id";
+
+    // Ensure table exists (for affiliate)
+    if (isAffiliate && db.AffiliateCommissionHistory) {
+      const [tableCheck] = await sequelize.query(
+        `SHOW TABLES LIKE '${tableName}'`
+      );
+      if (tableCheck.length === 0) {
+        await db.AffiliateCommissionHistory.sync({ alter: true });
+      }
+    }
+
     // Check if is_payment_declined column exists, if not create it
     const [columnCheck] = await sequelize.query(
-      "SHOW COLUMNS FROM broker_commission_histories LIKE 'is_payment_declined'"
+      `SHOW COLUMNS FROM ${tableName} LIKE 'is_payment_declined'`
     );
 
     if (columnCheck.length === 0) {
       console.log(
-        "⚠️ is_payment_declined column doesn't exist. Creating it now..."
+        `⚠️ is_payment_declined column doesn't exist in ${tableName}. Creating it now...`
       );
 
       await sequelize.query(`
-        ALTER TABLE broker_commission_histories
+        ALTER TABLE ${tableName}
         ADD COLUMN is_payment_declined TINYINT(1) NOT NULL DEFAULT 0
         AFTER is_payment_done
       `);
 
       console.log(
-        "✅ is_payment_declined column created successfully"
+        `✅ is_payment_declined column created successfully in ${tableName}`
       );
     }
 
@@ -43,7 +57,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
           ELSE CONCAT(order_id, '_', order_type)
         END
       ) as total
-      FROM broker_commission_histories
+      FROM ${tableName}
       WHERE is_deleted = 0
       ${search ? "AND order_id LIKE :search" : ""}
     `,
@@ -63,15 +77,15 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     const [orderIds] = await sequelize.query(
       `
       SELECT
-  MAX(id) as id,
-  order_id,
-  order_type
-FROM broker_commission_histories
-WHERE is_deleted = 0
-${search ? "AND order_id LIKE :search" : ""}
-GROUP BY order_id, order_type
-ORDER BY MAX(createdAt) DESC
-LIMIT :limit OFFSET :offset
+        MAX(id) as id,
+        order_id,
+        order_type
+      FROM ${tableName}
+      WHERE is_deleted = 0
+      ${search ? "AND order_id LIKE :search" : ""}
+      GROUP BY order_id, order_type
+      ORDER BY MAX(createdAt) DESC
+      LIMIT :limit OFFSET :offset
     `,
       {
         replacements: search
@@ -94,8 +108,9 @@ LIMIT :limit OFFSET :offset
     if (!orderIds || orderIds.length === 0) {
       return res.status(200).json({
         success: true,
-        message:
-          "All brokers commission history fetched successfully.",
+        message: isAffiliate
+          ? "All affiliates commission history fetched successfully."
+          : "All brokers commission history fetched successfully.",
         data: [],
         pagination: {
           currentPage: page,
@@ -154,7 +169,7 @@ LIMIT :limit OFFSET :offset
         bch.commission_type,
         bch.order_amount,
         bch.profit_amount,
-        bch.broker_id,
+        bch.${entityIdColumn} AS broker_id,
         bch.user_id,
         bch.commission_percent,
         bch.commission_amount,
@@ -169,7 +184,7 @@ LIMIT :limit OFFSET :offset
         bch.updatedAt,
         u.user_email
 
-      FROM broker_commission_histories AS bch
+      FROM ${tableName} AS bch
 
       LEFT JOIN 6LWUP_users AS u
       ON u.ID = bch.user_id
@@ -224,6 +239,7 @@ LIMIT :limit OFFSET :offset
 
         acc[orderKey].broker_commissions.push({
           broker_id: record.broker_id,
+          affiliate_id: record.broker_id,
           user_id: record.user_id,
           user_email: record.user_email,
 
@@ -294,8 +310,9 @@ LIMIT :limit OFFSET :offset
     return res.status(200).json({
       success: true,
 
-      message:
-        "All brokers commission history fetched successfully.",
+      message: isAffiliate
+        ? "All affiliates commission history fetched successfully."
+        : "All brokers commission history fetched successfully.",
 
       data: grouped || [],
 
@@ -310,7 +327,7 @@ LIMIT :limit OFFSET :offset
     });
   } catch (error) {
     console.error(
-      "Error fetching all broker commission history:",
+      "Error fetching all commission history:",
       error
     );
 

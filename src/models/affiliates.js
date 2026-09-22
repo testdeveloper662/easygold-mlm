@@ -49,6 +49,10 @@ const Affiliates = sequelize.define(
       defaultValue: 0,
       comment: "Total commission amount accumulated by affiliate",
     },
+    veriff_session_id: {
+      type: Sequelize.STRING(255),
+      allowNull: true,
+    },
     // untermaklervertrag_doc: {
     //   type: Sequelize.TEXT("long"),
     //   allowNull: true,

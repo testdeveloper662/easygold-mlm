@@ -16,6 +16,7 @@ const GetAllAffiliates = async (req, res) => {
       targetUserId = user.ID || user.id;
     }
 
+    const isSuperAdmin = user.role === "SUPER_ADMIN";
     const whereClause = {};
 
     if (targetUserId) {
@@ -27,12 +28,12 @@ const GetAllAffiliates = async (req, res) => {
 
       const bRec = await db.Brokers.findOne({ where: { user_id: targetUserId } });
       if (bRec) {
-        if (bRec.id) targetParentIds.push(bRec.id);
         if (bRec.referral_code) targetRefCodes.push(bRec.referral_code);
       }
       if (db.Affiliates) {
         const aRec = await db.Affiliates.findOne({ where: { user_id: targetUserId } });
         if (aRec) {
+          // Strictly only include Affiliate table ID for querying db.Affiliates table
           if (aRec.id) targetParentIds.push(aRec.id);
           if (aRec.referral_code) targetRefCodes.push(aRec.referral_code);
         }
@@ -47,10 +48,7 @@ const GetAllAffiliates = async (req, res) => {
       }
 
       if (orConditions.length > 0) {
-        whereClause[Op.and] = [
-          { [Op.or]: orConditions },
-          { parent_id: { [Op.ne]: null } },
-        ];
+        whereClause[Op.or] = orConditions;
       } else {
         whereClause.id = -1;
       }
@@ -79,6 +77,22 @@ const GetAllAffiliates = async (req, res) => {
     let count = 0;
     let affiliates = [];
 
+    const baseRoleFilter = {
+      role_id: { [Op.ne]: 5 },
+      [Op.or]: [
+        { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+        { role_id: 2, user_status: { [Op.ne]: 2 } }
+      ]
+    };
+    const strictRoleFilter = {
+      role_id: { [Op.ne]: 5 },
+      [Op.or]: [
+        { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+        { role_id: 2, user_status: 0 }
+      ]
+    };
+    const affiliateUserFilter = (isSuperAdmin && !targetUserId) ? baseRoleFilter : strictRoleFilter;
+
     // 1️⃣ Try fetching from db.Affiliates if available
     let primaryQueried = false;
     try {
@@ -92,12 +106,7 @@ const GetAllAffiliates = async (req, res) => {
               as: "user",
               attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
               required: true,
-              where: {
-                [Op.or]: [
-                  { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
-                  { role_id: 2, user_status: 0 }
-                ]
-              }
+              where: affiliateUserFilter
             },
           ],
           distinct: true,
@@ -130,10 +139,7 @@ const GetAllAffiliates = async (req, res) => {
       if (affiliateUserIds.length > 0) {
         const userWhere = {
           ID: { [Op.in]: affiliateUserIds },
-          [Op.or]: [
-            { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
-            { role_id: 2, user_status: 0 }
-          ]
+          ...affiliateUserFilter
         };
 
         if (search && search.trim() !== "") {
@@ -221,10 +227,10 @@ const GetAllAffiliates = async (req, res) => {
           referral_code: affiliate.referral_code || m.referral_code || null,
           referred_by_code: affiliate.referred_by_code || null,
           person_typ: affiliate.person_typ || m.person_typ || m.u_person_type || "privatperson",
-          company: m.u_company || null,
+          company: m.u_company || "-",
           country: affiliate.land || m.u_country || m.country || null,
           steuer_id: affiliate.steuer_id || m.steuer_id || m.u_vat_no || m.vat_no || null,
-          phone: m.u_phone || null,
+          phone: m.u_phone || "-",
           language: m.language || null,
           logo: logoUrl,
           user_status: u?.user_status !== undefined ? u.user_status : (affiliate.user_status !== undefined ? affiliate.user_status : 2),

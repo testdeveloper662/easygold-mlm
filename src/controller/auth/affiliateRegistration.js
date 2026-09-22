@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const { getBrokerLevel } = require("../../utils/brokerLevelHelper");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
 const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
-const { parseVatId } = require("../../utils/registerStoreUserHelper");
+const { parseVatId, pullVeriffMedia } = require("../../utils/registerStoreUserHelper");
 const axios = require("axios");
 
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
@@ -27,7 +27,11 @@ const AffiliateRegistration = async (req, res) => {
       u_role,
       empfehlercode,
       language,
+      veriff_session_id,
+      veriffId,
     } = req.body;
+
+    const veriffSessionId = veriff_session_id || veriffId || null;
 
     const firstName = u_fname;
     const lastName = u_lname;
@@ -76,15 +80,25 @@ const AffiliateRegistration = async (req, res) => {
       cleanCode === "ADMINISTRATOR";
 
     let parentBroker = null;
+    let parentUserRef = null;
 
     if (!isAdminParent) {
-      // 1. Search in Brokers table
-      parentBroker = await db.Brokers.findOne({
-        where: { referral_code: empfehlercode },
-      });
+      // 1. Search in UserReferrals table first
+      if (db.UserReferrals) {
+        parentUserRef = await db.UserReferrals.findOne({
+          where: { referral_code: empfehlercode },
+        });
+      }
 
-      // 2. Search in Affiliates table if not found in Brokers
-      if (!parentBroker && db.Affiliates) {
+      // 2. Search in Brokers table
+      if (!parentUserRef) {
+        parentBroker = await db.Brokers.findOne({
+          where: { referral_code: empfehlercode },
+        });
+      }
+
+      // 3. Search in Affiliates table if not found in Brokers
+      if (!parentUserRef && !parentBroker && db.Affiliates) {
         const parentAffiliate = await db.Affiliates.findOne({
           where: { referral_code: empfehlercode },
         });
@@ -93,14 +107,12 @@ const AffiliateRegistration = async (req, res) => {
         }
       }
 
-      if (!parentBroker) {
+      if (!parentUserRef && !parentBroker) {
         return res.status(400).json({
           success: false,
           message: "Invalid referral code.",
         });
       }
-
-      // Level check removed to allow referrals beyond level 5
     }
 
     // Hash password
@@ -113,6 +125,27 @@ const AffiliateRegistration = async (req, res) => {
     const newReferralCode = generateReferralCode();
     const createdAt = new Date();
 
+    // Affiliates and Private Individuals register with pending status (user_status: 2) awaiting admin approval
+    const initialUserStatus = 2;
+
+    // Determine role_id and role string: private individual or affiliate
+    const isPrivateIndividual = personType === "private_individual";
+    let assignedRoleId = 3;
+    let assignedRoleStr = "AFFILIATE";
+
+    if (isPrivateIndividual) {
+      const privRole = await db.Seeder.findOne({
+        where: {
+          user_type: { [db.Sequelize.Op.or]: ["private individual", "private_individual"] },
+        },
+      });
+      assignedRoleId = privRole ? privRole.id : 4;
+      assignedRoleStr = "private individual";
+    } else {
+      assignedRoleId = 3;
+      assignedRoleStr = "AFFILIATE";
+    }
+
     // Create User record
     const newUser = await db.Users.create({
       user_login: email,
@@ -122,12 +155,15 @@ const AffiliateRegistration = async (req, res) => {
       user_registered: createdAt,
       display_name: fullName,
       user_type: 0,
-      user_status: 2,
-      role_id: 3,
+      user_status: initialUserStatus,
+      role_id: assignedRoleId,
     });
 
-    // Create Affiliate entry (every Broker is an Affiliate, but not every Affiliate is a Broker)
+    const parentUserId = isAdminParent
+      ? null
+      : (parentUserRef ? parentUserRef.user_id : (parentBroker ? parentBroker.user_id : null));
 
+    // Create Affiliate entry (every Broker is an Affiliate, but not every Affiliate is a Broker)
     if (db.Affiliates) {
       try {
         await db.Affiliates.create({
@@ -137,10 +173,66 @@ const AffiliateRegistration = async (req, res) => {
           referred_by_code: empfehlercode,
           children_count: 0,
           total_commission_amount: 0,
+          veriff_session_id: null,
         });
       } catch (affErr) {
         console.error("Error inserting into Affiliates table:", affErr);
         throw affErr;
+      }
+    }
+
+    // Every affiliate is also registered in the Brokers table so they exist in the broker network too.
+    // Private individuals (role_id 4) are excluded — they belong to the affiliate network only.
+    if (db.Brokers && !isPrivateIndividual) {
+      try {
+        let brokerParentId = null;
+        if (!isAdminParent && parentUserId) {
+          const parentInBrokers = await db.Brokers.findOne({
+            where: { user_id: parentUserId },
+          });
+          if (parentInBrokers) brokerParentId = parentInBrokers.id;
+        }
+
+        await db.Brokers.create({
+          user_id: newUser.ID,
+          parent_id: brokerParentId,
+          referral_code: newReferralCode,
+          referred_by_code: empfehlercode || null,
+          children_count: 0,
+          total_commission_amount: 0,
+        });
+
+        if (brokerParentId) {
+          await db.Brokers.increment("children_count", {
+            by: 1,
+            where: { id: brokerParentId },
+          });
+        }
+      } catch (brokErr) {
+        console.error("Error inserting into Brokers table:", brokErr);
+      }
+    }
+
+    // Create UserReferrals entry
+    if (db.UserReferrals) {
+      try {
+        await db.UserReferrals.create({
+          user_id: newUser.ID,
+          referral_code: newReferralCode,
+          referred_by_code: empfehlercode || null,
+          parent_user_id: parentUserId,
+          children_count: 0,
+        });
+
+        // Increment parent's children_count in UserReferrals
+        if (parentUserId) {
+          await db.UserReferrals.increment('children_count', {
+            by: 1,
+            where: { user_id: parentUserId },
+          });
+        }
+      } catch (refErr) {
+        console.error("Error inserting into UserReferrals table:", refErr);
       }
     }
 
@@ -187,10 +279,12 @@ const AffiliateRegistration = async (req, res) => {
       { user_id: newUser.ID, meta_key: "u_person_type", meta_value: personType },
       { user_id: newUser.ID, meta_key: "u_country", meta_value: country },
       { user_id: newUser.ID, meta_key: "u_vat_no", meta_value: vatNo },
-      { user_id: newUser.ID, meta_key: "u_role", meta_value: userRole },
-      { user_id: newUser.ID, meta_key: "user_role", meta_value: userRole },
+      { user_id: newUser.ID, meta_key: "role", meta_value: assignedRoleStr },
+      { user_id: newUser.ID, meta_key: "u_role", meta_value: assignedRoleStr },
+      { user_id: newUser.ID, meta_key: "user_role", meta_value: assignedRoleStr },
       { user_id: newUser.ID, meta_key: "language", meta_value: langValue },
       { user_id: newUser.ID, meta_key: "is_vat_verified", meta_value: isVatVerified ? "true" : "false" },
+      { user_id: newUser.ID, meta_key: "veriff_session_id", meta_value: "" },
     ];
 
     await db.UsersMeta.bulkCreate(metaEntries);
@@ -200,7 +294,8 @@ const AffiliateRegistration = async (req, res) => {
       fullName,
       email,
       referral_code: newReferralCode,
-      role: "AFFILIATE",
+      role: assignedRoleStr,
+      user_status: initialUserStatus,
     };
 
     // Update invitation status in db.AffiliateInvitations & db.BrokerInvitations

@@ -8,6 +8,7 @@ const LpOrderPivots = require("./lpOrderPivots");
 const LpOrderShippingOptions = require("./lpOrderShippingOptions");
 const Brokers = require("./brokers");
 const BrokerCommissionHistory = require("./brokerCommissionHistory");
+const AffiliateCommissionHistory = require("./affiliateCommissionHistory");
 const AdminFixedBrokerCommission = require("./adminFixedBrokerCommission");
 const AdminFixedAffiliateCommission = require("./adminFixedAffiliateCommission");
 const AdminVariableBrokerCommission = require("./adminVariableBrokerCommission");
@@ -45,6 +46,7 @@ const Affiliates = require("./affiliates");
 const AffiliateInvitations = require("./affiliateInvitations");
 const Seeder = require("./seeder");
 const PersonType = require("./personType");
+const UserReferrals = require("./userReferrals");
 
 const db = {};
 
@@ -52,6 +54,7 @@ db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
 db.Users = Users;
+db.UserReferrals = UserReferrals;
 db.UsersMeta = UsersMeta;
 db.LpOrders = LpOrders;
 db.LpOrderCarts = LpOrderCarts;
@@ -63,6 +66,7 @@ db.AffiliateInvitations = AffiliateInvitations;
 db.Seeder = Seeder;
 db.PersonType = PersonType;
 db.BrokerCommissionHistory = BrokerCommissionHistory;
+db.AffiliateCommissionHistory = AffiliateCommissionHistory;
 db.AdminFixedBrokerCommission = AdminFixedBrokerCommission;
 db.AdminFixedAffiliateCommission = AdminFixedAffiliateCommission;
 db.AdminVariableBrokerCommission = AdminVariableBrokerCommission;
@@ -105,6 +109,16 @@ db.TargetCustomers.belongsTo(db.Brokers, {
   as: "broker",
 });
 
+db.TargetCustomers.belongsTo(db.UserReferrals, {
+  foreignKey: "referral_code_id",
+  as: "user_referral",
+});
+
+db.UserReferrals.hasMany(db.TargetCustomers, {
+  foreignKey: "referral_code_id",
+  as: "target_customers",
+});
+
 db.TargetCustomerReferralLogs.belongsTo(db.Brokers, {
   foreignKey: "broker_id",
   as: "broker",
@@ -118,6 +132,21 @@ db.Brokers.hasMany(db.TargetCustomers, {
 db.BrokerCommissionHistory.belongsTo(db.Users, {
   foreignKey: "user_id",
   as: "commission_from_user",
+});
+
+db.AffiliateCommissionHistory.belongsTo(db.Users, {
+  foreignKey: "user_id",
+  as: "commission_from_user",
+});
+
+db.AffiliateCommissionHistory.belongsTo(db.Affiliates, {
+  foreignKey: "affiliate_id",
+  as: "affiliate",
+});
+
+db.Affiliates.hasMany(db.AffiliateCommissionHistory, {
+  foreignKey: "affiliate_id",
+  as: "commission_histories",
 });
 
 db.LpOrders.hasOne(db.Brokers, {
@@ -134,6 +163,21 @@ db.DiamondOrder.hasOne(db.Brokers, {
   foreignKey: "user_id",
   sourceKey: "user_id",
   as: "user_broker",
+});
+
+db.Users.hasOne(db.UserReferrals, {
+  foreignKey: "user_id",
+  as: "referral_info",
+});
+
+db.UserReferrals.belongsTo(db.Users, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+db.UserReferrals.belongsTo(db.Users, {
+  foreignKey: "parent_user_id",
+  as: "parent_user",
 });
 
 db.Users.hasMany(db.UsersMeta, {

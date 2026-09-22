@@ -79,54 +79,55 @@ const GetReferralDetails = async (req, res) => {
       });
     }
 
-    // 1️⃣ Find parent broker/affiliate by referral_code
-    let parentBroker = await db.Brokers.findOne({
+    // 1️⃣ Find parent referral record in user_referrals table
+    let parentReferral = await db.UserReferrals.findOne({
       where: { referral_code: referralCode },
-      attributes: ["id", "user_id"],
+      attributes: ["id", "user_id", "children_count"],
       include: [
         {
           model: db.Users,
           as: "user",
-          attributes: [],
+          attributes: ["display_name"],
           where: {
             deleted_at: null,
           },
           required: true,
         },
       ],
-      raw: true,
     });
 
-    if (!parentBroker && db.Affiliates) {
-      parentBroker = await db.Affiliates.findOne({
+    // Fallback: If not in UserReferrals, check Brokers or Affiliates
+    if (!parentReferral) {
+      const broker = await db.Brokers.findOne({
         where: { referral_code: referralCode },
-        attributes: ["id", "user_id"],
-        include: [
-          {
-            model: db.Users,
-            as: "user",
-            attributes: [],
-            where: {
-              deleted_at: null,
-            },
-            required: true,
-          },
-        ],
-        raw: true,
-      });
+        attributes: ["user_id"],
+        include: [{ model: db.Users, as: "user", attributes: ["display_name"], where: { deleted_at: null } }]
+      }) || (db.Affiliates ? await db.Affiliates.findOne({
+        where: { referral_code: referralCode },
+        attributes: ["user_id"],
+        include: [{ model: db.Users, as: "user", attributes: ["display_name"], where: { deleted_at: null } }]
+      }) : null);
+
+      if (broker && broker.user) {
+        parentReferral = {
+          user_id: broker.user_id,
+          user: broker.user,
+          children_count: 0
+        };
+      }
     }
 
-    if (!parentBroker) {
+    if (!parentReferral) {
       return res.json({
         success: false,
         message: "Invalid referral code",
       });
     }
 
-    // 2️⃣ Count how many brokers already referred by this code
-    totalChildren = await db.Brokers.count({
+    // 2️⃣ Get total children count from user_referrals
+    totalChildren = await db.UserReferrals.count({
       where: {
-        referred_by_code: referralCode,
+        parent_user_id: parentReferral.user_id,
       },
       include: [
         {
@@ -141,20 +142,8 @@ const GetReferralDetails = async (req, res) => {
       ],
     });
 
-    // 3️⃣ Check limit (max 4)
-    // if (totalChildren >= 4) {
-    //   limitReached = true;
-    // }
-
-    // 4️⃣ Get referral user's display name
-    const user = await db.Users.findOne({
-      where: { ID: parentBroker.user_id },
-      attributes: ["display_name"],
-      raw: true,
-    });
-
-    if (user) {
-      referralName = user.display_name;
+    if (parentReferral.user) {
+      referralName = parentReferral.user.display_name;
     }
 
     // 5️⃣ Final response

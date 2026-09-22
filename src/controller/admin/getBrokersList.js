@@ -1,14 +1,39 @@
 const db = require("../../models");
+const { Op } = require("sequelize");
 
 const GetBrokersList = async (req, res) => {
   try {
-    // Fetch brokers with user details
+    const whereClause = {};
+
+    // Exclude users whose role is AFFILIATE
+    const affiliateMetas = await db.UsersMeta.findAll({
+      where: {
+        meta_key: "user_role",
+        meta_value: "AFFILIATE",
+      },
+      attributes: ["user_id"],
+    });
+
+    const affiliateUserIds = affiliateMetas.map((m) => m.user_id);
+    if (affiliateUserIds.length > 0) {
+      whereClause.user_id = { [Op.notIn]: affiliateUserIds };
+    }
+
+    // Fetch brokers with user details excluding Customers (role_id = 5) and Affiliates
     const brokers = await db.Brokers.findAll({
+      where: whereClause,
       include: [
         {
           model: db.Users,
           as: "user",
-          attributes: ["display_name", "user_email"],
+          attributes: ["display_name", "user_email", "role_id"],
+          where: {
+            [Op.or]: [
+              { role_id: { [Op.ne]: 5 } },
+              { role_id: null },
+            ],
+          },
+          required: true,
         },
       ],
       attributes: ["id", "user_id"],

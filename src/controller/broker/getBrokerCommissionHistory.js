@@ -31,30 +31,37 @@ const GetBrokerCommissionHistory = async (req, res) => {
     // the single source of truth here: only show records that are paid out.
     // (Existing historical rows were backfilled via
     // src/migration/backfill_is_payment_done.js before this filter went live.)
+    const isAffiliate = req.query.type === "affiliate" || req.query.user_type === "affiliate";
+    const HistoryModel = isAffiliate && db.AffiliateCommissionHistory ? db.AffiliateCommissionHistory : db.BrokerCommissionHistory;
+
+    const userOrAffiliateMatch = isAffiliate
+      ? { [Op.or]: [{ user_id: id }, { affiliate_id: id }] }
+      : { user_id: id };
+
     let whereClause;
 
     if (isSellerFilter === true) {
       whereClause = {
-        user_id: id,
+        ...userOrAffiliateMatch,
         is_seller: true,
         is_deleted: false,
         is_payment_done: true,
       };
     } else {
       whereClause = {
-        user_id: id,
+        ...userOrAffiliateMatch,
         is_deleted: false,
         is_payment_done: true,
       };
     }
 
     // Get total count
-    const totalCount = await db.BrokerCommissionHistory.count({
+    const totalCount = await HistoryModel.count({
       where: whereClause,
     });
 
     // Fetch paginated commission history ordered from latest to oldest
-    const history = await db.BrokerCommissionHistory.findAll({
+    const history = await HistoryModel.findAll({
       where: whereClause,
       order: [["createdAt", "DESC"]],
       limit: limit,
@@ -273,7 +280,9 @@ const GetBrokerCommissionHistory = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Broker commission history fetched successfully.",
+      message: isAffiliate
+        ? "Affiliate commission history fetched successfully."
+        : "Broker commission history fetched successfully.",
       data: enrichedHistory || [],
       pagination: {
         currentPage: page,

@@ -7,11 +7,12 @@ async function seedDatabase() {
     await db.Seeder.sync({ force: true });
     console.log("Seeder table synchronized successfully.");
 
-    console.log("Inserting seed data (admin, broker, affiliate)...");
+    console.log("Inserting seed data (admin, broker, affiliate, private individual)...");
     await db.Seeder.bulkCreate([
       { user_type: "admin" },
       { user_type: "broker" },
       { user_type: "affiliate" },
+      { user_type: "private individual" },
     ]);
 
     console.log("Synchronizing PersonType table...");
@@ -20,10 +21,11 @@ async function seedDatabase() {
 
     const personTypeCount = await db.PersonType.count();
     if (personTypeCount === 0) {
-      console.log("Inserting seed data for PersonTypes (private_individual, company)...");
+      console.log("Inserting seed data for PersonTypes (business, affiliate, private_individual)...");
       await db.PersonType.bulkCreate([
+        { value: "business", label_en: "Business", label_de: "Unternehmen" },
+        { value: "affiliate", label_en: "Affiliate", label_de: "Affiliate" },
         { value: "private_individual", label_en: "Private Individual", label_de: "Privatperson" },
-        { value: "company", label_en: "Company", label_de: "Unternehmen" },
       ]);
     }
 

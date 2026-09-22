@@ -46,7 +46,7 @@ const GetBrokerBankDetails = async (req, res) => {
         if (!brokerDetails) {
             return res.status(404).json({
                 success: false,
-                message: "Broker not found.",
+                message: "Broker/Affiliate not found.",
             });
         }
 

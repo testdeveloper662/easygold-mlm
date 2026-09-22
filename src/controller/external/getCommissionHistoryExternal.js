@@ -49,17 +49,20 @@ const GetExternalCommissionHistoryLogs = async (req, res) => {
       condition.order_type = product;
     }
 
+    const isBrokerRoute = req.originalUrl.includes('/broker/');
+    const isAffiliateRoute = req.originalUrl.includes('/affiliate/');
+
     let combinedData = [];
 
-    if (isbroker && db.BrokerCommissionHistory) {
+    if (isbroker && db.BrokerCommissionHistory && (!isAffiliateRoute)) {
       const brokerLogs = await db.BrokerCommissionHistory.findAll({
         where: { ...condition, user_id: user.ID },
         raw: true
       });
-      combinedData = [...combinedData, ...brokerLogs.map(log => ({ ...log, history_type: 'broker' }))];
+      combinedData = [...combinedData, ...brokerLogs];
     }
 
-    if (isaffiliate && db.AffiliateCommissionHistory) {
+    if (isaffiliate && db.AffiliateCommissionHistory && (!isBrokerRoute)) {
        const affiliateLogs = await db.AffiliateCommissionHistory.findAll({
          where: { 
            ...condition, 
@@ -67,7 +70,7 @@ const GetExternalCommissionHistoryLogs = async (req, res) => {
          },
          raw: true
        });
-       combinedData = [...combinedData, ...affiliateLogs.map(log => ({...log, history_type: 'affiliate'}))];
+       combinedData = [...combinedData, ...affiliateLogs];
     }
 
     // Sort combined data by createdAt DESC

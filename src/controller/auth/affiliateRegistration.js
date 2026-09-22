@@ -70,7 +70,7 @@ const AffiliateRegistration = async (req, res) => {
         // Find existing parent referral code
         const userRef = await db.UserReferrals.findOne({ where: { user_id: existingUser.ID } });
         const existingParentRefCode = userRef ? userRef.referred_by_code : null;
-        
+
         if (existingParentRefCode && existingParentRefCode !== empfehlercode) {
           return res.status(400).json({
             success: false,
@@ -264,15 +264,13 @@ const AffiliateRegistration = async (req, res) => {
     // Create UserReferrals entry
     if (db.UserReferrals) {
       try {
-        if (isCustomerUpgrading) {
-          const userRef = await db.UserReferrals.findOne({ where: { user_id: newUser.ID } });
-          if (userRef) {
-            await userRef.update({
-              referral_code: newReferralCode,
-              referred_by_code: empfehlercode || null,
-              parent_user_id: parentUserId,
-            });
-          }
+        const userRef = await db.UserReferrals.findOne({ where: { user_id: newUser.ID } });
+        if (userRef) {
+          await userRef.update({
+            referral_code: newReferralCode,
+            referred_by_code: empfehlercode || null,
+            parent_user_id: parentUserId,
+          });
         } else {
           await db.UserReferrals.create({
             user_id: newUser.ID,

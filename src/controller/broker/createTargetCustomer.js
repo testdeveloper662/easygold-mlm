@@ -158,6 +158,21 @@ const CreateTargetCustomer = async (req, res) => {
 
     let existingCustomer;
 
+    // Cross-platform check: Enforce same parent
+    const anyExistingCustomer = await db.TargetCustomers.findOne({
+      where: { customer_email },
+      order: [["createdAt", "ASC"]],
+    });
+
+    if (anyExistingCustomer) {
+      if (anyExistingCustomer.referred_by_code && anyExistingCustomer.referred_by_code !== refCode) {
+        return res.status(400).json({
+          success: false,
+          message: "Customer is already registered under a different partner.",
+        });
+      }
+    }
+
     const uniquenessOrClause = [
       ...(referId ? [{ referral_code_id: referId }] : [])
     ];

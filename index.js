@@ -63,6 +63,13 @@ app.use("/api/v1/user", userRouter);
 app.use("/api/v1/users", userRouter); // Support both singular and plural
 app.use("/api/v1/upload-image", uploadRouter); // Support both singular and plural
 
+const GetExternalCommissionHistoryLogs = require("./src/controller/external/getCommissionHistoryExternal");
+app.get("/api/v1/broker/commission-history-logs-external", GetExternalCommissionHistoryLogs);
+app.get("/api/v1/affiliate/commission-history-logs-external", GetExternalCommissionHistoryLogs);
+
+const GetExternalBalanceAndBankDetails = require("./src/controller/external/getExternalBalanceAndBankDetails");
+app.get("/api/v1/balance-bank-details-external", GetExternalBalanceAndBankDetails);
+
 app.get("/api/v1/public/videos", getPublicVideos);
 
 app.listen(port, () => {

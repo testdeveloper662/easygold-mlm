@@ -179,40 +179,8 @@ const registerCustomerUser = async (targetCustomer, transaction = null) => {
       parentUserId = null;
     }
 
-    // 3. Create or update Brokers record for customer if referral code / referred_by code exists
     let brokerRecord = null;
-    if (referralCode || referredByCode || targetCustomer.broker_id) {
-      brokerRecord = await db.Brokers.findOne({
-        where: { user_id: userId },
-        ...options,
-      });
-
-      if (brokerRecord && parentBrokerId === brokerRecord.id) {
-        parentBrokerId = null; // prevent self-referral in Brokers table
-      }
-
-      if (!brokerRecord) {
-        brokerRecord = await db.Brokers.create(
-          {
-            user_id: userId,
-            referral_code: referralCode,
-            referred_by_code: referredByCode,
-            parent_id: parentBrokerId,
-            children_count: 0,
-          },
-          options
-        );
-      } else {
-        await brokerRecord.update(
-          {
-            referral_code: referralCode || brokerRecord.referral_code,
-            referred_by_code: referredByCode || brokerRecord.referred_by_code,
-            parent_id: parentBrokerId || brokerRecord.parent_id,
-          },
-          options
-        );
-      }
-    }
+    // Removed: Customer should not be inserted into Brokers table
 
     // 4. Create or update UserReferrals record for customer
     let userRefRecord = await db.UserReferrals.findOne({
@@ -220,11 +188,14 @@ const registerCustomerUser = async (targetCustomer, transaction = null) => {
       ...options,
     });
 
+    // Customers do not get a referral_code until they upgrade to affiliate/broker
+    const customerReferralCode = null;
+
     if (!userRefRecord) {
       userRefRecord = await db.UserReferrals.create(
         {
           user_id: userId,
-          referral_code: referralCode,
+          referral_code: customerReferralCode,
           referred_by_code: referredByCode,
           parent_user_id: parentUserId,
           children_count: 0,
@@ -234,7 +205,8 @@ const registerCustomerUser = async (targetCustomer, transaction = null) => {
     } else {
       await userRefRecord.update(
         {
-          referral_code: referralCode || userRefRecord.referral_code,
+          // We don't overwrite with null if they already have one from an upgrade
+          referral_code: userRefRecord.referral_code || customerReferralCode,
           referred_by_code: referredByCode || userRefRecord.referred_by_code,
           parent_user_id: parentUserId || userRefRecord.parent_user_id,
         },
@@ -245,7 +217,9 @@ const registerCustomerUser = async (targetCustomer, transaction = null) => {
     // 5. Ensure targetCustomer has ITS OWN referral_code_id pointing to ITS OWN user_referrals record
     if (userRefRecord && userRefRecord.id) {
       const selfRefId = userRefRecord.id;
-      const selfRefCode = userRefRecord.referral_code || referralCode;
+      // We assign the generated referralCode to TargetCustomers even though it's null in UserReferrals
+      const selfRefCode = referralCode;
+      
       if (typeof targetCustomer.update === "function") {
         await targetCustomer.update(
           {
@@ -267,7 +241,7 @@ const registerCustomerUser = async (targetCustomer, transaction = null) => {
       }
     }
 
-    return { user, brokerRecord, userRefRecord };
+    return { user, brokerRecord: null, userRefRecord };
   } catch (err) {
     console.error("Error in registerCustomerUser helper:", err.message);
     return null;

@@ -122,6 +122,7 @@ brokerRouter.get("/target-customers-logs/investnent-logs-external", GetReferralL
 brokerRouter.get("/target-customers-logs/:id", authenticateToken, GetAllReferralLogs);
 
 // Dashboard
+
 brokerRouter.get("/dashboard", authenticateToken, GetDashboardData);
 
 brokerRouter.delete("/remove-brocker-image/:type", authenticateToken, RemoveBrokerImage);

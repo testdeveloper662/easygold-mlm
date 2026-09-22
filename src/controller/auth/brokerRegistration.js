@@ -100,6 +100,7 @@ const runBrokerRegisterBackground = async ({
   banks,
   legalStatus,
   isVatVerified,
+  isCustomerUpgrading,
 }) => {
 
   try {
@@ -305,54 +306,99 @@ const runBrokerRegisterBackground = async ({
       }
     }
 
-    // Create broker entry
-    const broker = await db.Brokers.create({
-      user_id: user_id,
-      parent_id: isAdminParent ? null : brokerParentId,
-      referral_code: newReferralCode,
-      referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
-      children_count: 0,
-      total_commission_amount: 0,
-      veriff_session_id: veriff_session_id || null,
-      untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
-      maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
-      inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
-      llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
-      goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
-      hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
-      binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
-      partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
-      uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
-      ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
-      option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
-    });
+    // Create or update broker entry
+    let broker = await db.Brokers.findOne({ where: { user_id: user_id } });
+    if (broker && isCustomerUpgrading) {
+      await broker.update({
+        parent_id: isAdminParent ? null : brokerParentId,
+        referral_code: newReferralCode,
+        referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+        veriff_session_id: veriff_session_id || null,
+        untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
+        maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
+        inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
+        llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
+        goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
+        hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
+        binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
+        partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
+        uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
+        ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
+        option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
+      });
+    } else {
+      broker = await db.Brokers.create({
+        user_id: user_id,
+        parent_id: isAdminParent ? null : brokerParentId,
+        referral_code: newReferralCode,
+        referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+        children_count: 0,
+        total_commission_amount: 0,
+        veriff_session_id: veriff_session_id || null,
+        untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
+        maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
+        inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
+        llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
+        goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
+        hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
+        binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
+        partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
+        uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
+        ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
+        option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
+      });
+    }
 
-    // Create affiliate entry (every Broker is an Affiliate)
+    // Create or update affiliate entry (every Broker is an Affiliate)
     if (db.Affiliates) {
       try {
-        await db.Affiliates.create({
-          user_id: user_id,
-          parent_id: isAdminParent ? null : affiliateParentId,
-          referral_code: newReferralCode,
-          referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
-          person_typ: legalStatus || "",
-          land: country || "",
-          steuer_id: taxNumber || "",
-          children_count: 0,
-          total_commission_amount: 0,
-          veriff_session_id: veriff_session_id || null,
-          untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
-          maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
-          inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
-          llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
-          goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
-          hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
-          binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
-          partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
-          uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
-          ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
-          option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
-        });
+        let affiliate = await db.Affiliates.findOne({ where: { user_id: user_id } });
+        if (affiliate && isCustomerUpgrading) {
+          await affiliate.update({
+            parent_id: isAdminParent ? null : affiliateParentId,
+            referral_code: newReferralCode,
+            referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+            person_typ: legalStatus || "",
+            land: country || "",
+            steuer_id: taxNumber || "",
+            veriff_session_id: veriff_session_id || null,
+            untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
+            maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
+            inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
+            llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
+            goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
+            hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
+            binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
+            partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
+            uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
+            ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
+            option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
+          });
+        } else {
+          await db.Affiliates.create({
+            user_id: user_id,
+            parent_id: isAdminParent ? null : affiliateParentId,
+            referral_code: newReferralCode,
+            referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+            person_typ: legalStatus || "",
+            land: country || "",
+            steuer_id: taxNumber || "",
+            children_count: 0,
+            total_commission_amount: 0,
+            veriff_session_id: veriff_session_id || null,
+            untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
+            maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
+            inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
+            llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
+            goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
+            hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
+            binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
+            partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
+            uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
+            ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
+            option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
+          });
+        }
       } catch (affErr) {
         console.error("Error inserting into Affiliates table during broker registration:", affErr.message);
       }
@@ -381,7 +427,7 @@ const runBrokerRegisterBackground = async ({
           });
         }
 
-        if (parentUserId) {
+        if (parentUserId && !isCustomerUpgrading) {
           await db.UserReferrals.increment('children_count', {
             by: 1,
             where: { user_id: parentUserId },
@@ -438,7 +484,7 @@ const runBrokerRegisterBackground = async ({
     }
 
     // Update parent's children count
-    if (!isAdminParent && parentBroker) {
+    if (!isAdminParent && parentBroker && !isCustomerUpgrading) {
       if (parentBroker.update) {
         await parentBroker.update({
           children_count: (parentBroker.children_count || 0) + 1,
@@ -783,31 +829,51 @@ const BrokerRegistration = async (req, res) => {
           "Missing required fields: referralCode, fullName, company, contactPerson, postalCode, city, country, email, phone, mobile, username, password, idExpiryDate",
       });
     }
-    console.log("111111111111111111111111");
+    console.log("1111111111");
 
     // Check if user already exists by email
     const existingUserByEmail = await db.Users.findOne({
       where: { user_email: email },
     });
 
+    let isCustomerUpgrading = false;
+    let customerExistingUserId = null;
+
     if (existingUserByEmail) {
-      return res.status(400).json({
-        success: false,
-        message: "A user with this email already exists. Please use a different email address.",
-      });
+      if (existingUserByEmail.role_id === 5) {
+        // Find existing parent referral code
+        const userRef = await db.UserReferrals.findOne({ where: { user_id: existingUserByEmail.ID } });
+        const existingParentRefCode = userRef ? userRef.referred_by_code : null;
+
+        if (existingParentRefCode && existingParentRefCode !== referralCode) {
+          return res.status(400).json({
+            success: false,
+            message: "For this email ID, you can only register using your parent referral code.",
+          });
+        }
+        isCustomerUpgrading = true;
+        customerExistingUserId = existingUserByEmail.ID;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "A user with this email already exists. Please use a different email address.",
+        });
+      }
     }
 
     // // Check if username already exists
-    const existingUserByUsername = await db.Users.findOne({
-      where: { user_login: username },
-    });
+    // const existingUserByUsername = await db.Users.findOne({
+    //   where: { user_login: username },
+    // });
 
-    if (existingUserByUsername) {
-      return res.status(400).json({
-        success: false,
-        message: "This username is already taken. Please choose a different username.",
-      });
-    }
+    // if (existingUserByUsername) {
+    //   if (!isCustomerUpgrading || existingUserByUsername.ID !== customerExistingUserId) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       message: "A user with this username already exists. Please choose a different username.",
+    //     });
+    //   }
+    // }
 
     // // Check if mystorekey already exists
     const existingUserByMyStore = await db.Users.findOne({
@@ -987,24 +1053,50 @@ const BrokerRegistration = async (req, res) => {
 
     let apiResponse;
 
-    // =========================================================================
-    // REGISTRATION METHOD TOGGLE (Comment/uncomment to toggle between APIs)
-    // =========================================================================
+    if (isCustomerUpgrading) {
+      // Update user role to 2 (Broker) and update password if provided
+      const updateData = { role_id: 2 };
 
-    // Method 1: External API Call (axios)
-    apiResponse = await registerViaExternalApi(req, registrationFields);
+      if (password) {
+        let hashedPassword = await bcrypt.hash(password, 10);
+        if (hashedPassword.startsWith("$2b")) {
+          hashedPassword = hashedPassword.replace("$2b", "$2y");
+        }
+        updateData.user_pass = hashedPassword;
+      }
 
-    // Method 2: Local API Call (direct database/helper)
-    //apiResponse = await registerViaLocalHelper(req, registrationFields);
+      await db.Users.update(updateData, { where: { ID: customerExistingUserId } });
 
-    // =========================================================================
+      // Mock apiResponse for the background function
+      apiResponse = {
+        data: {
+          success: true,
+          message: "User upgraded successfully",
+          data: {
+            user_id: customerExistingUserId
+          }
+        }
+      };
+    } else {
+      // =========================================================================
+      // REGISTRATION METHOD TOGGLE (Comment/uncomment to toggle between APIs)
+      // =========================================================================
 
-    // Check if registration returned an error
-    if (!apiResponse.data?.success) {
-      return res.status(400).json({
-        success: false,
-        message: apiResponse.data?.message || "Registration failed",
-      });
+      // Method 1: External API Call (axios)
+      //apiResponse = await registerViaExternalApi(req, registrationFields);
+
+      // Method 2: Local API Call (direct database/helper)
+      apiResponse = await registerViaLocalHelper(req, registrationFields);
+
+      // =========================================================================
+
+      // Check if registration returned an error
+      if (!apiResponse.data?.success) {
+        return res.status(400).json({
+          success: false,
+          message: apiResponse.data?.message || "Registration failed",
+        });
+      }
     }
 
     await db.Users.update(
@@ -1046,6 +1138,7 @@ const BrokerRegistration = async (req, res) => {
         banks,
         legalStatus: legalStatus || req.body.person_typ || req.body.legal_status || "",
         isVatVerified,
+        isCustomerUpgrading,
       });
     });
 

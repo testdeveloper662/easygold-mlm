@@ -57,6 +57,10 @@ const GetCustomerDetails = require("../controller/admin/getCustomerDetails");
 const GetAllAdminContracts = require("../controller/admin/getAllAdminContracts");
 const GetAdminContractsById = require("../controller/admin/getAdminContractsById");
 const UpdateAdminContract = require("../controller/admin/updateAdminContract");
+const GetAllTermsAndConditions = require("../controller/admin/getAllTermsAndConditions");
+const GetTermsAndConditionsById = require("../controller/admin/getTermsAndConditionsById");
+const UpdateTermsAndCondition = require("../controller/admin/updateTermsAndCondition");
+const CreateTermsAndCondition = require("../controller/admin/createTermsAndCondition");
 const UpdateReferralLogStatus = require("../controller/broker/updateReferralLogStatus");
 const GetCustomerByOrderId = require("../controller/admin/getCustomerByOrderId");
 const SubmitManualCommission = require("../controller/admin/submitManualCommission");
@@ -134,6 +138,18 @@ adminRouter.put("/admin-contracts/:id", authenticateToken, upload.fields([
     { name: "english_pdf_file", maxCount: 1 },
     { name: "german_pdf_file", maxCount: 1 },
 ]), UpdateAdminContract);
+
+// Terms and Conditions Routes
+adminRouter.get("/terms-and-conditions", authenticateToken, GetAllTermsAndConditions);
+adminRouter.get("/terms-and-conditions/:id", authenticateToken, GetTermsAndConditionsById);
+adminRouter.put("/terms-and-conditions/:id", authenticateToken, upload.fields([
+    { name: "english_pdf_file", maxCount: 1 },
+    { name: "german_pdf_file", maxCount: 1 },
+]), UpdateTermsAndCondition);
+adminRouter.post("/terms-and-conditions", authenticateToken, upload.fields([
+    { name: "english_pdf_file", maxCount: 1 },
+    { name: "german_pdf_file", maxCount: 1 },
+]), CreateTermsAndCondition);
 
 // Marketing Materials Routes
 adminRouter.get("/marketing-materials", authenticateToken, getMarketingMaterials);

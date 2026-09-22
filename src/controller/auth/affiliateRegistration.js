@@ -62,11 +62,29 @@ const AffiliateRegistration = async (req, res) => {
       where: { user_email: email },
     });
 
+    let isCustomerUpgrading = false;
+    let customerExistingUserId = null;
+
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: "A user with this email already exists.",
-      });
+      if (existingUser.role_id === 5) {
+        // Find existing parent referral code
+        const userRef = await db.UserReferrals.findOne({ where: { user_id: existingUser.ID } });
+        const existingParentRefCode = userRef ? userRef.referred_by_code : null;
+
+        if (existingParentRefCode && existingParentRefCode !== empfehlercode) {
+          return res.status(400).json({
+            success: false,
+            message: "For this email ID, you can only register using your parent referral code.",
+          });
+        }
+        isCustomerUpgrading = true;
+        customerExistingUserId = existingUser.ID;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "A user with this email already exists.",
+        });
+      }
     }
 
     // Validate referral code (must exist or be admin code)
@@ -146,37 +164,58 @@ const AffiliateRegistration = async (req, res) => {
       assignedRoleStr = "AFFILIATE";
     }
 
-    // Create User record
-    const newUser = await db.Users.create({
-      user_login: email,
-      user_nicename: email,
-      user_email: email,
-      user_pass: hashedPassword,
-      user_registered: createdAt,
-      display_name: fullName,
-      user_type: 0,
-      user_status: initialUserStatus,
-      role_id: assignedRoleId,
-    });
+    // Create or Update User record
+    let newUser;
+    if (isCustomerUpgrading) {
+      await db.Users.update({
+        role_id: assignedRoleId,
+        user_status: initialUserStatus,
+        user_pass: hashedPassword,
+      }, { where: { ID: customerExistingUserId } });
+
+      newUser = await db.Users.findOne({ where: { ID: customerExistingUserId } });
+    } else {
+      newUser = await db.Users.create({
+        user_login: email,
+        user_nicename: email,
+        user_email: email,
+        user_pass: hashedPassword,
+        user_registered: createdAt,
+        display_name: fullName,
+        user_type: 0,
+        user_status: initialUserStatus,
+        role_id: assignedRoleId,
+      });
+    }
 
     const parentUserId = isAdminParent
       ? null
       : (parentUserRef ? parentUserRef.user_id : (parentBroker ? parentBroker.user_id : null));
 
-    // Create Affiliate entry (every Broker is an Affiliate, but not every Affiliate is a Broker)
+    // Create or Update Affiliate entry (every Broker is an Affiliate, but not every Affiliate is a Broker)
     if (db.Affiliates) {
       try {
-        await db.Affiliates.create({
-          user_id: newUser.ID,
-          parent_id: isAdminParent ? null : parentBroker?.id || null,
-          referral_code: newReferralCode,
-          referred_by_code: empfehlercode,
-          children_count: 0,
-          total_commission_amount: 0,
-          veriff_session_id: null,
-        });
+        let affiliate = await db.Affiliates.findOne({ where: { user_id: newUser.ID } });
+        if (affiliate && isCustomerUpgrading) {
+          await affiliate.update({
+            parent_id: isAdminParent ? null : parentBroker?.id || null,
+            referral_code: newReferralCode,
+            referred_by_code: empfehlercode,
+            veriff_session_id: null,
+          });
+        } else {
+          await db.Affiliates.create({
+            user_id: newUser.ID,
+            parent_id: isAdminParent ? null : parentBroker?.id || null,
+            referral_code: newReferralCode,
+            referred_by_code: empfehlercode,
+            children_count: 0,
+            total_commission_amount: 0,
+            veriff_session_id: null,
+          });
+        }
       } catch (affErr) {
-        console.error("Error inserting into Affiliates table:", affErr);
+        console.error("Error inserting/updating Affiliates table:", affErr);
         throw affErr;
       }
     }
@@ -193,51 +232,69 @@ const AffiliateRegistration = async (req, res) => {
           if (parentInBrokers) brokerParentId = parentInBrokers.id;
         }
 
-        await db.Brokers.create({
-          user_id: newUser.ID,
-          parent_id: brokerParentId,
-          referral_code: newReferralCode,
-          referred_by_code: empfehlercode || null,
-          children_count: 0,
-          total_commission_amount: 0,
-        });
-
-        if (brokerParentId) {
-          await db.Brokers.increment("children_count", {
-            by: 1,
-            where: { id: brokerParentId },
+        let broker = await db.Brokers.findOne({ where: { user_id: newUser.ID } });
+        if (broker && isCustomerUpgrading) {
+          await broker.update({
+            parent_id: brokerParentId,
+            referral_code: newReferralCode,
+            referred_by_code: empfehlercode || null,
           });
+        } else {
+          await db.Brokers.create({
+            user_id: newUser.ID,
+            parent_id: brokerParentId,
+            referral_code: newReferralCode,
+            referred_by_code: empfehlercode || null,
+            children_count: 0,
+            total_commission_amount: 0,
+          });
+
+          if (brokerParentId && !isCustomerUpgrading) {
+            await db.Brokers.increment("children_count", {
+              by: 1,
+              where: { id: brokerParentId },
+            });
+          }
         }
       } catch (brokErr) {
-        console.error("Error inserting into Brokers table:", brokErr);
+        console.error("Error inserting/updating Brokers table:", brokErr);
       }
     }
 
     // Create UserReferrals entry
     if (db.UserReferrals) {
       try {
-        await db.UserReferrals.create({
-          user_id: newUser.ID,
-          referral_code: newReferralCode,
-          referred_by_code: empfehlercode || null,
-          parent_user_id: parentUserId,
-          children_count: 0,
-        });
-
-        // Increment parent's children_count in UserReferrals
-        if (parentUserId) {
-          await db.UserReferrals.increment('children_count', {
-            by: 1,
-            where: { user_id: parentUserId },
+        const userRef = await db.UserReferrals.findOne({ where: { user_id: newUser.ID } });
+        if (userRef) {
+          await userRef.update({
+            referral_code: newReferralCode,
+            referred_by_code: empfehlercode || null,
+            parent_user_id: parentUserId,
           });
+        } else {
+          await db.UserReferrals.create({
+            user_id: newUser.ID,
+            referral_code: newReferralCode,
+            referred_by_code: empfehlercode || null,
+            parent_user_id: parentUserId,
+            children_count: 0,
+          });
+
+          // Increment parent's children_count in UserReferrals
+          if (parentUserId) {
+            await db.UserReferrals.increment('children_count', {
+              by: 1,
+              where: { user_id: parentUserId },
+            });
+          }
         }
       } catch (refErr) {
-        console.error("Error inserting into UserReferrals table:", refErr);
+        console.error("Error inserting/updating into UserReferrals table:", refErr);
       }
     }
 
     // Update parent children count
-    if (!isAdminParent && parentBroker) {
+    if (!isAdminParent && parentBroker && !isCustomerUpgrading) {
       await parentBroker.update({
         children_count: (parentBroker.children_count || 0) + 1,
       });

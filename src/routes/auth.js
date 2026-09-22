@@ -9,6 +9,8 @@ const RegisterBroker = require("../controller/broker/verifyBroker");
 const AffiliateRegistration = require("../controller/auth/affiliateRegistration");
 const GetPersonTypes = require("../controller/auth/getPersonTypes");
 const GetPartnerReferralCode = require("../controller/customer/getPartnerReferralCode");
+const GetPublicTermsAndConditions = require("../controller/auth/getPublicTermsAndConditions");
+const GetRegisterTerms = require("../controller/auth/getRegisterTerms");
 
 // Auth Routes
 authRouter.get("/auth/person-types", GetPersonTypes);
@@ -18,6 +20,8 @@ authRouter.post("/auth/affiliate-register", AffiliateRegistration);
 authRouter.post("/auth/change-password", ChangePassword);
 authRouter.post("/auth/otp", ValidateOTP);
 authRouter.post("/auth/reset-password", ResetPassword);
+authRouter.get("/auth/terms-and-conditions/:document_key", GetPublicTermsAndConditions);
+authRouter.get("/auth/register-terms", GetRegisterTerms);
 
 // Partner Referral Routes (Add Customer flow)
 authRouter.post("/partner-referral", GetPartnerReferralCode);

@@ -62,18 +62,25 @@ const GetTargetCustomers = async (req, res) => {
     // Fetch child user_referrals where parent_user_id = targetUserId
     const childUserRefs = await db.UserReferrals.findAll({
       where: { parent_user_id: targetUserId },
-      attributes: ["id"],
+      attributes: ["id", "referral_code"],
       raw: true,
     });
 
-    const referralCodeIds = [];
-    if (userRefRecord?.id) {
-      referralCodeIds.push(userRefRecord.id);
+    const referralCodes = [];
+    if (userRefRecord?.referral_code) {
+      referralCodes.push(userRefRecord.referral_code);
     }
+    if (broker?.referral_code && !referralCodes.includes(broker.referral_code)) {
+      referralCodes.push(broker.referral_code);
+    }
+    if (affiliate?.referral_code && !referralCodes.includes(affiliate.referral_code)) {
+      referralCodes.push(affiliate.referral_code);
+    }
+
     if (childUserRefs && childUserRefs.length > 0) {
       childUserRefs.forEach((r) => {
-        if (r.id && !referralCodeIds.includes(r.id)) {
-          referralCodeIds.push(r.id);
+        if (r.referral_code && !referralCodes.includes(r.referral_code)) {
+          referralCodes.push(r.referral_code);
         }
       });
     }
@@ -97,12 +104,12 @@ const GetTargetCustomers = async (req, res) => {
     const offset = (page - 1) * limit;
     const search = req.query.search || "";
 
-    // Build where clause using referral_code_id (with parent_user_id children) & broker_id fallback
+    // Build where clause using referred_by_code & broker_id fallback
     const brokerId = broker?.id || affiliate?.id;
     const ownerConditions = [];
 
-    if (referralCodeIds.length > 0) {
-      ownerConditions.push({ referral_code_id: { [Op.in]: referralCodeIds } });
+    if (referralCodes.length > 0) {
+      ownerConditions.push({ referred_by_code: { [Op.in]: referralCodes } });
     }
     if (brokerId) {
       ownerConditions.push({ broker_id: brokerId });

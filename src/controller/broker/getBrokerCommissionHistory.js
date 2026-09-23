@@ -7,6 +7,7 @@ const isNumericOrderId = (value) => {
 
 const GetBrokerCommissionHistory = async (req, res) => {
   try {
+    const { user } = req.user || {};
     const { id } = req.params;
 
     if (!id) {
@@ -31,25 +32,40 @@ const GetBrokerCommissionHistory = async (req, res) => {
     // the single source of truth here: only show records that are paid out.
     // (Existing historical rows were backfilled via
     // src/migration/backfill_is_payment_done.js before this filter went live.)
-    const isAffiliate = req.query.type === "affiliate" || req.query.user_type === "affiliate";
-    const HistoryModel = isAffiliate && db.AffiliateCommissionHistory ? db.AffiliateCommissionHistory : db.BrokerCommissionHistory;
+    const type = req.query.type || req.query.user_type;
+    
+    if (type && user && user.role !== "SUPER_ADMIN") {
+        const normalizedRole = (user.role || "").toLowerCase();
+        if (normalizedRole !== type.toLowerCase()) {
+            return res.status(200).json({
+                success: true,
+                message: "Commission history fetched successfully.",
+                data: [],
+                pagination: {
+                    currentPage: page,
+                    totalPages: 0,
+                    totalItems: 0,
+                    itemsPerPage: limit,
+                },
+            });
+        }
+    }
 
-    const userOrAffiliateMatch = isAffiliate
-      ? { [Op.or]: [{ user_id: id }, { affiliate_id: id }] }
-      : { user_id: id };
+    const HistoryModel = db.BrokerCommissionHistory;
+    const userMatch = { user_id: id };
 
     let whereClause;
 
     if (isSellerFilter === true) {
       whereClause = {
-        ...userOrAffiliateMatch,
+        ...userMatch,
         is_seller: true,
         is_deleted: false,
         is_payment_done: true,
       };
     } else {
       whereClause = {
-        ...userOrAffiliateMatch,
+        ...userMatch,
         is_deleted: false,
         is_payment_done: true,
       };
@@ -280,9 +296,7 @@ const GetBrokerCommissionHistory = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: isAffiliate
-        ? "Affiliate commission history fetched successfully."
-        : "Broker commission history fetched successfully.",
+      message: "Commission history fetched successfully.",
       data: enrichedHistory || [],
       pagination: {
         currentPage: page,

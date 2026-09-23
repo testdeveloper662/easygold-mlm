@@ -1,31 +1,38 @@
 const db = require("../../models");
 
-const AddUpdateBrokerBankDetails = async (req, res) => {
+const AddExternalBankDetails = async (req, res) => {
     try {
-        const user = req?.user?.user;
-        const { ac_holder_name, iban, bic_swift_code, bank_name, banks, user_type = "broker" } = req.body;
+        const { email, ac_holder_name, iban, bic_swift_code, bank_name, banks } = req.body;
 
-        let targetUserId = user?.ID || user?.id;
-        if (!targetUserId && user?.broker_id) {
-            const b = await db.Brokers.findOne({ where: { id: user.broker_id }, attributes: ["user_id"] });
-            if (b) targetUserId = b.user_id;
-        }
-        if (!targetUserId && user?.affiliate_id && db.Affiliates) {
-            const a = await db.Affiliates.findOne({ where: { id: user.affiliate_id }, attributes: ["user_id"] });
-            if (a) targetUserId = a.user_id;
-        }
-
-        if (!targetUserId) {
+        if (!email) {
             return res.status(400).json({
                 success: false,
-                message: "User ID is required.",
+                message: "Email is required.",
             });
         }
 
-        let banksData;
-        if (banks) {
-            banksData = typeof banks === "string" ? banks : JSON.stringify(banks);
-        } else {
+        const user = await db.Users.findOne({ where: { user_email: email } });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found with this email.",
+            });
+        }
+
+        let targetUserId = user.ID;
+
+        const bankDetailsData = {
+            ac_holder_name: ac_holder_name || "",
+            iban: iban || "",
+            bic_swift_code: bic_swift_code || "",
+            bank_name: bank_name || "",
+            user_id: targetUserId,
+            banks: banks ? (typeof banks === "string" ? banks : JSON.stringify(banks)) : null
+        };
+
+        // Also update UsersMeta for fallback
+        let banksData = bankDetailsData.banks;
+        if (!banksData) {
             banksData = JSON.stringify({
                 sepa: [
                     {
@@ -46,7 +53,7 @@ const AddUpdateBrokerBankDetails = async (req, res) => {
             ...(ac_holder_name ? [{ key: "ac_holder_name", value: ac_holder_name }] : []),
             ...(iban ? [{ key: "iban", value: iban }] : []),
             ...(bic_swift_code ? [{ key: "bic_swift_code", value: bic_swift_code }] : []),
-            ...(bank_name ? [{ key: "bank_name", value: bank_name }] : []),
+            ...(bank_name ? [{ key: "bank_name", value: bank_name }] : [])
         ];
 
         for (const item of metaKeysToUpdate) {
@@ -67,10 +74,9 @@ const AddUpdateBrokerBankDetails = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `${user_type === "affiliate" ? "Affiliate" : "Broker"} bank details updated successfully in user metadata.`,
+            message: "Bank details updated successfully.",
             data: {
                 user_id: targetUserId,
-                banks: typeof banksData === "string" ? JSON.parse(banksData) : banksData,
                 ac_holder_name,
                 iban,
                 bic_swift_code,
@@ -78,8 +84,7 @@ const AddUpdateBrokerBankDetails = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Error in Add/Update Bank Details:", error);
-
+        console.error("Error in AddExternalBankDetails:", error);
         return res.status(500).json({
             success: false,
             message: "Internal server error.",
@@ -87,4 +92,4 @@ const AddUpdateBrokerBankDetails = async (req, res) => {
     }
 };
 
-module.exports = AddUpdateBrokerBankDetails;
+module.exports = AddExternalBankDetails;

@@ -225,6 +225,22 @@ const CaptureOrderPreview = async (req, res) => {
     let broker = null;
     let targetCustomerBroker = false;
     let targetCustomerLogFound = null;
+
+    let userRole = 2; // default
+    let userIdToLookup = order ? order.user_id : null;
+    if (!userIdToLookup && b2bEmail) {
+       const u = await db.Users.findOne({ where: { user_email: b2bEmail } });
+       if (u) userIdToLookup = u.ID;
+    }
+    if (userIdToLookup) {
+       const u = await db.Users.findOne({ where: { ID: userIdToLookup } });
+       if (u && u.role_id) userRole = u.role_id;
+    }
+
+    let isReferrerBroker = (userRole === 2);
+    let isReferrerAffiliate = (userRole === 3 || userRole === 4);
+    let isReferrerCustomer = (userRole === 5);
+
     let customerInfo = null;
 
     if (isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing || isDealerPurchasingDiamond) {
@@ -404,24 +420,46 @@ const CaptureOrderPreview = async (req, res) => {
     if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
       // For Gold Flex, use fixed commission percentages
       await db.AdminFixedBrokerCommission.sync();
-      commissionRecords = await db.AdminFixedBrokerCommission.findAll({
-        where: {
-          service_type: serviceType,
-        },
-        order: [["level", "ASC"]],
-      });
+      
+      if (isReferrerAffiliate) {
+        await db.AdminFixedAffiliateCommission.sync();
+        commissionRecords = await db.AdminFixedAffiliateCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+      } else if (isReferrerCustomer) {
+        commissionRecords = [{ percentage: 8 }];
+      } else {
+        await db.AdminFixedBrokerCommission.sync();
+        commissionRecords = await db.AdminFixedBrokerCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+      }
+
       console.log(` [PREVIEW CAPTURE ORDER] Found ${commissionRecords.length} fixed commission records for Gold Flex serviceType: ${serviceType}`);
     } else {
 
       // Step 7.1: Fetch dynamic commission percentages from database (Variable Broker Commissions)
       await db.AdminVariableBrokerCommission.sync();
 
-      commissionRecords = await db.AdminVariableBrokerCommission.findAll({
-        where: {
-          service_type: serviceType,
-        },
-        order: [["level", "ASC"]],
-      });
+      
+      if (isReferrerAffiliate) {
+        await db.AdminVariableAffiliateCommission.sync();
+        commissionRecords = await db.AdminVariableAffiliateCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+      } else if (isReferrerCustomer) {
+        commissionRecords = [{ percentage: 8 }]; // Flat 8% for customers
+      } else {
+        await db.AdminVariableBrokerCommission.sync();
+        commissionRecords = await db.AdminVariableBrokerCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+      }
+
 
       console.log(` [PREVIEW CAPTURE ORDER] Found ${commissionRecords.length} commission records for serviceType: ${serviceType}`);
     }

@@ -7,6 +7,7 @@ const isNumericOrderId = (value) => {
 
 const GetBrokerDirectCommissionHistory = async (req, res) => {
   try {
+    const { user } = req.user || {};
     const { id } = req.params;
 
     if (!id) {
@@ -25,12 +26,28 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
       ? req.query.is_seller === "true"
       : null;
 
-    const isAffiliate = req.query.type === "affiliate" || req.query.user_type === "affiliate";
-    const HistoryModel = isAffiliate && db.AffiliateCommissionHistory ? db.AffiliateCommissionHistory : db.BrokerCommissionHistory;
+    const type = req.query.type || req.query.user_type;
+    
+    if (type && user && user.role !== "SUPER_ADMIN") {
+        const normalizedRole = (user.role || "").toLowerCase();
+        if (normalizedRole !== type.toLowerCase()) {
+            return res.status(200).json({
+                success: true,
+                message: "Direct commission history fetched successfully.",
+                data: [],
+                pagination: {
+                    currentPage: page,
+                    totalPages: 0,
+                    totalItems: 0,
+                    itemsPerPage: limit,
+                },
+            });
+        }
+    }
 
-    const userOrAffiliateMatch = isAffiliate
-      ? { [Op.or]: [{ user_id: id }, { affiliate_id: id }] }
-      : { user_id: id };
+    const HistoryModel = db.BrokerCommissionHistory;
+
+    const userMatch = { user_id: id };
 
     let whereClause;
 
@@ -38,7 +55,7 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
 
     if (isSellerFilter === true) {
       whereClause = {
-        ...userOrAffiliateMatch,
+        ...userMatch,
         is_seller: true,
         is_deleted: false,
         [Op.or]: [
@@ -87,7 +104,7 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
       };
     } else {
       whereClause = {
-        ...userOrAffiliateMatch,
+        ...userMatch,
         is_deleted: false,
         [Op.or]: [
           // Seller logic
@@ -158,7 +175,7 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
         ],
       };
     }
-
+    
     // Get total count
     const totalCount = await HistoryModel.count({
       where: whereClause,
@@ -384,9 +401,7 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: isAffiliate
-        ? "Affiliate direct commission history fetched successfully."
-        : "Broker direct commission history fetched successfully.",
+      message: "Direct commission history fetched successfully.",
       data: enrichedHistory || [],
       pagination: {
         currentPage: page,

@@ -3,19 +3,8 @@ const { sequelize } = require("../../config/database");
 
 const GetAllBrokerCommissionHistory = async (req, res) => {
   try {
-    const isAffiliate = req.query.type === "affiliate" || req.query.user_type === "affiliate";
-    const tableName = isAffiliate ? "affiliate_commission_histories" : "broker_commission_histories";
-    const entityIdColumn = isAffiliate ? "affiliate_id" : "broker_id";
-
-    // Ensure table exists (for affiliate)
-    if (isAffiliate && db.AffiliateCommissionHistory) {
-      const [tableCheck] = await sequelize.query(
-        `SHOW TABLES LIKE '${tableName}'`
-      );
-      if (tableCheck.length === 0) {
-        await db.AffiliateCommissionHistory.sync({ alter: true });
-      }
-    }
+    const type = req.query.type || req.query.user_type;
+    const tableName = "broker_commission_histories";
 
     // Check if is_payment_declined column exists, if not create it
     const [columnCheck] = await sequelize.query(
@@ -62,9 +51,9 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
       ${search ? "AND order_id LIKE :search" : ""}
     `,
       {
-        replacements: search
-          ? { search: `%${search}%` }
-          : {},
+        replacements: {
+          ...(search ? { search: `%${search}%` } : {}),
+        },
       }
     );
 
@@ -88,16 +77,11 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
       LIMIT :limit OFFSET :offset
     `,
       {
-        replacements: search
-          ? {
-            limit,
-            offset,
-            search: `%${search}%`,
-          }
-          : {
-            limit,
-            offset,
-          },
+        replacements: {
+          limit,
+          offset,
+          ...(search ? { search: `%${search}%` } : {}),
+        },
       }
     );
 
@@ -108,9 +92,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     if (!orderIds || orderIds.length === 0) {
       return res.status(200).json({
         success: true,
-        message: isAffiliate
-          ? "All affiliates commission history fetched successfully."
-          : "All brokers commission history fetched successfully.",
+        message: "All commission history fetched successfully.",
         data: [],
         pagination: {
           currentPage: page,
@@ -169,7 +151,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
         bch.commission_type,
         bch.order_amount,
         bch.profit_amount,
-        bch.${entityIdColumn} AS broker_id,
+        bch.broker_id,
         bch.user_id,
         bch.commission_percent,
         bch.commission_amount,
@@ -310,9 +292,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     return res.status(200).json({
       success: true,
 
-      message: isAffiliate
-        ? "All affiliates commission history fetched successfully."
-        : "All brokers commission history fetched successfully.",
+      message: "All commission history fetched successfully.",
 
       data: grouped || [],
 

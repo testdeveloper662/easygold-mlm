@@ -1,5 +1,6 @@
 const { Sequelize, sequelize } = require("../config/database");
 const Brokers = require("./brokers");
+const Users = require("./users");
 
 const BrokerPayoutRequests = sequelize.define(
     "broker_payout_requests",
@@ -11,12 +12,16 @@ const BrokerPayoutRequests = sequelize.define(
         },
         broker_id: {
             type: Sequelize.INTEGER.UNSIGNED,
-            allowNull: false,
+            allowNull: true,
             references: {
                 model: "brokers",
                 key: "id",
             },
             onDelete: "CASCADE",
+        },
+        user_id: {
+            type: Sequelize.BIGINT.UNSIGNED,
+            allowNull: false,
         },
         amount: {
             type: Sequelize.FLOAT,
@@ -47,5 +52,6 @@ const BrokerPayoutRequests = sequelize.define(
 
 // Associations
 BrokerPayoutRequests.belongsTo(Brokers, { foreignKey: "broker_id", as: "broker" });
+BrokerPayoutRequests.belongsTo(Users, { foreignKey: "user_id", as: "user" });
 
 module.exports = BrokerPayoutRequests;

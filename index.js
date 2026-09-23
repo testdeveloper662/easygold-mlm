@@ -64,11 +64,19 @@ app.use("/api/v1/users", userRouter); // Support both singular and plural
 app.use("/api/v1/upload-image", uploadRouter); // Support both singular and plural
 
 const GetExternalCommissionHistoryLogs = require("./src/controller/external/getCommissionHistoryExternal");
-app.get("/api/v1/broker/commission-history-logs-external", GetExternalCommissionHistoryLogs);
-app.get("/api/v1/affiliate/commission-history-logs-external", GetExternalCommissionHistoryLogs);
+app.get("/api/v1/commission-history-logs-external", GetExternalCommissionHistoryLogs);
 
 const GetExternalBalanceAndBankDetails = require("./src/controller/external/getExternalBalanceAndBankDetails");
 app.get("/api/v1/balance-bank-details-external", GetExternalBalanceAndBankDetails);
+
+const AddExternalBankDetails = require("./src/controller/external/addExternalBankDetails");
+app.post("/api/v1/bank-details-external", AddExternalBankDetails);
+
+const CreateExternalPayoutRequest = require("./src/controller/external/createExternalPayoutRequest");
+app.post("/api/v1/payout-request-external", CreateExternalPayoutRequest);
+
+const GetExternalPayoutRequests = require("./src/controller/external/getExternalPayoutRequests");
+app.get("/api/v1/payout-request-external", GetExternalPayoutRequests);
 
 app.get("/api/v1/public/videos", getPublicVideos);
 

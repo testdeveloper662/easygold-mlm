@@ -51,10 +51,11 @@ const GetBrokerBankDetails = async (req, res) => {
         }
 
         const targetUserId = brokerDetails.user_id || brokerDetails.user?.ID;
+        
         const userMetaRows = targetUserId ? await db.UsersMeta.findAll({
             where: {
                 user_id: targetUserId,
-                meta_key: ["banks", "affiliate_banks", "ac_holder_name", "iban", "bic_swift_code", "bank_name", "u_account_owner"]
+                meta_key: ["banks", "ac_holder_name", "iban", "bic_swift_code", "bank_name", "u_account_owner"]
             },
         }) : [];
 
@@ -63,13 +64,12 @@ const GetBrokerBankDetails = async (req, res) => {
             metaMap[m.meta_key] = m.meta_value;
         });
 
-        const rawBanks = metaMap.banks || metaMap.affiliate_banks;
         let parsedBanks = null;
-        if (rawBanks) {
+        if (metaMap.banks) {
             try {
-                parsedBanks = typeof rawBanks === "string" ? JSON.parse(rawBanks) : rawBanks;
+                parsedBanks = typeof metaMap.banks === "string" ? JSON.parse(metaMap.banks) : metaMap.banks;
             } catch (e) {
-                console.error("Error parsing banks meta_value:", e);
+                console.error("Error parsing banks:", e);
             }
         }
 

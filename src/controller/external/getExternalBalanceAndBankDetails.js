@@ -14,6 +14,8 @@ const GetExternalBalanceAndBankDetails = async (req, res) => {
     if (!user) {
       return res.status(200).json({
         success: true,
+        role_id: null,
+        role: null,
         isbroker: false,
         isaffiliate: false,
         data: null
@@ -120,8 +122,16 @@ const GetExternalBalanceAndBankDetails = async (req, res) => {
       }
     }
 
+    let roleValue = "";
+    if (user.role_id === 2) roleValue = "BROKER";
+    else if (user.role_id === 3) roleValue = "AFFILIATE";
+    else if (user.role_id === 4) roleValue = "PRIVATE INDIVIDUAL";
+    else if (user.role_id === 5) roleValue = "CUSTOMER";
+
     return res.status(200).json({
       success: true,
+      role_id: user.role_id,
+      role: roleValue,
       isbroker,
       isaffiliate,
       data: result

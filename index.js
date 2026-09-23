@@ -72,6 +72,9 @@ app.get("/api/v1/balance-bank-details-external", GetExternalBalanceAndBankDetail
 const AddExternalBankDetails = require("./src/controller/external/addExternalBankDetails");
 app.post("/api/v1/bank-details-external", AddExternalBankDetails);
 
+const UpdateExternalBankDetails = require("./src/controller/external/updateExternalBankDetails");
+app.put("/api/v1/bank-details-external", UpdateExternalBankDetails);
+
 const CreateExternalPayoutRequest = require("./src/controller/external/createExternalPayoutRequest");
 app.post("/api/v1/payout-request-external", CreateExternalPayoutRequest);
 

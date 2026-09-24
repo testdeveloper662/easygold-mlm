@@ -3,7 +3,7 @@ const { Op } = require("sequelize");
 
 const GetExternalCommissionHistoryLogs = async (req, res) => {
   try {
-    const { email, page = 1, limit = 10, search, product } = req.query;
+    const { email, page = 1, limit = 10, search, product, order_id, orderid } = req.query;
 
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required" });
@@ -46,8 +46,9 @@ const GetExternalCommissionHistoryLogs = async (req, res) => {
       is_payment_done: true,
     };
 
-    if (search) {
-      condition.order_id = { [Op.like]: `%${search}%` };
+    const searchQuery = search || order_id || orderid;
+    if (searchQuery) {
+      condition.order_id = { [Op.like]: `%${searchQuery}%` };
     }
 
     if (product) {

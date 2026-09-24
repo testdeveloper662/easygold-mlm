@@ -66,6 +66,9 @@ app.use("/api/v1/upload-image", uploadRouter); // Support both singular and plur
 const GetExternalCommissionHistoryLogs = require("./src/controller/external/getCommissionHistoryExternal");
 app.get("/api/v1/commission-history-logs-external", GetExternalCommissionHistoryLogs);
 
+const GetOrderDetailsExternal = require("./src/controller/external/getOrderDetailsExternal");
+app.get("/api/v1/order-details-external", GetOrderDetailsExternal);
+
 const GetExternalBalanceAndBankDetails = require("./src/controller/external/getExternalBalanceAndBankDetails");
 app.get("/api/v1/balance-bank-details-external", GetExternalBalanceAndBankDetails);
 

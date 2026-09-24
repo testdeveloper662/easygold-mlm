@@ -49,6 +49,26 @@ const GetExternalPayoutRequests = async (req, res) => {
             order: [["createdAt", "DESC"]]
         });
 
+        const baseUrl = process.env.NODE_URL || "http://localhost:4000";
+        const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+
+        const formattedRows = rows.map(row => {
+            const rowData = row.toJSON ? row.toJSON() : row;
+            if (rowData.invoice) {
+                const normalizedInvoice = rowData.invoice.replace(/\\/g, '/').replace(/^\/+/, '');
+                if (normalizedInvoice.startsWith("uploads/")) {
+                    rowData.invoice_path = normalizedBaseUrl + normalizedInvoice;
+                } else if (normalizedInvoice.startsWith("http")) {
+                    rowData.invoice_path = normalizedInvoice;
+                } else {
+                    rowData.invoice_path = normalizedBaseUrl + "uploads/" + normalizedInvoice;
+                }
+            } else {
+                rowData.invoice_path = null;
+            }
+            return rowData;
+        });
+
         let roleValue = "";
         if (user.role_id === 2) roleValue = "BROKER";
         else if (user.role_id === 3) roleValue = "AFFILIATE";
@@ -59,7 +79,7 @@ const GetExternalPayoutRequests = async (req, res) => {
             success: true,
             role_id: user.role_id,
             role: roleValue,
-            data: rows,
+            data: formattedRows,
             pagination: {
                 total: count,
                 page: pageNum,

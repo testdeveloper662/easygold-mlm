@@ -1,14 +1,15 @@
 const db = require("../../models");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const ResetPassword = async (req, res) => {
   try {
-    const { email, newPassword } = req.body;
+    const { token, newPassword } = req.body;
 
-    if (!email) {
+    if (!token) {
       return res.status(400).json({
         success: false,
-        message: "Email is required",
+        message: "Reset token is required",
       });
     }
 
@@ -19,9 +20,19 @@ const ResetPassword = async (req, res) => {
       });
     }
 
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_ACCESS_TOKEN || "defaultsecret");
+    } catch (err) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token",
+      });
+    }
+
     const user = await db.Users.findOne({
       where: {
-        email,
+        user_email: decoded.email,
       },
     });
 
@@ -35,7 +46,7 @@ const ResetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await user.update({
-      password: hashedPassword,
+      user_pass: hashedPassword,
     });
 
     return res.status(200).json({

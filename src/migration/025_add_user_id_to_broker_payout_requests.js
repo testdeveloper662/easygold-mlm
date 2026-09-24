@@ -34,11 +34,10 @@ const migrate = async () => {
         console.log(`✅ Backfill complete. Updated rows: ${result.affectedRows || result.changedRows || "Check database"}`);
 
         console.log("🎉 Migration completed successfully!");
-        process.exit(0);
     } catch (error) {
         console.error("❌ Error during migration:", error);
-        process.exit(1);
+        throw error;
     }
 };
 
-migrate();
+module.exports = migrate;

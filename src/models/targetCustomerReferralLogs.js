@@ -12,7 +12,7 @@ const TargetCustomerReferralLogs = sequelize.define(
         /** 🔗 Broker */
         broker_id: {
             type: Sequelize.INTEGER.UNSIGNED,
-            allowNull: false,
+            allowNull: true,
             references: {
                 model: "brokers",
                 key: "id",
@@ -20,10 +20,21 @@ const TargetCustomerReferralLogs = sequelize.define(
             onDelete: "CASCADE",
         },
 
+        /** 👤 User ID of Referrer (Global) */
+        user_id: {
+            type: Sequelize.INTEGER,
+            allowNull: true,
+            references: {
+                model: "users",
+                key: "ID",
+            },
+            onDelete: "CASCADE",
+        },
+
         /** 👤 Who referred */
         from_customer_id: {
             type: Sequelize.INTEGER,
-            allowNull: false,
+            allowNull: true,
             comment: "Referrer customer",
         },
 

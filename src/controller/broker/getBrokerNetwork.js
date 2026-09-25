@@ -4,7 +4,7 @@ const { roundToTwoDecimalPlaces, generateImageUrl } = require("../../utils/Helpe
 
 const MAX_LEVEL = 5;
 
-const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {}, assignedUserIds = new Set()) => {
+const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {}, assignedUserIds = new Set(), rootNetworkType = null) => {
   if (level > MAX_LEVEL || !parentNode) return [];
 
   const parentId = parentNode.id || parentNode.dataValues?.id;
@@ -23,6 +23,13 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {},
     // A single child user must never be connected to multiple parents in the tree
     if (assignedUserIds.has(Number(bUserId))) return false;
 
+    if (level === 2 && rootNetworkType) {
+      const childRoleId = b.user?.role_id || b.role_id;
+      const isAffiliateNet = Boolean(b.is_affiliate) || childRoleId === 3 || childRoleId === 4;
+      if (rootNetworkType === "affiliate" && !isAffiliateNet) return false;
+      if (rootNetworkType === "broker" && isAffiliateNet) return false;
+    }
+
     const bRefCode = (b.referred_by_code || "").trim().toUpperCase();
     if (parentRefCode && bRefCode) {
       return bRefCode === parentRefCode;
@@ -30,12 +37,6 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {},
 
     if (b.parent_user_id && parentUserId && Number(b.parent_user_id) === Number(parentUserId)) {
       return true;
-    }
-
-    // Only fallback to parent_id if referred_by_code is absent, and must match parent table type
-    if (parentId && b.parent_id && Number(b.parent_id) === Number(parentId)) {
-      const isChildAffiliate = Boolean(b.is_affiliate);
-      return isChildAffiliate === isParentAffiliate;
     }
 
     return false;
@@ -54,13 +55,15 @@ const buildBrokerTree = async (nodes, parentNode, level = 1, commissionMap = {},
         b,
         level + 1,
         commissionMap,
-        assignedUserIds
+        assignedUserIds,
+        rootNetworkType
       );
 
       const commissionAmount = b.is_affiliate ? 0 : roundToTwoDecimalPlaces(commissionMap[b.id] || 0);
       const bRoleId = b.user?.role_id || b.role_id || (b.is_affiliate ? 3 : 2);
       let roleName = "BROKER";
       if (bRoleId === 5) roleName = "CUSTOMER";
+      else if (bRoleId === 4) roleName = "PRIVATE INDIVIDUAL";
       else if (bRoleId === 3 || b.is_affiliate) roleName = "AFFILIATE";
       else if (bRoleId === 2) roleName = "BROKER";
 
@@ -187,23 +190,21 @@ const GetBrokerNetwork = async (req, res) => {
           : defaultRoleWhere);
 
     let brokersFormatted = [];
-    if (!isAffiliateNode) {
-      const brokersRaw = await db.Brokers.findAll({
-        include: [
-          {
-            model: db.Users,
-            as: "user",
-            attributes: ["ID", "user_email", "display_name", "role_id"],
-            where: brokerUserWhere,
-            required: true,
-          },
-        ],
-      });
-      brokersFormatted = brokersRaw.map(b => ({ ...b.toJSON(), is_affiliate: false }));
-    }
+    const brokersRaw = await db.Brokers.findAll({
+      include: [
+        {
+          model: db.Users,
+          as: "user",
+          attributes: ["ID", "user_email", "display_name", "role_id"],
+          where: brokerUserWhere,
+          required: true,
+        },
+      ],
+    });
+    brokersFormatted = brokersRaw.map(b => ({ ...b.toJSON(), is_affiliate: false }));
 
     let affiliatesFormatted = [];
-    if (isAffiliateNode && db.Affiliates) {
+    if (db.Affiliates) {
       const affiliatesRaw = await db.Affiliates.findAll({
         include: [
           {
@@ -366,8 +367,16 @@ const GetBrokerNetwork = async (req, res) => {
 
 
     // Build hierarchy using strictly matching database table nodes
-    const children = await buildBrokerTree(nodesToUse, currentBroker, 2, commissionMap);
+    const requestedNetworkType = req.query.type === "affiliate" ? "affiliate" : "broker";
+    const children = await buildBrokerTree(nodesToUse, currentBroker, 2, commissionMap, new Set(), requestedNetworkType);
     // Response
+    const rootRoleId = currentBroker.user?.role_id || currentBroker.role_id || (isAffiliateNode ? 3 : 2);
+    let rootRoleName = "BROKER";
+    if (rootRoleId === 5) rootRoleName = "CUSTOMER";
+    else if (rootRoleId === 4) rootRoleName = "PRIVATE INDIVIDUAL";
+    else if (rootRoleId === 3 || isAffiliateNode) rootRoleName = "AFFILIATE";
+    else if (rootRoleId === 2) rootRoleName = "BROKER";
+
     const network = {
       broker_id: currentBroker.id || currentBroker.dataValues?.id,
       user_id: currentBroker.user?.ID || currentBroker.user_id || currentBroker.dataValues?.user_id || null,
@@ -375,6 +384,8 @@ const GetBrokerNetwork = async (req, res) => {
       display_name: currentBroker.user?.display_name || null,
       profile_image: await generateImageUrl(currentBroker.profile_image || currentBroker.dataValues?.profile_image, "profile"),
       is_affiliate: isAffiliateNode,
+      role_id: rootRoleId,
+      role_name: rootRoleName,
       referral_code: currentBroker.referral_code || currentBroker.dataValues?.referral_code || null,
       level: 1,
       commission_amount: (isAffiliateNode || req.query.type === "affiliate") ? 0 : (commissionMap[currentBroker.id] ? roundToTwoDecimalPlaces(commissionMap[currentBroker.id]) : 0),

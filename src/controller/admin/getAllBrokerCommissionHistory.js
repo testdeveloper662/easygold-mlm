@@ -164,7 +164,8 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
         bch.notes,
         bch.createdAt,
         bch.updatedAt,
-        u.user_email
+        u.user_email,
+        u.role_id
 
       FROM ${tableName} AS bch
 
@@ -224,6 +225,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
           affiliate_id: record.broker_id,
           user_id: record.user_id,
           user_email: record.user_email,
+          user_role_id: record.role_id,
 
           commission_percent: parseFloat(
             record.commission_percent || 0

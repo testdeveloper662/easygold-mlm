@@ -91,7 +91,7 @@ const GetCustomerByOrderId = async (req, res) => {
                 {
                     model: db.Users,
                     as: "commission_from_user",
-                    attributes: ["user_email"],
+                    attributes: ["user_email", "role_id"],
                 },
             ],
         });
@@ -101,6 +101,7 @@ const GetCustomerByOrderId = async (req, res) => {
             broker_id: item.broker_id,
             user_id: item.user_id,
             user_email: item.commission_from_user?.user_email || null,
+            user_role_id: item.commission_from_user?.role_id || null,
             commission_percent: item.commission_percent,
             commission_amount: item.commission_amount,
             is_seller: item.is_seller,

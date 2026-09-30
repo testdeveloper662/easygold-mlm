@@ -68,7 +68,7 @@ const Login = async (req, res) => {
     } else if (user.role_id === 5) {
       userRole = "CUSTOMER";
     } else if (user.role_id === 4) {
-      userRole = "private individual";
+      userRole = "AFFILIATE";
     } else if (user.role_id === 3) {
       userRole = "AFFILIATE";
     } else if (user.role_id === 2) {

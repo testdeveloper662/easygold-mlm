@@ -245,10 +245,7 @@ const GetBrokerNetworkById = async (req, res) => {
     }
 
     // Private individuals (role_id 4) belong to the affiliate network only and must never appear in the broker network.
-    const isAffiliateNetwork = isAffiliateNode || type === "affiliate";
-    const defaultRoleWhere = isAffiliateNetwork
-      ? { [Op.or]: [{ role_id: { [Op.notIn]: [5] } }, { role_id: null }] }
-      : { [Op.or]: [{ role_id: { [Op.notIn]: [4, 5] } }, { role_id: null }] };
+    const defaultRoleWhere = { [Op.or]: [{ role_id: { [Op.notIn]: [5] } }, { role_id: null }] };
 
     const brokerUserWhere = (filterRoleId === 5)
       ? { role_id: 5 }

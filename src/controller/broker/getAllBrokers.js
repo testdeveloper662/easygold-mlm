@@ -23,7 +23,7 @@ const GetAllBrokers = async (req, res) => {
         let downlineUserIds = new Set();
 
         if (targetUserId) {
-            const brokerUserWhere = { [Op.or]: [{ role_id: { [Op.notIn]: [4, 5] } }, { role_id: null }] };
+            const brokerUserWhere = { [Op.or]: [{ role_id: { [Op.notIn]: [5] } }, { role_id: null }] };
             const brokersRaw = await db.Brokers.findAll({ 
                 include: [{ model: db.Users, as: "user", attributes: ["ID", "role_id"], where: brokerUserWhere, required: true }],
                 attributes: ['id', 'user_id', 'parent_id', 'referral_code', 'referred_by_code'], raw: true 

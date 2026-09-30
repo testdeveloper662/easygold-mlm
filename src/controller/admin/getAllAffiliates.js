@@ -18,37 +18,106 @@ const GetAllAffiliates = async (req, res) => {
 
     const isSuperAdmin = user.role === "SUPER_ADMIN";
     const whereClause = {};
+    let allNodes = [];
+    let downlineUserIds = new Set();
 
     if (targetUserId) {
-      const targetParentIds = [];
-      const targetRefCodes = [];
-
-      if (referred_by_code) targetRefCodes.push(referred_by_code);
-      if (referral_code) targetRefCodes.push(referral_code);
-
-      const bRec = await db.Brokers.findOne({ where: { user_id: targetUserId } });
-      if (bRec) {
-        if (bRec.referral_code) targetRefCodes.push(bRec.referral_code);
-      }
+      const brokerUserWhere = { [Op.or]: [{ role_id: { [Op.notIn]: [5] } }, { role_id: null }] };
+      const brokersRaw = await db.Brokers.findAll({ 
+          include: [{ model: db.Users, as: "user", attributes: ["ID", "role_id"], where: brokerUserWhere, required: true }],
+          attributes: ['id', 'user_id', 'parent_id', 'referral_code', 'referred_by_code'], raw: true 
+      });
+      let affiliatesRaw = [];
       if (db.Affiliates) {
-        const aRec = await db.Affiliates.findOne({ where: { user_id: targetUserId } });
-        if (aRec) {
-          // Strictly only include Affiliate table ID for querying db.Affiliates table
-          if (aRec.id) targetParentIds.push(aRec.id);
-          if (aRec.referral_code) targetRefCodes.push(aRec.referral_code);
+          affiliatesRaw = await db.Affiliates.findAll({ 
+              include: [{ model: db.Users, as: "user", attributes: ["ID", "user_status", "role_id"], where: {
+                  [Op.and]: [
+                      brokerUserWhere,
+                      { [Op.or]: [
+                          { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+                          { role_id: 2, user_status: 0 }
+                      ]}
+                  ]
+              }, required: true }],
+              attributes: ['id', 'user_id', 'parent_id', 'referral_code', 'referred_by_code'], raw: true 
+          });
+      }
+      const allUserRefs = await db.UserReferrals.findAll({ attributes: ["user_id", "parent_user_id"], raw: true });
+      const parentUserIdMap = {};
+      allUserRefs.forEach(r => { parentUserIdMap[r.user_id] = r.parent_user_id; });
+
+      const brokerUserIds = new Set(brokersRaw.map(b => b.user_id));
+      const uniqueAffiliatesRaw = affiliatesRaw.filter(a => !brokerUserIds.has(a.user_id));
+
+      allNodes = [
+        ...brokersRaw.map(n => ({ ...n, type: 'broker' })),
+        ...uniqueAffiliatesRaw.map(n => ({ ...n, type: 'affiliate' }))
+      ].map(n => ({
+        id: n.id,
+        user_id: n.user_id,
+        type: n.type,
+        'user.role_id': n['user.role_id'],
+        parent_id: n.parent_id,
+        referral_code: (n.referral_code || "").trim().toUpperCase(),
+        referred_by_code: (n.referred_by_code || "").trim().toUpperCase(),
+        parent_user_id: parentUserIdMap[n.user_id] || null
+      }));
+
+      const assignedUserIds = new Set([Number(targetUserId)]);
+      
+      const rootAffiliate = affiliatesRaw.find(a => Number(a.user_id) === Number(targetUserId));
+      let currentLevelNodes = rootAffiliate ? [{
+        id: rootAffiliate.id,
+        user_id: rootAffiliate.user_id,
+        type: 'affiliate',
+        'user.role_id': rootAffiliate['user.role_id'] || null,
+        parent_id: rootAffiliate.parent_id,
+        referral_code: (rootAffiliate.referral_code || "").trim().toUpperCase(),
+        referred_by_code: (rootAffiliate.referred_by_code || "").trim().toUpperCase(),
+        parent_user_id: parentUserIdMap[rootAffiliate.user_id] || null
+      }] : [];
+      
+      for (let level = 1; level <= 5; level++) {
+        let nextLevelNodes = [];
+        for (const parentNode of currentLevelNodes) {
+          const parentRefCode = parentNode.referral_code;
+          const parentUserId = parentNode.user_id;
+          
+          const children = allNodes.filter(b => {
+            const bUserId = b.user_id;
+            if (!bUserId || Number(bUserId) === Number(parentUserId)) return false;
+            if (assignedUserIds.has(Number(bUserId))) return false;
+            
+            if (level === 1) {
+              const isAffiliateNet = b.type === 'affiliate' || b['user.role_id'] === 3 || b['user.role_id'] === 4;
+              if (!isAffiliateNet) return false;
+            }
+            
+            const bRefCode = b.referred_by_code;
+            if (parentRefCode && bRefCode && bRefCode === parentRefCode) return true;
+            if (b.parent_user_id && parentUserId && Number(b.parent_user_id) === Number(parentUserId)) return true;
+            if (b.type === parentNode.type && b.parent_id && parentNode.id && Number(b.parent_id) === Number(parentNode.id)) return true;
+            
+            if (level === 1) {
+              if (referred_by_code && bRefCode === referred_by_code.trim().toUpperCase()) return true;
+              if (referral_code && bRefCode === referral_code.trim().toUpperCase()) return true;
+            }
+            
+            return false;
+          });
+          
+          children.forEach(c => {
+            assignedUserIds.add(Number(c.user_id));
+            downlineUserIds.add(Number(c.user_id));
+            nextLevelNodes.push(c);
+          });
         }
+        currentLevelNodes = nextLevelNodes;
+        if (currentLevelNodes.length === 0) break;
       }
 
-      const orConditions = [];
-      if (targetRefCodes.length > 0) {
-        orConditions.push({ referred_by_code: { [Op.in]: Array.from(new Set(targetRefCodes)) } });
-      }
-      if (targetParentIds.length > 0) {
-        orConditions.push({ parent_id: { [Op.in]: Array.from(new Set(targetParentIds)) } });
-      }
-
-      if (orConditions.length > 0) {
-        whereClause[Op.or] = orConditions;
+      if (downlineUserIds.size > 0) {
+        whereClause.user_id = { [Op.in]: Array.from(downlineUserIds) };
       } else {
         whereClause.id = -1;
       }
@@ -95,33 +164,67 @@ const GetAllAffiliates = async (req, res) => {
 
     // 1️⃣ Try fetching from db.Affiliates if available
     let primaryQueried = false;
-    try {
-      if (db.Affiliates) {
-        primaryQueried = true;
-        const result = await db.Affiliates.findAndCountAll({
-          where: whereClause,
-          include: [
-            {
-              model: db.Users,
-              as: "user",
-              attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
-              required: true,
-              where: affiliateUserFilter
-            },
-          ],
-          distinct: true,
-          subQuery: false,
-          order: [["createdAt", "DESC"]],
-          limit: parseInt(limit),
-          offset: parseInt(offset),
-        });
-        count = result.count;
-        affiliates = result.rows;
+    
+    if (targetUserId) {
+      primaryQueried = true;
+      let uWhere = { ID: { [Op.in]: Array.from(downlineUserIds) } };
+      if (search && search.trim() !== "") {
+        uWhere[Op.or] = [
+          { display_name: { [Op.like]: `%${search}%` } },
+          { user_email: { [Op.like]: `%${search}%` } },
+        ];
       }
-    } catch (affErr) {
-      console.warn("db.Affiliates table query failed, falling back to UsersMeta:", affErr.message);
-      affiliates = [];
-      primaryQueried = false;
+      
+      const { count: uCount, rows: uRows } = await db.Users.findAndCountAll({
+        where: uWhere,
+        order: [["user_registered", "DESC"]],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+      });
+      
+      count = uCount;
+      affiliates = uRows.map(u => {
+        const node = allNodes.find(n => n.user_id === u.ID);
+        return {
+          id: node ? node.id : u.ID,
+          user_id: u.ID,
+          user: u,
+          referral_code: node ? node.referral_code : null,
+          referred_by_code: node ? node.referred_by_code : null,
+          total_commission_amount: 0, // wait, original uses affiliate.total_commission_amount... but it's optional
+          createdAt: u.user_registered,
+          updatedAt: u.user_registered,
+        };
+      });
+    } else {
+      try {
+        if (db.Affiliates) {
+          primaryQueried = true;
+          const result = await db.Affiliates.findAndCountAll({
+            where: whereClause,
+            include: [
+              {
+                model: db.Users,
+                as: "user",
+                attributes: ["ID", "user_email", "display_name", "user_status", "role_id"],
+                required: true,
+                where: affiliateUserFilter
+              },
+            ],
+            distinct: true,
+            subQuery: false,
+            order: [["createdAt", "DESC"]],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+          });
+          count = result.count;
+          affiliates = result.rows;
+        }
+      } catch (affErr) {
+        console.warn("db.Affiliates table query failed, falling back to UsersMeta:", affErr.message);
+        affiliates = [];
+        primaryQueried = false;
+      }
     }
 
     // 2️⃣ Fallback to db.UsersMeta ONLY if db.Affiliates query was not performed (e.g. model unavailable/failed)

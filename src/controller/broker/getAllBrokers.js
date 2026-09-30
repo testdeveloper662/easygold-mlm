@@ -19,34 +19,101 @@ const GetAllBrokers = async (req, res) => {
         }
 
         const whereClause = {};
+        let allNodes = [];
+        let downlineUserIds = new Set();
 
         if (targetUserId) {
-            const targetParentIds = [];
-            const targetRefCodes = [];
-
-            const bRec = await db.Brokers.findOne({ where: { user_id: targetUserId } });
-            if (bRec) {
-                // Strictly only include Broker table ID for querying db.Brokers table
-                if (bRec.id) targetParentIds.push(bRec.id);
-                if (bRec.referral_code) targetRefCodes.push(bRec.referral_code);
-            }
+            const brokerUserWhere = { [Op.or]: [{ role_id: { [Op.notIn]: [4, 5] } }, { role_id: null }] };
+            const brokersRaw = await db.Brokers.findAll({ 
+                include: [{ model: db.Users, as: "user", attributes: ["ID", "role_id"], where: brokerUserWhere, required: true }],
+                attributes: ['id', 'user_id', 'parent_id', 'referral_code', 'referred_by_code'], raw: true 
+            });
+            let affiliatesRaw = [];
             if (db.Affiliates) {
-                const aRec = await db.Affiliates.findOne({ where: { user_id: targetUserId } });
-                if (aRec) {
-                    if (aRec.referral_code) targetRefCodes.push(aRec.referral_code);
+                affiliatesRaw = await db.Affiliates.findAll({ 
+                    include: [{ model: db.Users, as: "user", attributes: ["ID", "user_status", "role_id"], where: {
+                        [Op.and]: [
+                            brokerUserWhere,
+                            { [Op.or]: [
+                                { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
+                                { role_id: 2, user_status: 0 }
+                            ]}
+                        ]
+                    }, required: true }],
+                    attributes: ['id', 'user_id', 'parent_id', 'referral_code', 'referred_by_code'], raw: true 
+                });
+            }
+            const allUserRefs = await db.UserReferrals.findAll({ attributes: ["user_id", "parent_user_id"], raw: true });
+            const parentUserIdMap = {};
+            allUserRefs.forEach(r => { parentUserIdMap[r.user_id] = r.parent_user_id; });
+
+            const brokerUserIds = new Set(brokersRaw.map(b => b.user_id));
+            const uniqueAffiliatesRaw = affiliatesRaw.filter(a => !brokerUserIds.has(a.user_id));
+
+            allNodes = [
+                ...brokersRaw.map(n => ({ ...n, type: 'broker' })),
+                ...uniqueAffiliatesRaw.map(n => ({ ...n, type: 'affiliate' }))
+            ].map(n => ({
+                id: n.id,
+                user_id: n.user_id,
+                type: n.type,
+                'user.role_id': n['user.role_id'],
+                parent_id: n.parent_id,
+                referral_code: (n.referral_code || "").trim().toUpperCase(),
+                referred_by_code: (n.referred_by_code || "").trim().toUpperCase(),
+                parent_user_id: parentUserIdMap[n.user_id] || null
+            }));
+
+            const assignedUserIds = new Set([Number(targetUserId)]);
+            
+            const rootBroker = brokersRaw.find(b => Number(b.user_id) === Number(targetUserId));
+            let currentLevelNodes = rootBroker ? [{
+                id: rootBroker.id,
+                user_id: rootBroker.user_id,
+                type: 'broker',
+                'user.role_id': rootBroker['user.role_id'] || null,
+                parent_id: rootBroker.parent_id,
+                referral_code: (rootBroker.referral_code || "").trim().toUpperCase(),
+                referred_by_code: (rootBroker.referred_by_code || "").trim().toUpperCase(),
+                parent_user_id: parentUserIdMap[rootBroker.user_id] || null
+            }] : [];
+            
+            for (let level = 1; level <= 5; level++) {
+                let nextLevelNodes = [];
+                for (const parentNode of currentLevelNodes) {
+                    const parentRefCode = parentNode.referral_code;
+                    const parentUserId = parentNode.user_id;
+                    
+                    const children = allNodes.filter(b => {
+                        const bUserId = b.user_id;
+                        if (!bUserId || Number(bUserId) === Number(parentUserId)) return false;
+                        if (assignedUserIds.has(Number(bUserId))) return false;
+                        
+                        if (level === 1) {
+                            const isAffiliateNet = b.type === 'affiliate' || b['user.role_id'] === 3 || b['user.role_id'] === 4;
+                            if (isAffiliateNet) return false;
+                        }
+                        
+                        const bRefCode = b.referred_by_code;
+                        if (parentRefCode && bRefCode && bRefCode === parentRefCode) return true;
+                        if (b.parent_user_id && parentUserId && Number(b.parent_user_id) === Number(parentUserId)) return true;
+                        if (b.type === parentNode.type && b.parent_id && parentNode.id && Number(b.parent_id) === Number(parentNode.id)) return true;
+                        
+                        return false;
+                    });
+                    
+                    children.forEach(c => {
+                        assignedUserIds.add(Number(c.user_id));
+                        downlineUserIds.add(Number(c.user_id));
+                        nextLevelNodes.push(c);
+                    });
                 }
+                currentLevelNodes = nextLevelNodes;
+                if (currentLevelNodes.length === 0) break;
             }
 
-            const orConditions = [];
-            if (targetRefCodes.length > 0) {
-                orConditions.push({ referred_by_code: { [Op.in]: Array.from(new Set(targetRefCodes)) } });
-            }
-            if (targetParentIds.length > 0) {
-                orConditions.push({ parent_id: { [Op.in]: Array.from(new Set(targetParentIds)) } });
-            }
-
-            if (orConditions.length > 0) {
-                whereClause[Op.or] = orConditions;
+            if (downlineUserIds.size > 0) {
+                whereClause.user_id = { [Op.in]: Array.from(downlineUserIds) };
             } else {
                 whereClause.id = -1;
             }
@@ -61,39 +128,72 @@ const GetAllBrokers = async (req, res) => {
         }
 
         // 1️⃣ Get paginated brokers with their user info
-        const { count, rows: brokers } = await db.Brokers.findAndCountAll({
-            where: whereClause,
-            include: [
-                {
-                    model: db.Users,
-                    as: "user",
-                    attributes: ["ID", "user_email", "display_name", "role_id"],
-                    where: {
-                        [Op.or]: [
-                            { role_id: { [Op.ne]: 5 } },
-                            { role_id: null },
+        let count = 0;
+        let brokers = [];
+
+        if (targetUserId) {
+            let uWhere = { ID: { [Op.in]: Array.from(downlineUserIds) } };
+            if (search) {
+                uWhere[Op.or] = [
+                    { display_name: { [Op.like]: `%${search}%` } },
+                    { user_email: { [Op.like]: `%${search}%` } },
+                ];
+            }
+            const { count: uCount, rows: uRows } = await db.Users.findAndCountAll({
+                where: uWhere,
+                order: [["user_registered", "DESC"]],
+                limit: parseInt(limit),
+                offset: parseInt(offset),
+            });
+            count = uCount;
+            brokers = uRows.map(u => {
+                const node = allNodes.find(n => n.user_id === u.ID);
+                return {
+                    id: node ? node.id : u.ID,
+                    user_id: u.ID,
+                    user: u,
+                    referral_code: node ? node.referral_code : null,
+                    createdAt: u.user_registered,
+                    updatedAt: u.user_registered
+                };
+            });
+        } else {
+            const result = await db.Brokers.findAndCountAll({
+                where: whereClause,
+                include: [
+                    {
+                        model: db.Users,
+                        as: "user",
+                        attributes: ["ID", "user_email", "display_name", "role_id"],
+                        where: {
+                            [Op.or]: [
+                                { role_id: { [Op.ne]: 5 } },
+                                { role_id: null },
+                            ],
+                        },
+                        required: true,
+                        include: [
+                            {
+                                model: db.UsersMeta,
+                                as: "user_meta",
+                                attributes: [],
+                                where: {
+                                    meta_key: "u_company",
+                                },
+                                required: false,
+                            },
                         ],
                     },
-                    required: true,
-                    include: [
-                        {
-                            model: db.UsersMeta,
-                            as: "user_meta",
-                            attributes: [],
-                            where: {
-                                meta_key: "u_company",
-                            },
-                            required: false,
-                        },
-                    ],
-                },
-            ],
-            distinct: true, // 🔥 avoid duplicate count
-            subQuery: false, // 🔥 required for nested search
-            order: [["id", "DESC"]],
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-        });
+                ],
+                distinct: true,
+                subQuery: false,
+                order: [["id", "DESC"]],
+                limit: parseInt(limit),
+                offset: parseInt(offset),
+            });
+            count = result.count;
+            brokers = result.rows;
+        }
 
         const userIds = brokers.map((b) => b.user_id);
 
@@ -144,16 +244,16 @@ const GetAllBrokers = async (req, res) => {
             const u = broker.user;
             const m = userMetaMap[u?.ID] || {};
 
-            const untermaklervertrag_doc = broker.untermaklervertrag_doc !== null ? `${process.env.NODE_URL}${broker.untermaklervertrag_doc}` : null;
-            const maklervertrag_doc = broker.maklervertrag_doc !== null ? `${process.env.NODE_URL}${broker.maklervertrag_doc}` : null;
-            const inc_partnership_doc = broker.inc_partnership_doc !== null ? `${process.env.NODE_URL}${broker.inc_partnership_doc}` : null;
-            const llc_partnership_doc = broker.llc_partnership_doc !== null ? `${process.env.NODE_URL}${broker.llc_partnership_doc}` : null;
-            const goldflex_partnership_doc = broker.goldflex_partnership_doc !== null ? `${process.env.NODE_URL}${broker.goldflex_partnership_doc}` : null;
-            const hartmann_benz_gmbh_doc = broker.hartmann_benz_gmbh_doc !== null ? `${process.env.NODE_URL}${broker.hartmann_benz_gmbh_doc}` : null;
-            const binding_loi_doc = broker.binding_loi_doc !== null ? `${process.env.NODE_URL}${broker.binding_loi_doc}` : null;
-            const partner_tax_billing_doc = broker.partner_tax_billing_doc !== null ? `${process.env.NODE_URL}${broker.partner_tax_billing_doc}` : null;
-            const uk_company_sales_platform_doc = broker.uk_company_sales_platform_doc !== null ? `${process.env.NODE_URL}${broker.uk_company_sales_platform_doc}` : null;
-            const ncnda_doc = broker.ncnda_doc !== null ? `${process.env.NODE_URL}${broker.ncnda_doc}` : null;
+            const untermaklervertrag_doc = broker.untermaklervertrag_doc ? `${process.env.NODE_URL}${broker.untermaklervertrag_doc}` : null;
+            const maklervertrag_doc = broker.maklervertrag_doc ? `${process.env.NODE_URL}${broker.maklervertrag_doc}` : null;
+            const inc_partnership_doc = broker.inc_partnership_doc ? `${process.env.NODE_URL}${broker.inc_partnership_doc}` : null;
+            const llc_partnership_doc = broker.llc_partnership_doc ? `${process.env.NODE_URL}${broker.llc_partnership_doc}` : null;
+            const goldflex_partnership_doc = broker.goldflex_partnership_doc ? `${process.env.NODE_URL}${broker.goldflex_partnership_doc}` : null;
+            const hartmann_benz_gmbh_doc = broker.hartmann_benz_gmbh_doc ? `${process.env.NODE_URL}${broker.hartmann_benz_gmbh_doc}` : null;
+            const binding_loi_doc = broker.binding_loi_doc ? `${process.env.NODE_URL}${broker.binding_loi_doc}` : null;
+            const partner_tax_billing_doc = broker.partner_tax_billing_doc ? `${process.env.NODE_URL}${broker.partner_tax_billing_doc}` : null;
+            const uk_company_sales_platform_doc = broker.uk_company_sales_platform_doc ? `${process.env.NODE_URL}${broker.uk_company_sales_platform_doc}` : null;
+            const ncnda_doc = broker.ncnda_doc ? `${process.env.NODE_URL}${broker.ncnda_doc}` : null;
             const option_subscription_doc = broker.option_subscription_doc ? `${process.env.NODE_URL}${broker.option_subscription_doc}` : null;
 
             // Construct public URLs if exist

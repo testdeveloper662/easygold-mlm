@@ -146,21 +146,9 @@ const GetAllAffiliates = async (req, res) => {
     let count = 0;
     let affiliates = [];
 
-    const baseRoleFilter = {
-      role_id: { [Op.ne]: 5 },
-      [Op.or]: [
-        { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
-        { role_id: 2, user_status: { [Op.ne]: 2 } }
-      ]
+    const affiliateUserFilter = {
+      role_id: { [Op.in]: [3, 4] }
     };
-    const strictRoleFilter = {
-      role_id: { [Op.ne]: 5 },
-      [Op.or]: [
-        { role_id: { [Op.or]: [{ [Op.ne]: 2 }, { [Op.is]: null }] } },
-        { role_id: 2, user_status: 0 }
-      ]
-    };
-    const affiliateUserFilter = (isSuperAdmin && !targetUserId) ? baseRoleFilter : strictRoleFilter;
 
     // 1️⃣ Try fetching from db.Affiliates if available
     let primaryQueried = false;

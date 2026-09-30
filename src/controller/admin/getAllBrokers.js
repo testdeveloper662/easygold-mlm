@@ -54,10 +54,7 @@ const GetAllBrokers = async (req, res) => {
           as: "user",
           attributes: ["ID", "user_email", "display_name", "role_id"],
           where: {
-            [Op.or]: [
-              { role_id: { [Op.ne]: 5 } },
-              { role_id: null },
-            ],
+            role_id: 2
           },
           required: true,
           include: [

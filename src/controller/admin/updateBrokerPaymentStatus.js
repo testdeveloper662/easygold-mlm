@@ -38,8 +38,7 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
       });
     }
 
-    const isAffiliate = type === "affiliate" || req.query.type === "affiliate";
-    const HistoryModel = isAffiliate && db.AffiliateCommissionHistory ? db.AffiliateCommissionHistory : db.BrokerCommissionHistory;
+    const HistoryModel = db.BrokerCommissionHistory;
 
     const normalizedOrderId = String(order_id).trim();
 

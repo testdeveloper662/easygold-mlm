@@ -3,6 +3,7 @@ const authRouter = express.Router();
 
 const Login = require("../controller/auth/login");
 const ChangePassword = require("../controller/auth/changePassword");
+const ForgotPassword = require("../controller/auth/forgotPassword");
 const ValidateOTP = require("../controller/auth/validateOTP");
 const ResetPassword = require("../controller/auth/resetPassword");
 const RegisterBroker = require("../controller/broker/verifyBroker");
@@ -18,6 +19,7 @@ authRouter.post("/auth/login", Login);
 authRouter.post("/auth/broker-register", RegisterBroker);
 authRouter.post("/auth/affiliate-register", AffiliateRegistration);
 authRouter.post("/auth/change-password", ChangePassword);
+authRouter.post("/auth/forgot-password", ForgotPassword);
 authRouter.post("/auth/otp", ValidateOTP);
 authRouter.post("/auth/reset-password", ResetPassword);
 authRouter.get("/auth/terms-and-conditions/:document_key", GetPublicTermsAndConditions);

@@ -5,7 +5,7 @@ const { generateImageUrl } = require("../../utils/Helper");
 const GetBrokerPayoutRequests = async (req, res) => {
     try {
         // Optional filters
-        const { broker_id, email, type } = req.query;
+        const { broker_id, email, type, user_id } = req.query;
 
         // Pagination
         const page = parseInt(req.query.page) || 1;
@@ -14,106 +14,15 @@ const GetBrokerPayoutRequests = async (req, res) => {
 
         // Build where clause dynamically
         const whereClause = {};
-        if (broker_id) whereClause.broker_id = broker_id;
-        if (type) whereClause.user_type = type;
-
-        if (type === "affiliate") {
-            let totalCount = 0;
-            let formattedData = [];
-            if (db.AffiliatePayoutRequests) {
-                try {
-                    const affiliateInclude = {
-                        model: db.Affiliates,
-                        as: "affiliate",
-                        include: [
-                            {
-                                model: db.Users,
-                                as: "user",
-                                attributes: ["ID", "user_nicename", "user_login", "user_email"],
-                            },
-                        ],
-                    };
-                    if (email) {
-                        affiliateInclude.include[0].where = {
-                            [Op.or]: [{ user_login: email }, { user_email: email }],
-                        };
-                        affiliateInclude.include[0].required = true;
-                        affiliateInclude.required = true;
-                    }
-
-                    const affWhere = {};
-                    if (broker_id) affWhere.affiliate_id = broker_id;
-
-                    totalCount = await db.AffiliatePayoutRequests.count({
-                        where: affWhere,
-                        include: email ? [affiliateInclude] : [],
-                        distinct: !!email,
-                    });
-
-                    const payoutList = await db.AffiliatePayoutRequests.findAll({
-                        where: affWhere,
-                        include: [affiliateInclude],
-                        order: [["createdAt", "DESC"]],
-                        limit: limit,
-                        offset: offset,
-                    });
-
-                    formattedData = await Promise.all(
-                        payoutList.map(async (item) => {
-                            const json = item.toJSON();
-                            const invoice_url = json.invoice
-                                ? await generateImageUrl(json.invoice, "invoice")
-                                : "";
-
-                            const aff = json.affiliate || {};
-                            const u = aff.user || {};
-
-                            return {
-                                id: json.id,
-                                broker_id: json.affiliate_id || json.broker_id,
-                                affiliate_id: json.affiliate_id,
-                                amount: json.amount,
-                                invoice: invoice_url,
-                                payout_for: json.payout_for,
-                                status: json.status,
-                                created_at: json.createdAt,
-                                updated_at: json.updatedAt,
-
-                                broker: {
-                                    id: aff.id || json.affiliate_id,
-                                    referral_code: aff.referral_code || "",
-                                    children_count: aff.children_count || 0,
-                                    total_commission_amount: aff.total_commission_amount || 0,
-                                    user: u.ID
-                                        ? {
-                                            id: u.ID,
-                                            username: u.user_login || "",
-                                            name: u.user_nicename || "",
-                                        }
-                                        : null,
-                                },
-                            };
-                        })
-                    );
-                } catch (affErr) {
-                    console.error("Error fetching affiliate payout requests:", affErr);
-                }
-            }
-
-            return res.status(200).json({
-                success: true,
-                message: "Affiliate payout requests fetched successfully.",
-                data: formattedData,
-                pagination: {
-                    currentPage: page,
-                    totalPages: Math.ceil(totalCount / limit) || 1,
-                    totalItems: totalCount,
-                    itemsPerPage: limit,
-                },
-            });
+        if (broker_id) {
+            whereClause[Op.or] = [
+                { broker_id: broker_id },
+                { user_id: broker_id }
+            ];
         }
+        if (user_id) whereClause.user_id = user_id;
 
-        // Build include clause with optional email filter
+        // Build include clause for broker and user
         const brokerInclude = {
             model: db.Brokers,
             as: "broker",
@@ -124,34 +33,39 @@ const GetBrokerPayoutRequests = async (req, res) => {
                     attributes: ["ID", "user_nicename", "user_login", "user_email"],
                 },
             ],
+            required: false,
+        };
+
+        const userInclude = {
+            model: db.Users,
+            as: "user",
+            attributes: ["ID", "user_nicename", "user_login", "user_email"],
+            required: false,
         };
 
         // Add email filter to user include if email is provided
         if (email) {
-            brokerInclude.include[0].where = {
+            const emailWhere = {
                 [Op.or]: [
                     { user_login: email },
                     { user_email: email },
                 ],
             };
-            brokerInclude.include[0].required = true;
-            brokerInclude.required = true;
+            userInclude.where = emailWhere;
+            userInclude.required = true;
         }
 
 
         const countOptions = {
             where: whereClause,
+            include: [userInclude]
         };
-        if (email) {
-            countOptions.include = [brokerInclude];
-            countOptions.distinct = true;
-        }
         const totalCount = await db.BrokerPayoutRequests.count(countOptions);
 
         // Fetch data
         const payoutList = await db.BrokerPayoutRequests.findAll({
             where: whereClause,
-            include: [brokerInclude],
+            include: [brokerInclude, userInclude],
             order: [["createdAt", "DESC"]],
             limit: limit,
             offset: offset,
@@ -163,9 +77,13 @@ const GetBrokerPayoutRequests = async (req, res) => {
                 const json = item.toJSON();
                 const invoice_url = json.invoice ? await generateImageUrl(json.invoice, "invoice") : "";
 
+                // Fallback to json.user directly for non-brokers, or broker.user for backward compatibility
+                const u = json.user || (json.broker && json.broker.user) || null;
+
                 return {
                     id: json.id,
                     broker_id: json.broker_id,
+                    user_id: json.user_id,
                     amount: json.amount,
                     invoice: invoice_url,
                     payout_for: json.payout_for,
@@ -173,21 +91,17 @@ const GetBrokerPayoutRequests = async (req, res) => {
                     created_at: json.createdAt,
                     updated_at: json.updatedAt,
 
-                    broker: json.broker
-                        ? {
-                            id: json.broker.id,
-                            referral_code: json.broker.referral_code,
-                            children_count: json.broker.children_count,
-                            total_commission_amount: json.broker.total_commission_amount,
-                            user: json.broker.user
-                                ? {
-                                    id: json.broker.user.ID,
-                                    username: json.broker.user.user_login,
-                                    name: json.broker.user.user_nicename,
-                                }
-                                : null,
-                        }
-                        : null,
+                    broker: {
+                        id: json.broker ? json.broker.id : null,
+                        referral_code: json.broker ? json.broker.referral_code : "",
+                        children_count: json.broker ? json.broker.children_count : 0,
+                        total_commission_amount: json.broker ? json.broker.total_commission_amount : 0,
+                        user: u ? {
+                            id: u.ID,
+                            username: u.user_login,
+                            name: u.user_nicename,
+                        } : null,
+                    },
                 };
             })
         );

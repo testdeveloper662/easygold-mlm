@@ -28,10 +28,7 @@ const GetBrokersList = async (req, res) => {
           as: "user",
           attributes: ["display_name", "user_email", "role_id"],
           where: {
-            [Op.or]: [
-              { role_id: { [Op.ne]: 5 } },
-              { role_id: null },
-            ],
+            role_id: 2
           },
           required: true,
         },

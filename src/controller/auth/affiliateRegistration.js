@@ -222,7 +222,7 @@ const AffiliateRegistration = async (req, res) => {
 
     // Every affiliate is also registered in the Brokers table so they exist in the broker network too.
     // Private individuals (role_id 4) are excluded — they belong to the affiliate network only.
-    if (db.Brokers && !isPrivateIndividual) {
+    if (db.Brokers) {
       try {
         let brokerParentId = null;
         if (!isAdminParent && parentUserId) {

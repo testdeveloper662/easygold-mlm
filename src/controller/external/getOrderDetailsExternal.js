@@ -4,20 +4,34 @@ const BrokerCommissionHistory = db.BrokerCommissionHistory;
 const TargetCustomerReferralLogs = db.TargetCustomerReferralLogs;
 const TargetCustomers = db.TargetCustomers;
 
-const GetCustomerByOrderId = async (req, res) => {
+const GetOrderDetailsExternal = async (req, res) => {
     try {
-        const { order_id } = req.query;
+        const { order_id, orderid, email } = req.query;
 
-        if (!order_id) {
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email is required" });
+        }
+
+        const user = await db.Users.findOne({ where: { user_email: email } });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        const loggedInUserId = user.ID;
+
+        const actualOrderId = order_id || orderid;
+
+        if (!actualOrderId || !String(actualOrderId).trim()) {
             return res.status(400).json({
                 success: false,
                 message: "order_id is required",
             });
         }
 
+        const normalizedOrderId = String(actualOrderId).trim();
+
         // ✅ Main record (with referral log)
         const data = await BrokerCommissionHistory.findOne({
-            where: { order_id },
+            where: { order_id: normalizedOrderId },
             include: [
                 {
                     model: TargetCustomerReferralLogs,
@@ -35,25 +49,7 @@ const GetCustomerByOrderId = async (req, res) => {
                         },
                     ],
                 },
-            ],
-            attributes: {
-                include: [
-                    [
-                        db.sequelize.literal(`
-    EXISTS (
-      SELECT 1 
-      FROM broker_commission_histories AS bch
-      WHERE 
-        bch.order_id = '${String(order_id).replace(/'/g, "\\'")}'
-        AND bch.is_send_bonus = true
-        AND bch.is_payment_done = true
-        AND bch.is_deleted = false
-    )
-  `),
-                        "commission_devided",
-                    ],
-                ],
-            },
+            ]
         });
 
         if (!data) {
@@ -86,12 +82,12 @@ const GetCustomerByOrderId = async (req, res) => {
 
         // ✅ Get ALL broker commissions for same order
         const allCommissions = await BrokerCommissionHistory.findAll({
-            where: { order_id },
+            where: { order_id: normalizedOrderId, user_id: loggedInUserId },
             include: [
                 {
                     model: db.Users,
                     as: "commission_from_user",
-                    attributes: ["user_email", "role_id"],
+                    attributes: ["user_email"],
                 },
             ],
         });
@@ -101,7 +97,6 @@ const GetCustomerByOrderId = async (req, res) => {
             broker_id: item.broker_id,
             user_id: item.user_id,
             user_email: item.commission_from_user?.user_email || null,
-            user_role_id: item.commission_from_user?.role_id || null,
             commission_percent: item.commission_percent,
             commission_amount: item.commission_amount,
             is_seller: item.is_seller,
@@ -127,7 +122,7 @@ const GetCustomerByOrderId = async (req, res) => {
                         : "",
 
             broker_commissions,
-            commission_devided: data.get("commission_devided") ? true : false,
+            commission_devided: data?.get("commission_devided") ? true : false,
 
             // ✅ Unified customer structure
             referralLog: referralLogData,
@@ -140,7 +135,7 @@ const GetCustomerByOrderId = async (req, res) => {
             data: response,
         });
     } catch (error) {
-        console.error("GetCustomerByOrderId Error:", error);
+        console.error("GetOrderDetailsExternal Error:", error);
         return res.status(500).json({
             success: false,
             message: "Something went wrong",
@@ -148,4 +143,4 @@ const GetCustomerByOrderId = async (req, res) => {
     }
 };
 
-module.exports = GetCustomerByOrderId;
+module.exports = GetOrderDetailsExternal;

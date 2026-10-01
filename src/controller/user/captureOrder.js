@@ -326,7 +326,57 @@ const CaptureOrder = async (req, res) => {
     let broker = null;
     let targetCustomerBroker = false;
     let targetCustomerLogFound = null;
+
     let customerInfo = null;
+    let userIdToLookup = order ? order.user_id : null;
+    if (!userIdToLookup && b2bEmail) {
+      const u = await db.Users.findOne({ where: { user_email: b2bEmail } });
+      if (u) userIdToLookup = u.ID;
+    }
+
+    if (b2bEmail && (isGoldFlex || isEasyGoldToken || isPrimeInvest)) {
+        let interest_in;
+        if (orderType == "goldflex") interest_in = "goldflex";
+        else if (orderType == "easygoldtoken") interest_in = "easygold Token";
+        else if (orderType == "primeinvest") interest_in = "Primeinvest";
+        
+        customerInfo = await db.TargetCustomers.findOne({
+            where: { customer_email: b2bEmail, interest_in, status: "REGISTERED" },
+        });
+    }
+
+    let startUserId = null;
+    if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
+        if (userIdToLookup) {
+            const buyerReferral = await db.UserReferrals.findOne({ where: { user_id: userIdToLookup } });
+            if (buyerReferral && buyerReferral.parent_user_id) {
+                startUserId = buyerReferral.parent_user_id;
+            } else if (customerInfo && customerInfo.parent_customer_id) {
+                const pCust = await db.TargetCustomers.findOne({ where: { id: customerInfo.parent_customer_id } });
+                if (pCust) {
+                    const pUser = await db.Users.findOne({ where: { user_email: pCust.customer_email } });
+                    if (pUser) startUserId = pUser.ID;
+                }
+            } else if (customerInfo && customerInfo.broker_id) {
+                const tBroker = await db.Brokers.findOne({ where: { id: customerInfo.broker_id } });
+                if (tBroker) startUserId = tBroker.user_id;
+            }
+        }
+    } else {
+        startUserId = order ? order.user_id : null;
+    }
+
+    let userRole = 2; // default
+    if (startUserId) {
+      const referrerUser = await db.Users.findOne({ where: { ID: startUserId } });
+      if (referrerUser && referrerUser.role_id) {
+        userRole = referrerUser.role_id;
+      }
+    }
+
+    let isReferrerBroker = (userRole === 2);
+    let isReferrerAffiliate = (userRole === 3 || userRole === 4);
+    let isReferrerCustomer = (userRole === 5);
 
     if (isGoldFlex || isEasyGoldToken || isPrimeInvest || isDealerPurchasing || isGoldPriceFixing || isDealerPurchasingDiamond) {
       // For Gold Flex, get broker using b2bEmail
@@ -384,25 +434,17 @@ const CaptureOrder = async (req, res) => {
       });
     }
 
-    console.log(targetCustomerLogFound, "targetCustomerLogFound");
-    console.log(targetCustomerBroker, "targetCustomerBroker");
-    console.log("----------------------------------------------");
-    console.log("Investement check");
-    console.log("----------------------------------------------");
-    console.log(targetCustomerBroker, "targetCustomerBroker");
-    console.log("----------------------------------------------");
-    if (targetCustomerBroker) {
-      let interest_in;
+    let interest_in;
+    if (orderType == "goldflex") {
+      interest_in = "goldflex";
+    } else if (orderType == "easygoldtoken") {
+      interest_in = "easygold Token";
+    } else if (orderType == "primeinvest") {
+      interest_in = "Primeinvest";
+    }
 
-      if (orderType == "goldflex") {
-        interest_in = "goldflex";
-      } else if (orderType == "easygoldtoken") {
-        interest_in = "easygold Token";
-      } else if (orderType == "primeinvest") {
-        interest_in = "Primeinvest";
-      }
-
-      const customer = await db.TargetCustomers.findOne({
+    if (b2bEmail && (isGoldFlex || isEasyGoldToken || isPrimeInvest)) {
+      customerInfo = await db.TargetCustomers.findOne({
         where: {
           customer_email: b2bEmail,
           interest_in,
@@ -410,65 +452,28 @@ const CaptureOrder = async (req, res) => {
         },
       });
 
-      customerInfo = customer;
-
-      console.log(customer, "customer");
-      console.log(customer.parent_customer_id, "customer.parent_customer_id");
-
-      if (customer && customer.parent_customer_id) {
+      if (customerInfo && startUserId) {
         const investment = parseFloat(b2bCommissionAmount || 0);
-
-        // ✅ Calculate commission based on rule
         const commission_amount = Math.floor(investment / 5000);
 
-        console.log(b2bAddress, "b2bAddress inside call");
-
-        targetCustomerLogFound = await ReferralLogs.create({
-          broker_id: customer.broker_id,
-          from_customer_id: customer.parent_customer_id,
-          to_customer_id: customer.id,
-          type: "INVESTMENT_DONE",
-          investment_amount: investment,
-          commission_amount, // 🔥 added
-          product: interest_in,
-          status: "PENDING",
-          address: b2bAddress,
-          b2bName: b2bName
-        });
-
-        console.log("✅ INVESTMENT_DONE log created", {
-          investment,
-          commission_amount,
-          targetCustomerLogFound
-        });
+        // targetCustomerLogFound = await ReferralLogs.create({
+        //   broker_id: customerInfo.broker_id || null,
+        //   user_id: startUserId,
+        //   from_customer_id: customerInfo.parent_customer_id || null,
+        //   to_customer_id: customerInfo.id,
+        //   type: "INVESTMENT_DONE",
+        //   investment_amount: investment,
+        //   commission_amount,
+        //   product: interest_in,
+        //   status: "PENDING",
+        //   address: b2bAddress,
+        //   b2bName: b2bName
+        // });
       }
     }
-    if (!broker)
-      return res
-        .status(404)
-        .json({ success: false, message: "Broker not found" });
-
-    // Step 6: Get up to 4 parent brokers
-    const parentBrokers = [];
-    let currentParentId = broker.parent_id;
-    let level = 0;
-
-    let brokerlevel;
-
+    let brokerlevel = 5;
     if (isEasyGoldToken || isGoldFlex || isPrimeInvest) {
-      brokerlevel = targetCustomerBroker ? 4 : 5;
-    } else {
-      brokerlevel = 4;
-    }
-
-    while (currentParentId && level < brokerlevel) {
-      const parent = await db.Brokers.findOne({
-        where: { id: currentParentId },
-      });
-      if (!parent) break;
-      parentBrokers.push(parent);
-      currentParentId = parent.parent_id;
-      level++;
+      brokerlevel = targetCustomerBroker ? 5 : 6;
     }
 
     // Step 7: Map orderType to serviceType for dynamic commission fetching
@@ -503,24 +508,54 @@ const CaptureOrder = async (req, res) => {
     if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
       // For Gold Flex, use fixed commission percentages
       await db.AdminFixedBrokerCommission.sync();
-      commissionRecords = await db.AdminFixedBrokerCommission.findAll({
-        where: {
-          service_type: serviceType,
-        },
-        order: [["level", "ASC"]],
-      });
+
+      if (isReferrerAffiliate) {
+        await db.AdminFixedAffiliateCommission.sync();
+        commissionRecords = await db.AdminFixedAffiliateCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+      } else if (isReferrerCustomer) {
+        await db.AdminFixedCustomerCommission.sync();
+        commissionRecords = await db.AdminFixedCustomerCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+      } else {
+        await db.AdminFixedBrokerCommission.sync();
+        commissionRecords = await db.AdminFixedBrokerCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+      }
+
       console.log(` [CAPTURE ORDER] Found ${commissionRecords.length} fixed commission records for Gold Flex serviceType: ${serviceType}`);
     } else {
 
       // Step 7.1: Fetch dynamic commission percentages from database (Variable Broker Commissions)
       await db.AdminVariableBrokerCommission.sync();
 
-      commissionRecords = await db.AdminVariableBrokerCommission.findAll({
-        where: {
-          service_type: serviceType,
-        },
-        order: [["level", "ASC"]],
-      });
+
+      if (isReferrerAffiliate) {
+        await db.AdminVariableAffiliateCommission.sync();
+        commissionRecords = await db.AdminVariableAffiliateCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+      } else if (isReferrerCustomer) {
+        await db.AdminFixedCustomerCommission.sync();
+        commissionRecords = await db.AdminFixedCustomerCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+      } else {
+        await db.AdminVariableBrokerCommission.sync();
+        commissionRecords = await db.AdminVariableBrokerCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+      }
+
 
       console.log(` [CAPTURE ORDER] Found ${commissionRecords.length} commission records for serviceType: ${serviceType}`);
     }
@@ -553,17 +588,30 @@ const CaptureOrder = async (req, res) => {
 
     let activeLevels = [];
 
-    if (isGoldFlex || isEasyGoldToken || isPrimeInvest) {
-      activeLevels = targetCustomerBroker
-        ? [broker, ...parentBrokers]   // self included
-        : [...parentBrokers];          // self skipped
-    } else {
-      activeLevels = [broker, ...parentBrokers];
+    if (!startUserId) {
+        return res.status(404).json({ success: false, message: "Referrer/Seller user_id not found for this order" });
+    }
+
+    let currentTraceUserId = startUserId;
+    while (currentTraceUserId && activeLevels.length < brokerlevel) {
+        const tempBroker = await db.Brokers.findOne({ where: { user_id: currentTraceUserId } });
+        
+        activeLevels.push({
+            id: tempBroker ? tempBroker.id : null, 
+            user_id: currentTraceUserId
+        });
+
+        const ref = await db.UserReferrals.findOne({ where: { user_id: currentTraceUserId } });
+        if (ref && ref.parent_user_id) {
+            currentTraceUserId = ref.parent_user_id;
+        } else {
+            currentTraceUserId = null;
+        }
     }
     const activeBase = basePercentages.slice(0, activeLevels.length);
 
     console.log(` [CAPTURE ORDER] Active levels count: ${activeLevels.length}, Active base percentages: [${activeBase.join(", ")}]`);
-    console.log(` [CAPTURE ORDER] Broker Hierarchy: Level 1 (Seller) + ${parentBrokers.length} Parent(s)`);
+    console.log(` [CAPTURE ORDER] Broker Hierarchy: Level 1 (Seller) + ${activeLevels.length - 1} Parent(s)`);
 
     // Distribute remaining percent to level 1 (seller)
     const totalBase = activeBase.reduce((a, b) => a + b, 0);

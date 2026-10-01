@@ -1,5 +1,6 @@
 const db = require("../../models");
 const { Op } = require("sequelize");
+const { getBrokerCommissionTotals, getAffiliateCommissionTotals } = require("../../utils/getBrokerCommissionTotals");
 
 const GetExternalBalanceAndBankDetails = async (req, res) => {
   try {
@@ -24,6 +25,7 @@ const GetExternalBalanceAndBankDetails = async (req, res) => {
 
     let isbroker = false;
     let isaffiliate = false;
+    let iscustomer = false;
 
     // role_id 2 = BROKER
     // role_id 3 = AFFILIATE
@@ -34,19 +36,18 @@ const GetExternalBalanceAndBankDetails = async (req, res) => {
     } else if (user.role_id === 4) {
       isaffiliate = true;
       isbroker = false;
+    } else if (user.role_id === 5) {
+      iscustomer = true;
     }
 
     let result = {
-      broker_balance: 0,
-      broker_bank_details: [],
-      affiliate_balance: 0,
-      affiliate_bank_details: []
+      bank_details: []
     };
 
     const userMetaRows = await db.UsersMeta.findAll({
       where: {
         user_id: user.ID,
-        meta_key: ["banks", "affiliate_banks"]
+        meta_key: ["banks"]
       },
       raw: true
     });
@@ -57,70 +58,78 @@ const GetExternalBalanceAndBankDetails = async (req, res) => {
     });
 
     const parseBanksObj = (raw) => {
-      let parsed = [];
+      let parsed = null;
       if (raw) {
         try {
           parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
         } catch (e) {}
       }
-      return parsed;
+
+      // If it's an array (old format), wrap it in sepa. Otherwise return the new format directly.
+      if (Array.isArray(parsed)) {
+          return { sepa: parsed };
+      }
+      return parsed || {};
     };
 
-    if (isbroker && db.Brokers) {
-      const broker = await db.Brokers.findOne({ where: { user_id: user.ID }, raw: true });
-      if (broker) {
-        if (product && db.BrokerCommissionHistory) {
-          const sum = await db.BrokerCommissionHistory.sum('commission_amount', {
-            where: {
-              user_id: user.ID,
-              is_deleted: false,
-              is_payment_done: true,
-              order_type: product
-            }
-          });
-          result.broker_balance = sum || 0;
+    const flatBankData = parseBanksObj(metaMap.banks);
+    let unifiedBalance = 0;
+    
+    // Map product query to wallet key
+    const B2B_TYPES = ["my_store", "api", "landing_page", "gold_purchase", "gold_purchase_sell_orders", "goldprice_fixing", "dealer_purchasing", "dealer_purchasing_diamond"];
+    const TYPE_MAPPING = {
+        easygoldtoken: "EASYGOLD_TOKEN",
+        primeinvest: "PRIMEINVEST",
+        goldflex: "GOLDFLEX",
+    };
+    
+    let targetWalletKey = null;
+    if (product) {
+        const prodLower = product.toLowerCase();
+        if (B2B_TYPES.includes(prodLower)) {
+            targetWalletKey = "B2B_DASHBOARD";
         } else {
-          result.broker_balance = broker.total_commission_amount || 0;
+            targetWalletKey = TYPE_MAPPING[prodLower] || prodLower.toUpperCase();
         }
-
-        if (metaMap.banks) {
-            result.broker_bank_details = parseBanksObj(metaMap.banks);
-        } else if (db.BrokerBankDetails) {
-            const bankDetails = await db.BrokerBankDetails.findAll({ where: { broker_id: broker.id }, raw: true });
-            if (bankDetails && bankDetails.length > 0) {
-                result.broker_bank_details = bankDetails;
+    }
+    
+    if ((isbroker || isaffiliate || iscustomer)) {
+        let totals = {};
+        if (isbroker) {
+            totals = await getBrokerCommissionTotals({ user });
+        } else {
+            totals = await getAffiliateCommissionTotals({ user });
+        }
+        
+        // Subtract payouts
+        const approvedPayouts = await db.BrokerPayoutRequests.findAll({
+            where: { user_id: user.ID, status: "APPROVED" },
+            attributes: [ "payout_for", [db.Sequelize.fn("SUM", db.Sequelize.col("amount")), "total_amount"] ],
+            group: ["payout_for"],
+            raw: true
+        });
+        
+        approvedPayouts.forEach(p => {
+            if (p.payout_for && totals[p.payout_for] !== undefined) {
+                totals[p.payout_for] = Math.max(0, totals[p.payout_for] - Number(p.total_amount || 0));
             }
+        });
+        
+        if (targetWalletKey && totals[targetWalletKey] !== undefined) {
+            unifiedBalance = totals[targetWalletKey];
+        } else if (!product) {
+            unifiedBalance = Object.values(totals).reduce((a, b) => a + b, 0);
+        } else {
+            // fallback if product is something unknown, keep it 0 or run a raw sum
+            const sum = await db.BrokerCommissionHistory.sum('commission_amount', {
+                where: { user_id: user.ID, is_deleted: false, is_payment_done: true, order_type: product }
+            });
+            unifiedBalance = sum || 0;
         }
-      }
     }
 
-    if (isaffiliate && db.Affiliates) {
-      const affiliate = await db.Affiliates.findOne({ where: { user_id: user.ID }, raw: true });
-      if (affiliate) {
-        if (product && db.AffiliateCommissionHistory) {
-          const sum = await db.AffiliateCommissionHistory.sum('commission_amount', {
-            where: {
-              [Op.or]: [{ user_id: user.ID }, { affiliate_id: user.ID }],
-              is_deleted: false,
-              is_payment_done: true,
-              order_type: product
-            }
-          });
-          result.affiliate_balance = sum || 0;
-        } else {
-          result.affiliate_balance = affiliate.total_commission_amount || 0;
-        }
-
-        if (metaMap.affiliate_banks) {
-            result.affiliate_bank_details = parseBanksObj(metaMap.affiliate_banks);
-        } else if (db.AffiliateBankDetails) {
-            const bankDetails = await db.AffiliateBankDetails.findAll({ where: { affiliate_id: affiliate.id }, raw: true });
-            if (bankDetails && bankDetails.length > 0) {
-                result.affiliate_bank_details = bankDetails;
-            }
-        }
-      }
-    }
+    result.bank_details = flatBankData;
+    result.balance = unifiedBalance;
 
     let roleValue = "";
     if (user.role_id === 2) roleValue = "BROKER";
@@ -134,6 +143,7 @@ const GetExternalBalanceAndBankDetails = async (req, res) => {
       role: roleValue,
       isbroker,
       isaffiliate,
+      iscustomer,
       data: result
     });
 

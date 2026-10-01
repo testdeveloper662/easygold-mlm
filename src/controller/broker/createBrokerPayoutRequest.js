@@ -77,7 +77,30 @@ const CreateBrokerPayoutRequest = async (req, res) => {
                 ]
             });
         }
-        brokerDetails = brokerDetails?.get({ plain: true });
+        if (!brokerDetails) {
+            // Customer fallback
+            const customer = await db.Users.findOne({
+                where: { ID: user.ID },
+                attributes: ["ID", "user_nicename", "user_login", "user_email"],
+                include: [
+                    {
+                        model: db.UsersMeta,
+                        as: "user_meta",
+                        attributes: ["meta_key", "meta_value"],
+                        where: {
+                            meta_key: ["language", "u_web_site", "u_phone", "u_company", "u_street_no", "u_street", "u_postcode", "u_location", "u_country", "u_account_owner", "banks", "affiliate_banks", "ac_holder_name", "iban", "bic_swift_code", "bank_name"]
+                        },
+                        required: false
+                    },
+                ]
+            });
+            if (customer) {
+                brokerDetails = { user: customer.get({ plain: true }), bank_details: {} };
+            }
+        }
+        
+        brokerDetails = brokerDetails?.get ? brokerDetails.get({ plain: true }) : brokerDetails;
+
         if (!brokerDetails) {
             return res.status(404).json({
                 success: false,
@@ -104,29 +127,13 @@ const CreateBrokerPayoutRequest = async (req, res) => {
         }
 
         // Create new payout request
-        let newRequest;
-        if (user_type === "affiliate" && db.AffiliatePayoutRequests) {
-            let aff_id = user?.affiliate_id;
-            if (!aff_id && user?.ID && db.Affiliates) {
-                const aff = await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] });
-                if (aff) aff_id = aff.id;
-            }
-            if (!aff_id) aff_id = broker_id;
-
-            newRequest = await db.AffiliatePayoutRequests.create({
-                affiliate_id: aff_id,
-                amount,
-                payout_for,
-                status: "PENDING",
-            });
-        } else {
-            newRequest = await db.BrokerPayoutRequests.create({
+        const newRequest = await db.BrokerPayoutRequests.create({
+            user_id: user.ID,
                 broker_id,
                 amount,
                 payout_for,
                 status: "PENDING",
-            });
-        }
+        });
 
         const userDetails = brokerDetails?.user;
         const metas = userDetails?.user_meta || [];
@@ -319,9 +326,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
 
         let relativeInvoicePath = null;
         let pdfResult = null;
-        const isAffiliate = user_type === "affiliate";
-
-        if (!isAffiliate) {
+        if (true) {
             const outputFileName = `payout_${paylodForMailPDF.payout_request_id}.pdf`;
 
             pdfResult = await generatePDF(
@@ -391,8 +396,7 @@ const CreateBrokerPayoutRequest = async (req, res) => {
 
         // Send admin payout request notification email (template 137) to hsn_shop88@yahoo.de using logged-in user's language
         try {
-            const isAffiliate = user_type === "affiliate";
-            const userRoleText = isAffiliate ? "Affiliate" : "Broker";
+            const userRoleText = user_type.charAt(0).toUpperCase() + user_type.slice(1);
             const fullAddress = [street_no, street, location, postcode, country]
                 .filter(val => val !== undefined && val !== null && String(val).trim() !== "")
                 .join(", ") || "-";

@@ -38,6 +38,8 @@ const GetVariableAffiliateCommissions = require("../controller/admin/getVariable
 const AdjustVariableAffiliateCommissions = require("../controller/admin/adjustVariableAffiliateCommissions");
 const GetVariableBrokerCommissions = require("../controller/admin/getVariableBrokerCommissions");
 const AdjustVariableBrokerCommissions = require("../controller/admin/adjustVariableBrokerCommissions");
+const GetFixedCustomerCommissions = require('../controller/admin/getFixedCustomerCommissions');
+const AdjustFixedCustomerCommissions = require('../controller/admin/adjustFixedCustomerCommissions');
 const GetAllBrokers = require("../controller/admin/getAllBrokers");
 const GetAllAffiliates = require("../controller/admin/getAllAffiliates");
 const GetAllBrokerCommissionHistory = require("../controller/admin/getAllBrokerCommissionHistory");
@@ -95,6 +97,8 @@ adminRouter.get("/broker/fixed-commissions", authenticateToken, GetFixedBrokerCo
 adminRouter.post("/broker/fixed-commissions", authenticateToken, AdjustFixedBrokerCommissions);
 adminRouter.get("/broker/variable-commissions", authenticateToken, GetVariableBrokerCommissions);
 adminRouter.post("/broker/variable-commissions", authenticateToken, AdjustVariableBrokerCommissions);
+adminRouter.get('/customer/fixed-commissions', authenticateToken, GetFixedCustomerCommissions);
+adminRouter.post('/customer/fixed-commissions', authenticateToken, AdjustFixedCustomerCommissions);
 
 // Affiliate Commission Levels
 adminRouter.get("/affiliate/fixed-commissions", authenticateToken, GetFixedAffiliateCommissions);

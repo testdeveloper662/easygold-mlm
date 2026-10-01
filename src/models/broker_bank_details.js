@@ -1,5 +1,6 @@
 const { Sequelize, sequelize } = require("../config/database");
 const Brokers = require("./brokers");
+const Users = require("./users");
 
 const BrokerBankDetails = sequelize.define(
     "broker_bank_details",
@@ -27,12 +28,16 @@ const BrokerBankDetails = sequelize.define(
         },
         broker_id: {
             type: Sequelize.INTEGER.UNSIGNED,
-            allowNull: false,
+            allowNull: true,
             references: {
                 model: "brokers",
                 key: "id",
             },
             onDelete: "CASCADE",
+        },
+        user_id: {
+            type: Sequelize.BIGINT.UNSIGNED,
+            allowNull: false,
         },
     },
     {
@@ -44,5 +49,6 @@ const BrokerBankDetails = sequelize.define(
 // Associations
 BrokerBankDetails.belongsTo(Brokers, { foreignKey: "broker_id", as: "broker" });
 Brokers.hasOne(BrokerBankDetails, { foreignKey: "broker_id", as: "bank_details" });
+BrokerBankDetails.belongsTo(Users, { foreignKey: "user_id", as: "user" });
 
 module.exports = BrokerBankDetails;

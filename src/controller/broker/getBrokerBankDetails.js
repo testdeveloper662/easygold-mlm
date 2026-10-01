@@ -19,7 +19,7 @@ const GetBrokerBankDetails = async (req, res) => {
             broker_id = user?.broker_id || user?.affiliate_id;
             if (!broker_id && user?.ID) {
                 const b = await db.Brokers.findOne({ where: { user_id: user.ID }, attributes: ["id"] })
-                       || (db.Affiliates ? await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] }) : null);
+                    || (db.Affiliates ? await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] }) : null);
                 if (b) broker_id = b.id;
             }
         }
@@ -61,12 +61,24 @@ const GetBrokerBankDetails = async (req, res) => {
             });
         }
 
+        // Track whether this is actually a broker or affiliate record
+        let isBrokerRecord = false;
+        let isAffiliateRecord = false;
+
+        // If it has referral_code (or we found it in Brokers), it's a broker
+        if (brokerDetails.referral_code !== undefined) {
+            isBrokerRecord = true;
+        } else {
+            isAffiliateRecord = true;
+        }
+
 
         const targetUserId = brokerDetails?.user?.ID || brokerDetails?.user_id;
+
         const userMetaRows = targetUserId ? await db.UsersMeta.findAll({
             where: {
                 user_id: targetUserId,
-                meta_key: ["banks", "affiliate_banks", "ac_holder_name", "iban", "bic_swift_code", "bank_name", "u_account_owner"]
+                meta_key: ["banks", "ac_holder_name", "iban", "bic_swift_code", "bank_name", "u_account_owner"]
             },
         }) : [];
 
@@ -75,12 +87,12 @@ const GetBrokerBankDetails = async (req, res) => {
             metaMap[m.meta_key] = m.meta_value;
         });
 
-        const parseBanksObj = (raw, isAffiliate = false) => {
+        const parseBanksObj = (raw) => {
             let parsed = null;
             if (raw) {
                 try {
                     parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-                } catch (e) {}
+                } catch (e) { }
             }
 
             let sepa = {};
@@ -95,16 +107,14 @@ const GetBrokerBankDetails = async (req, res) => {
                 ach = parsed.ach?.[0] || {};
             }
 
-            const holder = sepa.account_holder || swift.account_holder || ach.account_holder || (!isAffiliate ? (metaMap.ac_holder_name || metaMap.u_account_owner || "") : "");
-            const ibanVal = sepa.iban || swift.iban || (!isAffiliate ? (metaMap.iban || "") : "");
-            const bicVal = sepa.bic_swift || swift.swift_bic || (!isAffiliate ? (metaMap.bic_swift_code || "") : "");
-            const nameVal = sepa.bank_name || swift.bank_name || ach.bank_name || (!isAffiliate ? (metaMap.bank_name || "") : "");
+            const holder = sepa.account_holder || swift.account_holder || ach.account_holder || metaMap.ac_holder_name || metaMap.u_account_owner || "";
+            const ibanVal = sepa.iban || swift.iban || metaMap.iban || "";
+            const bicVal = sepa.bic_swift || swift.swift_bic || metaMap.bic_swift_code || "";
+            const nameVal = sepa.bank_name || swift.bank_name || ach.bank_name || metaMap.bank_name || "";
 
             return { parsed, holder, iban: ibanVal, bic: bicVal, name: nameVal };
         };
-
-        const brokerBankMeta = parseBanksObj(metaMap.banks, false);
-        const affiliateBankMeta = parseBanksObj(metaMap.affiliate_banks, true);
+        const brokerBankMeta = parseBanksObj(metaMap.banks);
 
         const commissionTotals = await getBrokerCommissionTotals(brokerDetails);
         const approvedPayouts = await db.BrokerPayoutRequests.findAll({
@@ -189,6 +199,19 @@ const GetBrokerBankDetails = async (req, res) => {
             B2B_DASHBOARD: Math.max(0, affiliateCommissionTotals.B2B_DASHBOARD - affiliatePayoutDeductMap.B2B_DASHBOARD),
         };
 
+        // Zero out balances based on the actual user role
+        if (isBrokerRecord) {
+            finalAffiliateTotals.EASYGOLD_TOKEN = 0;
+            finalAffiliateTotals.PRIMEINVEST = 0;
+            finalAffiliateTotals.GOLDFLEX = 0;
+            finalAffiliateTotals.B2B_DASHBOARD = 0;
+        } else if (isAffiliateRecord) {
+            finalTotals.EASYGOLD_TOKEN = 0;
+            finalTotals.PRIMEINVEST = 0;
+            finalTotals.GOLDFLEX = 0;
+            finalTotals.B2B_DASHBOARD = 0;
+        }
+
         const bankDataObj = {
             ac_holder_name: brokerBankMeta.holder,
             iban: brokerBankMeta.iban,
@@ -197,21 +220,13 @@ const GetBrokerBankDetails = async (req, res) => {
             banks: brokerBankMeta.parsed,
         };
 
-        const affiliateBankDataObj = (affiliateBankMeta.holder || affiliateBankMeta.iban || affiliateBankMeta.name || affiliateBankMeta.parsed) ? {
-            ac_holder_name: affiliateBankMeta.holder,
-            iban: affiliateBankMeta.iban,
-            bic_swift_code: affiliateBankMeta.bic,
-            bank_name: affiliateBankMeta.name,
-            banks: affiliateBankMeta.parsed,
-        } : null;
-
         const isAffiliateUser = user?.role === "AFFILIATE" || (req.query.viewUserId && !brokerDetails?.user_id);
 
         return res.status(200).json({
             success: true,
             data: {
                 ...bankDataObj,
-                affiliate_bank: affiliateBankDataObj,
+                affiliate_bank: null,
                 commissions_totals: isAffiliateUser ? finalAffiliateTotals : finalTotals,
                 affiliate_commissions_totals: finalAffiliateTotals,
                 broker_commissions_totals: finalTotals,

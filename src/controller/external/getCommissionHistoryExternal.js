@@ -3,7 +3,7 @@ const { Op } = require("sequelize");
 
 const GetExternalCommissionHistoryLogs = async (req, res) => {
   try {
-    const { email, page = 1, limit = 10, search, product } = req.query;
+    const { email, page = 1, limit = 10, search, product, order_id, orderid } = req.query;
 
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required" });
@@ -25,6 +25,7 @@ const GetExternalCommissionHistoryLogs = async (req, res) => {
 
     let isbroker = false;
     let isaffiliate = false;
+    let iscustomer = false;
 
     // role_id 2 = BROKER
     // role_id 3 = AFFILIATE
@@ -35,6 +36,8 @@ const GetExternalCommissionHistoryLogs = async (req, res) => {
     } else if (user.role_id === 4) {
       isaffiliate = true;
       isbroker = false;
+    } else if (user.role_id === 5) {
+      iscustomer = true;
     }
 
     // Build common condition
@@ -43,36 +46,26 @@ const GetExternalCommissionHistoryLogs = async (req, res) => {
       is_payment_done: true,
     };
 
-    if (search) {
-      condition.order_id = { [Op.like]: `%${search}%` };
+    const searchQuery = search || order_id || orderid;
+    if (searchQuery) {
+      condition.order_id = { [Op.like]: `%${searchQuery}%` };
     }
 
     if (product) {
       condition.order_type = product;
     }
 
-    const isBrokerRoute = req.originalUrl.includes('/broker/');
-    const isAffiliateRoute = req.originalUrl.includes('/affiliate/');
-
     let combinedData = [];
 
-    if (isbroker && db.BrokerCommissionHistory && (!isAffiliateRoute)) {
-      const brokerLogs = await db.BrokerCommissionHistory.findAll({
+    if ((isbroker || isaffiliate || iscustomer) && db.BrokerCommissionHistory) {
+      const logs = await db.BrokerCommissionHistory.findAll({
         where: { ...condition, user_id: user.ID },
         raw: true
       });
-      combinedData = [...combinedData, ...brokerLogs];
-    }
-
-    if (isaffiliate && db.AffiliateCommissionHistory && (!isBrokerRoute)) {
-       const affiliateLogs = await db.AffiliateCommissionHistory.findAll({
-         where: { 
-           ...condition, 
-           [Op.or]: [{ user_id: user.ID }, { affiliate_id: user.ID }]
-         },
-         raw: true
-       });
-       combinedData = [...combinedData, ...affiliateLogs];
+      
+      // Since all roles now share the same table without a role_type flag, 
+      // we just return the user's unified commission history.
+      combinedData = [...combinedData, ...logs];
     }
 
     // Sort combined data by createdAt DESC
@@ -98,6 +91,7 @@ const GetExternalCommissionHistoryLogs = async (req, res) => {
       role: roleValue,
       isbroker,
       isaffiliate,
+      iscustomer,
       data: paginatedData,
       pagination: {
         total: combinedData.length,

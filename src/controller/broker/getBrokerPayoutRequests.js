@@ -42,38 +42,40 @@ const GetBrokerPayoutRequests = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
 
-        const isAffiliateType = req.query.type === "affiliate";
+        const type = req.query.type;
+        
+        if (type && user.role !== "SUPER_ADMIN") {
+            const normalizedRole = (user.role || "").toLowerCase();
+            if (normalizedRole !== type.toLowerCase()) {
+                return res.status(200).json({
+                    success: true,
+                    message: "Payout requests fetched successfully.",
+                    data: [],
+                    pagination: {
+                        currentPage: page,
+                        totalPages: 0,
+                        totalItems: 0,
+                        itemsPerPage: limit,
+                    },
+                });
+            }
+        }
         let totalCount = 0;
         let payoutList = [];
 
-        if (isAffiliateType && db.AffiliatePayoutRequests) {
-            let aff_id = user?.affiliate_id;
-            if (!aff_id && user?.ID && db.Affiliates) {
-                const aff = await db.Affiliates.findOne({ where: { user_id: user.ID }, attributes: ["id"] });
-                if (aff) aff_id = aff.id;
-            }
-            if (!aff_id) aff_id = broker_id;
-
-            totalCount = await db.AffiliatePayoutRequests.count({
-                where: { affiliate_id: aff_id },
-            });
-            payoutList = await db.AffiliatePayoutRequests.findAll({
-                where: { affiliate_id: aff_id },
-                order: [["createdAt", "DESC"]],
-                limit,
-                offset,
-            });
-        } else {
-            totalCount = await db.BrokerPayoutRequests.count({
-                where: { broker_id },
-            });
-            payoutList = await db.BrokerPayoutRequests.findAll({
-                where: { broker_id },
-                order: [["createdAt", "DESC"]],
-                limit,
-                offset,
-            });
-        }
+        const whereCondition = user.ID 
+            ? { [db.Sequelize.Op.or]: [{ broker_id }, { user_id: user.ID }] }
+            : { broker_id };
+        
+        totalCount = await db.BrokerPayoutRequests.count({
+            where: whereCondition,
+        });
+        payoutList = await db.BrokerPayoutRequests.findAll({
+            where: whereCondition,
+            order: [["createdAt", "DESC"]],
+            limit,
+            offset,
+        });
 
         const formattedData = await Promise.all(
             payoutList.map(async (item) => {
@@ -84,6 +86,7 @@ const GetBrokerPayoutRequests = async (req, res) => {
                 return {
                     id: json.id,
                     broker_id: json.broker_id,
+                    user_id: json.user_id,
                     amount: json.amount,
                     invoice: invoice_url,
                     payout_for: json.payout_for,

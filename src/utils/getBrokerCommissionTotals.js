@@ -96,16 +96,10 @@ async function getAffiliateCommissionTotals(entity) {
     const whereClause = {
         is_deleted: false,
         is_payment_done: true,
+        user_id: userId
     };
-    if (userId && affiliateId) {
-        whereClause[db.Sequelize.Op.or] = [{ user_id: userId }, { affiliate_id: affiliateId }];
-    } else if (userId) {
-        whereClause.user_id = userId;
-    } else {
-        whereClause.affiliate_id = affiliateId;
-    }
 
-    const commissionRows = await db.AffiliateCommissionHistory.findAll({
+    const commissionRows = await db.BrokerCommissionHistory.findAll({
         where: whereClause,
         attributes: ["commission_amount", "order_type", "is_seller", "selected_payment_method"],
         raw: true,

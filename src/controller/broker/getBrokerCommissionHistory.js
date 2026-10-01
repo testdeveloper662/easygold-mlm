@@ -36,7 +36,11 @@ const GetBrokerCommissionHistory = async (req, res) => {
     
     if (type && user && user.role !== "SUPER_ADMIN") {
         const normalizedRole = (user.role || "").toLowerCase();
-        if (normalizedRole !== type.toLowerCase()) {
+        const normalizedType = type.toLowerCase();
+        
+        const isBrokerOrAffiliate = (role) => ["broker", "affiliate"].includes(role);
+
+        if (normalizedRole !== normalizedType && !(isBrokerOrAffiliate(normalizedRole) && isBrokerOrAffiliate(normalizedType))) {
             return res.status(200).json({
                 success: true,
                 message: "Commission history fetched successfully.",

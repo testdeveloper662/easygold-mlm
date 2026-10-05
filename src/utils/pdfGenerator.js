@@ -5,6 +5,17 @@ const puppeteer = require("puppeteer");
 async function generatePDF(data, templateName, outputfolder, outputFileName) {
     let browser;
 
+    // Kill switch — set PDF_GENERATION_ENABLED=false (e.g. on staging) to skip
+    // PDF generation entirely without touching Puppeteer/Chrome at all.
+    if (process.env.PDF_GENERATION_ENABLED === "false") {
+        console.log(`[PDF Generator] Skipped (PDF_GENERATION_ENABLED=false): ${outputfolder}/${outputFileName}`);
+        return {
+            success: false,
+            skipped: true,
+            error: "PDF generation disabled via PDF_GENERATION_ENABLED env var",
+        };
+    }
+
     try {
         const templatePath = path.join(__dirname, "..", "templates", templateName);
 

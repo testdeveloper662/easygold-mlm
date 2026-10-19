@@ -14,7 +14,10 @@ module.exports = {
         200: {
           description: "Image uploaded successfully",
           content: {
-            "application/json": { schema: { "$ref": "#/components/schemas/ImageUploadResponse" } },
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/ImageUploadResponse" },
+              example: { uploaded: 1, fileName: "1710000000-123456789.png", url: "http://localhost:4000/uploads/contracts/1710000000-123456789.png" },
+            },
           },
         },
         400: { description: "No file uploaded" },

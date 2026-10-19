@@ -33,6 +33,97 @@ module.exports = {
                   },
                 ],
               },
+              examples: {
+                broker_or_affiliate_login: {
+                  summary: "Broker / Affiliate / Private individual login",
+                  value: {
+                    success: true,
+                    message: "Logged in successfully",
+                    data: {
+                      user: {
+                        ID: 43416,
+                        user_login: "broker18@yopmail.com",
+                        user_nicename: "broker18@yopmail.com",
+                        user_email: "broker18@yopmail.com",
+                        user_url: "",
+                        user_registered: "2026-03-14T09:21:00.000Z",
+                        user_activation_key: "",
+                        user_status: 0,
+                        display_name: "broker18",
+                        user_type: 0,
+                        wallet_amount: 125.5,
+                        wallet_payment: 0,
+                        logo: "http://localhost:4000/uploads/logo/1779099635240.jpeg",
+                        menulogo: null,
+                        commission_percentage: 10,
+                        api_commission_percentage: 10,
+                        shipping_costs_setting: 0,
+                        temp_pass: null,
+                        mystorekey: "broker123",
+                        self_service: 1,
+                        landing_page: true,
+                        deleted_at: null,
+                        role_id: 2,
+                        role: "BROKER",
+                        referral_code: "BIXBC8",
+                        broker_id: 130,
+                        profile_image: "http://localhost:4000/public/default/default_org.png",
+                        landing_pageurl: "https://easygold.example.com/landingpage/broker123",
+                        goldbuying_page: "https://easygold.example.com/Goldankauf/broker123",
+                        silverpurchase_page: "https://easygold.example.com/Silberankauf/broker123",
+                        platinumpurchase_page: "https://easygold.example.com/Platinankauf/broker123",
+                        palladiumpurchase_page: "https://easygold.example.com/Palladiumankauf/broker123",
+                        preciousmetalsale_page: "https://easygold.example.com/Edelmetallverkauf/broker123",
+                        cointrade_page: "https://easygold.example.com/Muenzhandel/broker123",
+                        jewelryappraisal_page: "https://easygold.example.com/schmuckbewertung/broker123",
+                        consultingexpertise_page: "https://easygold.example.com/BeratungUndExpertise/broker123",
+                        previousmetaldealers_page: "https://easygold.example.com/zoomLanding/broker123",
+                        selfservice_page: "https://easygold.example.com/mystore/broker123",
+                        goldflexurl: "https://app.easygold.example.com/customer-referral/QklYQkM4/goldflex",
+                        easygoldurl: "https://app.easygold.example.com/customer-referral/QklYQkM4/easygold",
+                        primeinvesturl: "https://app.easygold.example.com/customer-referral/QklYQkM4/primeinvest",
+                      },
+                      token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7IklEIjo0MzQxNn19.fakeSignatureForDocsOnly",
+                    },
+                  },
+                },
+                admin_login: {
+                  summary: "Super admin login (reduced user shape, no broker/affiliate fields)",
+                  value: {
+                    success: true,
+                    message: "Admin logged in successfully",
+                    data: {
+                      user: {
+                        ID: 1,
+                        user_login: "admin@easygold.example.com",
+                        user_nicename: "admin",
+                        user_email: "admin@easygold.example.com",
+                        user_url: "",
+                        user_registered: "2024-01-01T00:00:00.000Z",
+                        user_activation_key: "",
+                        user_status: 0,
+                        display_name: "Admin",
+                        user_type: 1,
+                        wallet_amount: 0,
+                        wallet_payment: 0,
+                        logo: "http://localhost:4000/public/default/default_org.png",
+                        menulogo: null,
+                        commission_percentage: 0,
+                        api_commission_percentage: 0,
+                        shipping_costs_setting: 0,
+                        temp_pass: null,
+                        mystorekey: null,
+                        self_service: 0,
+                        landing_page: 0,
+                        deleted_at: null,
+                        role_id: null,
+                        role: "SUPER_ADMIN",
+                      },
+                      token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7IklEIjoxfX0.fakeSignatureForDocsOnly",
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -80,6 +171,14 @@ module.exports = {
                   },
                 ],
               },
+              example: {
+                success: true,
+                data: [
+                  { id: 1, value: "business", label_en: "Business", label_de: "Unternehmen" },
+                  { id: 2, value: "affiliate", label_en: "Affiliate", label_de: "Partner" },
+                  { id: 3, value: "private_individual", label_en: "Private Individual", label_de: "Privatperson" },
+                ],
+              },
             },
           },
         },
@@ -98,7 +197,46 @@ module.exports = {
         },
       },
       responses: {
-        200: { description: "Broker verified and registered" },
+        200: {
+          description: "Broker verified and registered",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: {
+                success: true,
+                message: "Registered successfully",
+                data: {
+                  user: {
+                    ID: 43416,
+                    user_login: "broker18@yopmail.com",
+                    user_nicename: "broker18@yopmail.com",
+                    user_email: "broker18@yopmail.com",
+                    user_url: "",
+                    user_registered: "2026-03-14T09:21:00.000Z",
+                    user_activation_key: "",
+                    user_status: 0,
+                    display_name: "broker18",
+                    user_type: 0,
+                    wallet_amount: 0,
+                    wallet_payment: 0,
+                    logo: null,
+                    menulogo: null,
+                    commission_percentage: 0,
+                    api_commission_percentage: 0,
+                    shipping_costs_setting: 0,
+                    temp_pass: null,
+                    mystorekey: null,
+                    self_service: 0,
+                    landing_page: 0,
+                    deleted_at: null,
+                    role_id: 2,
+                  },
+                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7IklEIjo0MzQxNn19.fakeSignatureForDocsOnly",
+                },
+              },
+            },
+          },
+        },
         400: { description: "Invalid input or referral code" },
         401: {
           description: "Incorrect password",
@@ -123,7 +261,29 @@ module.exports = {
         },
       },
       responses: {
-        200: { description: "Affiliate registered successfully" },
+        200: {
+          description: "Affiliate registered successfully",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: {
+                success: true,
+                message: "Affiliate registered successfully",
+                data: {
+                  user: {
+                    ID: 43531,
+                    fullName: "Max Muster",
+                    email: "max.muster@example.com",
+                    referral_code: "K7QJ2P",
+                    role: "AFFILIATE",
+                    user_status: 2,
+                  },
+                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7IklEIjo0MzUzMX19.fakeSignatureForDocsOnly",
+                },
+              },
+            },
+          },
+        },
         400: { description: "Validation error or existing user" },
         500: {
           description: "Internal server error",
@@ -144,7 +304,15 @@ module.exports = {
         },
       },
       responses: {
-        200: { description: "OTP sent to email" },
+        200: {
+          description: "OTP sent to email",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: { success: true, message: "OTP has been sent to this email", data: {} },
+            },
+          },
+        },
         400: {
           description: "Email is required",
           content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
@@ -169,7 +337,15 @@ module.exports = {
         },
       },
       responses: {
-        200: { description: "Password reset email sent" },
+        200: {
+          description: "Password reset email sent",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: { success: true, message: "A password reset link has been sent to your email", data: {} },
+            },
+          },
+        },
         400: {
           description: "Email is required",
           content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
@@ -194,7 +370,15 @@ module.exports = {
         },
       },
       responses: {
-        200: { description: "OTP verified successfully" },
+        200: {
+          description: "OTP verified successfully",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: { success: true, message: "Correct OTP", data: {} },
+            },
+          },
+        },
         400: { description: "Invalid or expired OTP" },
         404: {
           description: "User not found",
@@ -219,7 +403,15 @@ module.exports = {
         },
       },
       responses: {
-        200: { description: "Password reset successful" },
+        200: {
+          description: "Password reset successful",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: { success: true, message: "Password reset successful", data: {} },
+            },
+          },
+        },
         400: { description: "Invalid or expired reset token" },
         404: {
           description: "User not found",
@@ -247,7 +439,31 @@ module.exports = {
         },
       ],
       responses: {
-        200: { description: "Terms document details" },
+        200: {
+          description: "Terms document details",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: {
+                success: true,
+                data: {
+                  id: 4,
+                  english_name: "Broker Contract Terms",
+                  german_name: "Vermittlervertragsbedingungen",
+                  english_template_text: "<p>These terms govern the broker partnership agreement...</p>",
+                  german_template_text: "<p>Diese Bedingungen regeln die Vermittler-Partnerschaftsvereinbarung...</p>",
+                  english_pdf_file: "/uploads/terms/broker_contract_terms_en.pdf",
+                  german_pdf_file: "/uploads/terms/broker_contract_terms_de.pdf",
+                  description: "Contract terms shown to brokers during registration",
+                  showonregister: true,
+                  document_key: "broker_contract_terms",
+                  createdAt: "2026-01-10T08:00:00.000Z",
+                  updatedAt: "2026-03-02T11:15:00.000Z",
+                },
+              },
+            },
+          },
+        },
         404: { description: "Terms not found" },
       },
     },
@@ -258,7 +474,21 @@ module.exports = {
       summary: "Get registration terms & conditions",
       description: "List all terms and conditions documents required for user registration.",
       responses: {
-        200: { description: "List of registration terms" },
+        200: {
+          description: "List of registration terms",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: {
+                success: true,
+                data: [
+                  { id: 4, document_key: "broker_contract_terms", english_name: "Broker Contract Terms", german_name: "Vermittlervertragsbedingungen" },
+                  { id: 5, document_key: "privacy_policy", english_name: "Privacy Policy", german_name: "Datenschutzerklärung" },
+                ],
+              },
+            },
+          },
+        },
       },
     },
   },
@@ -271,7 +501,30 @@ module.exports = {
         { name: "product", in: "query", schema: { type: "string" }, example: "goldflex" },
       ],
       responses: {
-        200: { description: "Referral code found" },
+        200: {
+          description: "Referral code found",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: {
+                success: true,
+                message: "Parent referral code retrieved successfully",
+                data: {
+                  referral_code: "UkVGMTIzNDU=",
+                  raw_referral_code: "REF12345",
+                  encoded_referral_code: "UkVGMTIzNDU=",
+                  customer_id: 912,
+                  customer_name: "Jane Customer",
+                  customer_email: "customer@example.com",
+                  product: "goldflex",
+                  partner_referral_url: "https://app.easygold.example.com/partner-referral/UkVGMTIzNDU=",
+                  broker_registration_url: "https://app.easygold.example.com/broker-register/step1/UkVGMTIzNDU=",
+                  affiliate_registration_url: "https://app.easygold.example.com/affiliate-register?referral=UkVGMTIzNDU=",
+                },
+              },
+            },
+          },
+        },
         400: {
           description: "Email is required",
           content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
@@ -293,7 +546,30 @@ module.exports = {
         },
       },
       responses: {
-        200: { description: "Referral code found" },
+        200: {
+          description: "Referral code found",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: {
+                success: true,
+                message: "Parent referral code retrieved successfully",
+                data: {
+                  referral_code: "UkVGMTIzNDU=",
+                  raw_referral_code: "REF12345",
+                  encoded_referral_code: "UkVGMTIzNDU=",
+                  customer_id: 912,
+                  customer_name: "Jane Customer",
+                  customer_email: "customer@example.com",
+                  product: "goldflex",
+                  partner_referral_url: "https://app.easygold.example.com/partner-referral/UkVGMTIzNDU=",
+                  broker_registration_url: "https://app.easygold.example.com/broker-register/step1/UkVGMTIzNDU=",
+                  affiliate_registration_url: "https://app.easygold.example.com/affiliate-register?referral=UkVGMTIzNDU=",
+                },
+              },
+            },
+          },
+        },
         400: {
           description: "Email is required",
           content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
@@ -315,7 +591,30 @@ module.exports = {
         { name: "product", in: "query", schema: { type: "string" } },
       ],
       responses: {
-        200: { description: "Referral code found" },
+        200: {
+          description: "Referral code found",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: {
+                success: true,
+                message: "Parent referral code retrieved successfully",
+                data: {
+                  referral_code: "UkVGMTIzNDU=",
+                  raw_referral_code: "REF12345",
+                  encoded_referral_code: "UkVGMTIzNDU=",
+                  customer_id: 912,
+                  customer_name: "Jane Customer",
+                  customer_email: "customer@example.com",
+                  product: "goldflex",
+                  partner_referral_url: "https://app.easygold.example.com/partner-referral/UkVGMTIzNDU=",
+                  broker_registration_url: "https://app.easygold.example.com/broker-register/step1/UkVGMTIzNDU=",
+                  affiliate_registration_url: "https://app.easygold.example.com/affiliate-register?referral=UkVGMTIzNDU=",
+                },
+              },
+            },
+          },
+        },
         400: {
           description: "Email is required",
           content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
@@ -336,7 +635,30 @@ module.exports = {
         },
       },
       responses: {
-        200: { description: "Referral code found" },
+        200: {
+          description: "Referral code found",
+          content: {
+            "application/json": {
+              schema: { "$ref": "#/components/schemas/SuccessResponse" },
+              example: {
+                success: true,
+                message: "Parent referral code retrieved successfully",
+                data: {
+                  referral_code: "UkVGMTIzNDU=",
+                  raw_referral_code: "REF12345",
+                  encoded_referral_code: "UkVGMTIzNDU=",
+                  customer_id: 912,
+                  customer_name: "Jane Customer",
+                  customer_email: "customer@example.com",
+                  product: "goldflex",
+                  partner_referral_url: "https://app.easygold.example.com/partner-referral/UkVGMTIzNDU=",
+                  broker_registration_url: "https://app.easygold.example.com/broker-register/step1/UkVGMTIzNDU=",
+                  affiliate_registration_url: "https://app.easygold.example.com/affiliate-register?referral=UkVGMTIzNDU=",
+                },
+              },
+            },
+          },
+        },
         400: {
           description: "Email is required",
           content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },

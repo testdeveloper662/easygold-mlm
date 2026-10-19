@@ -8,6 +8,7 @@ const brokerDocs = require("./docs/broker.swagger");
 const userDocs = require("./docs/user.swagger");
 const externalDocs = require("./docs/external.swagger");
 const uploadDocs = require("./docs/upload.swagger");
+const kontorDocs = require("./docs/kontor.swagger");
 
 // Combine all pre-defined paths
 const combinedPaths = {
@@ -17,6 +18,7 @@ const combinedPaths = {
   ...userDocs,
   ...externalDocs,
   ...uploadDocs,
+  ...kontorDocs,
 };
 
 const port = process.env.PORT || 4000;
@@ -677,6 +679,243 @@ const swaggerDefinition = {
           country_code: { type: "string", example: "CH" },
           city: { type: "string", example: "Zurich" },
           timezone: { type: "string", example: "Europe/Zurich" },
+        },
+      },
+      KontorCompany: {
+        type: "object",
+        required: ["legal_name", "postcode", "city", "country"],
+        properties: {
+          legal_name: { type: "string", example: "Beispiel Edelmetalle GmbH" },
+          legal_form: { type: "string", example: "GmbH" },
+          street: { type: "string", example: "Musterstraße 1" },
+          postcode: { type: "string", example: "70173" },
+          city: { type: "string", example: "Stuttgart" },
+          country: { type: "string", example: "DE" },
+          vat_id: { type: "string", example: "DE123456789" },
+        },
+      },
+      KontorContact: {
+        type: "object",
+        required: ["name", "email"],
+        properties: {
+          name: { type: "string", example: "Max Muster" },
+          email: { type: "string", format: "email", example: "max@example.com" },
+          phone: { type: "string", example: "+49 711 000000" },
+          locale: { type: "string", example: "de" },
+        },
+      },
+      KontorBrokerRegisterRequest: {
+        type: "object",
+        required: ["customer_no", "status", "company", "contact"],
+        properties: {
+          customer_no: { type: "integer", description: "Kontor's own broker ID — idempotency key for retries", example: 60123 },
+          organisation_id: { type: "integer", example: 412 },
+          status: { type: "string", description: "Kontor's own status vocabulary — \"approved\" grants immediate active access", example: "approved" },
+          approved_at: { type: "string", format: "date-time", nullable: true },
+          activated_at: { type: "string", format: "date-time", nullable: true, description: "Set on a later update, once the broker's first payment goes through" },
+          package: { type: "string", example: "premium_monthly" },
+          company: { "$ref": "#/components/schemas/KontorCompany" },
+          contact: { "$ref": "#/components/schemas/KontorContact" },
+          referral: {
+            type: "object",
+            properties: {
+              code: { type: "string", description: "Kontor's own referral code, stored for reference only", example: "GS-4F7K" },
+              sponsor_mlm_ref: { type: "string", nullable: true, description: "The sponsoring broker's mlm_customer_number — omit for a root-level broker", example: "M-10007" },
+            },
+          },
+          mlm_customer_number: { type: "string", nullable: true, description: "Always null on create — this is what we assign and return" },
+        },
+      },
+      KontorBrokerUpdateRequest: {
+        type: "object",
+        description: "Same shape as registration — Kontor resends the record with whichever fields changed (status, address, etc.); only customer_no (or mlm_customer_number) is required to locate it.",
+        properties: {
+          customer_no: { type: "integer", example: 60123 },
+          mlm_customer_number: { type: "string", example: "M-88412" },
+          status: { type: "string", example: "active" },
+          approved_at: { type: "string", format: "date-time" },
+          activated_at: { type: "string", format: "date-time" },
+          package: { type: "string" },
+          company: { "$ref": "#/components/schemas/KontorCompany" },
+          contact: { "$ref": "#/components/schemas/KontorContact" },
+        },
+      },
+      KontorBrokerStatusRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          customer_no: { type: "integer", example: 60123 },
+          mlm_customer_number: { type: "string", example: "M-88412" },
+          status: { type: "string", example: "blocked" },
+          activated_at: { type: "string", format: "date-time" },
+        },
+      },
+      KontorPartner: {
+        type: "object",
+        properties: {
+          customer_no: { type: "string", example: "60123" },
+          mlm_customer_number: { type: "string", example: "M-88412" },
+          status: { type: "string", example: "approved" },
+          company: { "$ref": "#/components/schemas/KontorCompany" },
+          contact: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              email: { type: "string" },
+              phone: { type: "string" },
+            },
+          },
+          package: { type: "string", nullable: true },
+          approved_at: { type: "string", nullable: true },
+          activated_at: { type: "string", nullable: true },
+          created_at: { type: "string", format: "date-time" },
+          updated_at: { type: "string", format: "date-time" },
+        },
+      },
+      KontorCaptureOrderRequest: {
+        type: "object",
+        required: ["idempotency_key", "channel", "partner", "commission"],
+        description: "One record per order line and event. All amounts are in cents. Corrections/refunds are never deleted — they arrive as a new record with negative amounts and corrects_entry_id pointing to the original entry_id.",
+        properties: {
+          entry_id: { type: "string", description: "Kontor's own transaction ID (a ULID)", example: "01J9ZK6Q8R3W5T2Y7M4N1B0C9D" },
+          idempotency_key: { type: "string", example: "order_line:4711:paid" },
+          seq: { type: "integer", example: 18234 },
+          mode: { type: "string", enum: ["live", "test"], example: "live" },
+          partner: {
+            type: "object",
+            properties: {
+              customer_no: { type: "integer", example: 60123 },
+              mlm_customer_number: { type: "string", example: "M-88412" },
+            },
+          },
+          referrer: {
+            type: "object",
+            properties: {
+              referral_code: { type: "string", example: "GS-4F7K" },
+              sponsor_mlm_ref: { type: "string", example: "M-10007" },
+            },
+          },
+          source: {
+            type: "object",
+            properties: {
+              type: { type: "string", example: "order_line" },
+              order_number: { type: "string", example: "KB-2026-000318" },
+              line: { type: "integer", example: 2 },
+              document_number: { type: "string", example: "HB-RE-2026-01544" },
+            },
+          },
+          channel: { type: "string", enum: ["kundenbestellung", "firmenbestellung", "preisfixierung", "ankauf", "abonnement"], example: "kundenbestellung" },
+          direction: { type: "string", enum: ["sale", "purchase", "subscription"], description: "We filter — subscription is acknowledged but not booked (no order type agreed yet)", example: "sale" },
+          product: {
+            type: "object",
+            properties: {
+              class: { type: "string", example: "bullion" },
+              metal: { type: "string", example: "au" },
+              sku: { type: "string", example: "UMI-10G" },
+              fine_weight_mg: { type: "integer", example: 10000 },
+            },
+          },
+          quantity: { type: "integer", example: 2 },
+          amounts: {
+            type: "object",
+            properties: {
+              currency: { type: "string", example: "EUR" },
+              unit_net_cents: { type: "integer", example: 124420 },
+              net_cents: { type: "integer", example: 248840 },
+              vat_cents: { type: "integer", example: 0 },
+              gross_cents: { type: "integer", example: 248840 },
+            },
+          },
+          commission: {
+            type: "object",
+            required: ["basis_net_cents"],
+            properties: {
+              basis_kind: { type: "string", example: "commission" },
+              basis_net_cents: { type: "integer", description: "The base we calculate on — can be 0 for a deal without profit, or negative for a correction. Our calculation is binding, not Kontor's partner_commission_cents.", example: 248840 },
+              purchase_net_cents: { type: "integer", example: 241600 },
+              partner_commission_cents: { type: "integer", description: "Kontor's own calculation, informational only", example: 7240 },
+              informational: { type: "boolean", description: "true = acknowledge receipt but don't book any commission (e.g. house-fulfilled sales)", example: false },
+            },
+          },
+          seller: {
+            type: "object",
+            properties: { kind: { type: "string", example: "house" } },
+          },
+          customer_type: { type: "string", enum: ["b2c", "b2b"], example: "b2c" },
+          event: { type: "string", enum: ["paid", "confirmed", "cancelled", "refunded"], example: "paid" },
+          entry_kind: { type: "string", example: "original" },
+          corrects_entry_id: { type: "string", nullable: true, description: "Set on a correction/refund — the entry_id of the original transaction being corrected" },
+          occurred_at: { type: "string", format: "date-time", example: "2026-10-06T10:14:03Z" },
+        },
+      },
+      KontorCaptureOrderReverseRequest: {
+        type: "object",
+        required: ["idempotency_key", "original_idempotency_key"],
+        properties: {
+          idempotency_key: { type: "string", description: "Unique key for this reversal booking", example: "KTR-ORD-98231-L1-REV" },
+          original_idempotency_key: { type: "string", description: "idempotency_key of the original capture-order call being reversed", example: "KTR-ORD-98231-L1" },
+          reason: { type: "string", example: "Customer returned within withdrawal period" },
+        },
+      },
+      KontorTransaction: {
+        type: "object",
+        properties: {
+          reference_id: { type: "string", description: "Our own booking reference, used for POST /acknowledgements", example: "KONTOR-CMM-4821" },
+          kontor_entry_id: { type: "string", nullable: true, description: "Kontor's own transaction ID (ULID), echoed back" },
+          idempotency_key: { type: "string" },
+          seq: { type: "integer", nullable: true },
+          mode: { type: "string", nullable: true, example: "live" },
+          source_type: { type: "string", nullable: true },
+          order_number: { type: "string", nullable: true },
+          line: { type: "integer", nullable: true },
+          document_number: { type: "string", nullable: true },
+          channel: { type: "string", nullable: true },
+          direction: { type: "string", nullable: true },
+          product: { type: "object", nullable: true },
+          quantity: { type: "integer", nullable: true },
+          amounts: { type: "object", nullable: true, description: "As originally sent, in cents" },
+          basis_net_amount: { type: "number", nullable: true, description: "commission.basis_net_cents converted to decimal currency" },
+          order_type: { type: "string", example: "my_store" },
+          mlm_customer_number: { type: "string", nullable: true },
+          customer_no: { type: "string", nullable: true },
+          is_seller: { type: "boolean" },
+          commission_percent: { type: "number" },
+          commission_amount: { type: "number" },
+          event: { type: "string", nullable: true, example: "paid" },
+          entry_kind: { type: "string", nullable: true },
+          corrects_entry_id: { type: "string", nullable: true },
+          is_reversal: { type: "boolean" },
+          is_payment_done: { type: "boolean" },
+          acknowledged_at: { type: "string", format: "date-time", nullable: true },
+          occurred_at: { type: "string", format: "date-time", nullable: true },
+          created_at: { type: "string", format: "date-time" },
+        },
+      },
+      KontorReconciliationDailyPostRequest: {
+        type: "object",
+        required: ["date", "brokers"],
+        properties: {
+          date: { type: "string", format: "date", example: "2026-10-19" },
+          brokers: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                mlm_customer_number: { type: "string", example: "M-88412" },
+                customer_no: { type: "string", example: "60123" },
+                order_count: { type: "integer", example: 3 },
+                total_commission_amount: { type: "number", example: 245.5 },
+              },
+            },
+          },
+        },
+      },
+      KontorAcknowledgementRequest: {
+        type: "object",
+        required: ["reference_id"],
+        properties: {
+          reference_id: { type: "string", description: "Our booking reference from capture-order / capture-order/reverse", example: "KONTOR-CMM-4821" },
+          acknowledged_at: { type: "string", format: "date-time" },
         },
       },
     },

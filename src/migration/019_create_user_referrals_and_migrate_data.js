@@ -5,6 +5,53 @@ async function migrateUserReferrals() {
   try {
     console.log("=== Starting Migration: Create user_referrals table & populate data ===");
 
+    // Defensive: these two columns are part of their models (used by the
+    // broker-registration PDF flow and the diamond/gemstone commission
+    // flow respectively) but were never captured as their own migration —
+    // add them if this DB never had them, so the broad Brokers/
+    // BrokerCommissionHistory queries below (and in later migrations)
+    // don't fail on a fresh/unmigrated DB.
+    const [ncndaDocColumn] = await sequelize.query(
+      "SHOW COLUMNS FROM `brokers` LIKE 'ncnda_doc';"
+    );
+    if (ncndaDocColumn.length === 0) {
+      console.log("Adding missing ncnda_doc column to brokers...");
+      await sequelize.query(
+        "ALTER TABLE `brokers` ADD COLUMN `ncnda_doc` LONGTEXT NULL DEFAULT NULL AFTER `uk_company_sales_platform_doc`;"
+      );
+    }
+    const [productTypeColumn] = await sequelize.query(
+      "SHOW COLUMNS FROM `broker_commission_histories` LIKE 'product_type';"
+    );
+    if (productTypeColumn.length === 0) {
+      console.log("Adding missing product_type column to broker_commission_histories...");
+      await sequelize.query(
+        "ALTER TABLE `broker_commission_histories` ADD COLUMN `product_type` VARCHAR(50) NOT NULL DEFAULT 'product' AFTER `commission_type`;"
+      );
+    }
+
+    // Also bring forward the Kontor columns (normally added by migrations
+    // 029-032) — any unscoped Brokers/BrokerCommissionHistory query between
+    // here and there would otherwise fail the same way. Those later
+    // migrations are themselves guarded by the same "does it exist" check,
+    // so they'll just no-op when the runner reaches them.
+    const addColumnIfMissing = async (table, column, ddl) => {
+      const [rows] = await sequelize.query(`SHOW COLUMNS FROM \`${table}\` LIKE '${column}';`);
+      if (rows.length === 0) {
+        console.log(`Adding missing ${column} column to ${table}...`);
+        await sequelize.query(ddl);
+      }
+    };
+    await addColumnIfMissing("brokers", "source", "ALTER TABLE `brokers` ADD COLUMN `source` VARCHAR(50) NULL DEFAULT NULL AFTER `option_subscription_doc`;");
+    await addColumnIfMissing("brokers", "external_ref", "ALTER TABLE `brokers` ADD COLUMN `external_ref` VARCHAR(255) NULL DEFAULT NULL AFTER `source`;");
+    await addColumnIfMissing("brokers", "kontor_status", "ALTER TABLE `brokers` ADD COLUMN `kontor_status` VARCHAR(20) NULL DEFAULT NULL AFTER `external_ref`;");
+    await addColumnIfMissing("brokers", "mlm_customer_number", "ALTER TABLE `brokers` ADD COLUMN `mlm_customer_number` VARCHAR(20) NULL DEFAULT NULL AFTER `kontor_status`;");
+    await addColumnIfMissing("broker_commission_histories", "source", "ALTER TABLE `broker_commission_histories` ADD COLUMN `source` VARCHAR(50) NULL DEFAULT NULL AFTER `product_type`;");
+    await addColumnIfMissing("broker_commission_histories", "kontor_acknowledged_at", "ALTER TABLE `broker_commission_histories` ADD COLUMN `kontor_acknowledged_at` DATETIME NULL DEFAULT NULL AFTER `source`;");
+    await addColumnIfMissing("broker_commission_histories", "kontor_entry_id", "ALTER TABLE `broker_commission_histories` ADD COLUMN `kontor_entry_id` VARCHAR(64) NULL DEFAULT NULL AFTER `kontor_acknowledged_at`;");
+    await addColumnIfMissing("broker_commission_histories", "occurred_at", "ALTER TABLE `broker_commission_histories` ADD COLUMN `occurred_at` DATETIME NULL DEFAULT NULL AFTER `kontor_entry_id`;");
+    await addColumnIfMissing("broker_commission_histories", "kontor_mode", "ALTER TABLE `broker_commission_histories` ADD COLUMN `kontor_mode` VARCHAR(10) NULL DEFAULT NULL AFTER `occurred_at`;");
+
     // 1. Sync the user_referrals schema
     console.log("Syncing user_referrals schema...");
     await UserReferrals.sync({ alter: true });

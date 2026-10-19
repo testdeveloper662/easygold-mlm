@@ -7,59 +7,34 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "multipart/form-data": {
-            schema: {
-              type: "object",
-              properties: {
-                u_trade_register: { type: "string", format: "binary" },
-                u_travel_id: { type: "string", format: "binary" },
-                bill_upload: { type: "string", format: "binary" },
-                signatureData: { type: "string", format: "binary" },
-                email: { type: "string", format: "email" },
-                password: { type: "string" },
-                u_fname: { type: "string" },
-                u_lname: { type: "string" },
-                u_street_no: { type: "string" },
-                address: { type: "string" },
-                city: { type: "string" },
-                country: { type: "string" },
-                postalCode: { type: "string" },
-                phone: { type: "string" },
-                vatId: { type: "string" },
-                taxNumber: { type: "string" },
-                website: { type: "string" },
-                empfehlercode: { type: "string", description: "Parent referral code" },
-                language: { type: "string" },
-              },
-            },
-          },
+          "multipart/form-data": { schema: { "$ref": "#/components/schemas/BrokerRegisterRequest" } },
         },
       },
       responses: {
         200: { description: "Broker registration successful" },
         400: { description: "Validation error or invalid referral" },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
       },
     },
   },
   "/api/v1/broker/checkexist": {
     post: {
       tags: ["Broker - Profile & Network"],
-      summary: "Check if broker email or phone exists",
+      summary: "Check if broker email, company, or username already exists",
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                email: { type: "string", format: "email" },
-                phone: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/CheckExistRequest" } },
         },
       },
       responses: {
-        200: { description: "Check result returned" },
+        200: { description: "Check result returned (success:false in body if already taken)" },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
       },
     },
   },
@@ -71,20 +46,23 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                email: { type: "string", format: "email" },
-                name: { type: "string" },
-                phone: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/BrokerReferralRequest" } },
         },
       },
       responses: {
         200: { description: "Referral email sent" },
+        400: {
+          description: "Broker already registered, or referral code not found",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        403: {
+          description: "No authenticated broker on the request",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
       },
     },
   },
@@ -95,16 +73,7 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                customer_email: { type: "string", format: "email" },
-                customer_name: { type: "string" },
-                product: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/CustomerReferralRequest" } },
         },
       },
       responses: {
@@ -119,14 +88,7 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                broker_id: { type: "integer" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/NudgeReferralRequest" } },
         },
       },
       responses: {
@@ -139,6 +101,10 @@ module.exports = {
       tags: ["Broker - Profile & Network"],
       summary: "Get current broker's downline network hierarchy",
       security: [{ bearerAuth: [] }],
+      parameters: [
+        { name: "viewUserId", in: "query", schema: { type: "string" }, description: "Admin-only: view another user's network" },
+        { name: "type", in: "query", schema: { type: "string" } },
+      ],
       responses: {
         200: { description: "Network tree with child brokers/affiliates" },
       },
@@ -172,7 +138,19 @@ module.exports = {
       summary: "Lookup broker details by referral code",
       parameters: [{ name: "referral_code", in: "query", schema: { type: "string" }, example: "REF123" }],
       responses: {
-        200: { description: "Broker referral info" },
+        200: {
+          description: "Broker referral info",
+          content: {
+            "application/json": {
+              schema: {
+                allOf: [
+                  { "$ref": "#/components/schemas/SuccessResponse" },
+                  { type: "object", properties: { data: { "$ref": "#/components/schemas/Broker" } } },
+                ],
+              },
+            },
+          },
+        },
       },
     },
   },
@@ -180,7 +158,8 @@ module.exports = {
     get: {
       tags: ["Broker - Profile & Network"],
       summary: "Check and validate VAT number via external VIES",
-      parameters: [{ name: "vatNumber", in: "query", required: true, schema: { type: "string" }, example: "CHE123456789" }],
+      description: "Query parameter is vatId, not vatNumber — verified against checkVatnumberValid.js and the frontend.",
+      parameters: [{ name: "vatId", in: "query", required: true, schema: { type: "string" }, example: "CHE123456789" }],
       responses: {
         200: { description: "VAT validation response" },
       },
@@ -195,9 +174,37 @@ module.exports = {
         { name: "id", in: "path", required: true, schema: { type: "string" } },
         { name: "page", in: "query", schema: { type: "integer", default: 1 } },
         { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
+        { name: "is_seller", in: "query", schema: { type: "string" } },
+        { name: "type", in: "query", schema: { type: "string" }, description: "user_type filter" },
       ],
       responses: {
-        200: { description: "Commissions list" },
+        200: {
+          description: "Commissions list",
+          content: {
+            "application/json": {
+              schema: {
+                allOf: [
+                  { "$ref": "#/components/schemas/SuccessResponse" },
+                  {
+                    type: "object",
+                    properties: {
+                      data: { type: "array", items: { "$ref": "#/components/schemas/Commission" } },
+                      pagination: { "$ref": "#/components/schemas/Pagination" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        400: {
+          description: "user id is required",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
       },
     },
   },
@@ -208,7 +215,33 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
       responses: {
-        200: { description: "Direct commission logs" },
+        200: {
+          description: "Direct commission logs",
+          content: {
+            "application/json": {
+              schema: {
+                allOf: [
+                  { "$ref": "#/components/schemas/SuccessResponse" },
+                  {
+                    type: "object",
+                    properties: {
+                      data: { type: "array", items: { "$ref": "#/components/schemas/Commission" } },
+                      pagination: { "$ref": "#/components/schemas/Pagination" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        400: {
+          description: "user id is required",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
       },
     },
   },
@@ -219,13 +252,7 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["order_id"],
-              properties: { order_id: { type: "string" } },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/OrderIdRequest" } },
         },
       },
       responses: {
@@ -240,15 +267,7 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                order_id: { type: "string" },
-                email: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/CustomerDetailRequest" } },
         },
       },
       responses: {
@@ -264,12 +283,7 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "multipart/form-data": {
-            schema: {
-              type: "object",
-              properties: { logo: { type: "string", format: "binary" } },
-            },
-          },
+          "multipart/form-data": { schema: { "$ref": "#/components/schemas/LogoUploadRequest" } },
         },
       },
       responses: {
@@ -285,12 +299,7 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "multipart/form-data": {
-            schema: {
-              type: "object",
-              properties: { profile: { type: "string", format: "binary" } },
-            },
-          },
+          "multipart/form-data": { schema: { "$ref": "#/components/schemas/ProfileImageUploadRequest" } },
         },
       },
       responses: {
@@ -325,16 +334,7 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "multipart/form-data": {
-            schema: {
-              type: "object",
-              properties: {
-                backgroundImage: { type: "string", format: "binary" },
-                title: { type: "string" },
-                description: { type: "string" },
-              },
-            },
-          },
+          "multipart/form-data": { schema: { "$ref": "#/components/schemas/AffiliateBannerCreateRequest" } },
         },
       },
       responses: {
@@ -365,15 +365,7 @@ module.exports = {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
       requestBody: {
         content: {
-          "multipart/form-data": {
-            schema: {
-              type: "object",
-              properties: {
-                backgroundImage: { type: "string", format: "binary" },
-                title: { type: "string" },
-              },
-            },
-          },
+          "multipart/form-data": { schema: { "$ref": "#/components/schemas/AffiliateBannerUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Banner updated" } },
@@ -394,18 +386,7 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                ac_holder_name: { type: "string" },
-                iban: { type: "string" },
-                bic_swift_code: { type: "string" },
-                bank_name: { type: "string" },
-                banks: { type: "object" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/BrokerBankDetailRequest" } },
         },
       },
       responses: { 200: { description: "Bank details saved" } },
@@ -414,7 +395,24 @@ module.exports = {
       tags: ["Broker - Commissions & Payouts"],
       summary: "Get broker bank details and balance",
       security: [{ bearerAuth: [] }],
-      responses: { 200: { description: "Bank details" } },
+      parameters: [
+        { name: "viewUserId", in: "query", schema: { type: "string" }, description: "Admin-only: view another broker's bank details" },
+      ],
+      responses: {
+        200: { description: "Bank details" },
+        400: {
+          description: "Invalid request",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        404: {
+          description: "Broker not found",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/broker/payout/request": {
@@ -425,19 +423,24 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["amount"],
-              properties: {
-                amount: { type: "number", example: 100.00 },
-                payout_for: { type: "string", example: "goldflex" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/PayoutRequestCreate" } },
         },
       },
-      responses: { 200: { description: "Payout request submitted" } },
+      responses: {
+        200: { description: "Payout request submitted" },
+        400: {
+          description: "amount/payout_for required or invalid payout_for enum value",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        404: {
+          description: "Broker not found",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/broker/payout/requests": {
@@ -448,8 +451,24 @@ module.exports = {
       parameters: [
         { name: "page", in: "query", schema: { type: "integer", default: 1 } },
         { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
+        { name: "type", in: "query", schema: { type: "string" } },
+        { name: "viewUserId", in: "query", schema: { type: "string" }, description: "Admin-only" },
       ],
-      responses: { 200: { description: "List of payout requests" } },
+      responses: {
+        200: { description: "List of payout requests" },
+        400: {
+          description: "Invalid request",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        404: {
+          description: "Broker not found",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/broker/target-customers": {
@@ -460,20 +479,7 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["customer_name", "customer_email"],
-              properties: {
-                customer_name: { type: "string" },
-                customer_email: { type: "string", format: "email" },
-                telephone: { type: "string" },
-                country: { type: "string" },
-                interest_in: { type: "string" },
-                status: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/TargetCustomerCreateRequest" } },
         },
       },
       responses: { 200: { description: "Customer created" } },
@@ -496,19 +502,7 @@ module.exports = {
       summary: "Create referral target customer via shared link",
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["customer_email", "referral_code"],
-              properties: {
-                customer_name: { type: "string" },
-                customer_email: { type: "string", format: "email" },
-                telephone: { type: "string" },
-                referral_code: { type: "string" },
-                interest_in: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/TargetCustomerReferralRequest" } },
         },
       },
       responses: { 200: { description: "Referral lead recorded" } },
@@ -556,16 +550,7 @@ module.exports = {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                customer_name: { type: "string" },
-                telephone: { type: "string" },
-                status: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/TargetCustomerUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Target customer updated" } },
@@ -584,17 +569,7 @@ module.exports = {
       summary: "Update target customer by email",
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["email"],
-              properties: {
-                email: { type: "string" },
-                customer_name: { type: "string" },
-                telephone: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/TargetCustomerUpdateByEmailRequest" } },
         },
       },
       responses: { 200: { description: "Customer updated" } },
@@ -630,16 +605,7 @@ module.exports = {
       summary: "Customer signup from EasyGold token page",
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                email: { type: "string", format: "email" },
-                password: { type: "string" },
-                referral_code: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/CustomerSignupRequest" } },
         },
       },
       responses: { 200: { description: "Customer signed up" } },
@@ -683,9 +649,15 @@ module.exports = {
     get: {
       tags: ["Broker - Profile & Network"],
       summary: "Get comprehensive broker dashboard stats and charts",
+      description: "Query param is filterType, not filter — verified against getDashboardData.js and the frontend.",
       security: [{ bearerAuth: [] }],
       parameters: [
-        { name: "filter", in: "query", schema: { type: "string" }, description: "e.g. today, weekly, monthly, yearly" },
+        { name: "filterType", in: "query", schema: { type: "string" }, description: "e.g. today, weekly, monthly, yearly" },
+        { name: "from", in: "query", schema: { type: "string", format: "date" } },
+        { name: "to", in: "query", schema: { type: "string", format: "date" } },
+        { name: "viewUserId", in: "query", schema: { type: "string" }, description: "Admin-only" },
+        { name: "type", in: "query", schema: { type: "string" } },
+        { name: "page", in: "query", schema: { type: "integer" } },
       ],
       responses: { 200: { description: "Dashboard summary, commissions, customer counters" } },
     },
@@ -707,15 +679,7 @@ module.exports = {
       summary: "Create or update invitation",
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                email: { type: "string" },
-                referral_code: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/InvitationRequest" } },
         },
       },
       responses: { 200: { description: "Invitation recorded" } },
@@ -749,12 +713,7 @@ module.exports = {
       summary: "Get partner referral code",
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: { email: { type: "string" } },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/EmailRequest" } },
         },
       },
       responses: { 200: { description: "Referral code found" } },

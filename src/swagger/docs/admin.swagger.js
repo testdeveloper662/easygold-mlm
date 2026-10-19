@@ -7,17 +7,7 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["email"],
-              properties: {
-                email: { type: "string", format: "email" },
-                name: { type: "string" },
-                phone: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/ReferralRequest" } },
         },
       },
       responses: { 200: { description: "Broker referral created" } },
@@ -31,17 +21,7 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["email"],
-              properties: {
-                email: { type: "string", format: "email" },
-                name: { type: "string" },
-                phone: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/ReferralRequest" } },
         },
       },
       responses: { 200: { description: "Affiliate referral created" } },
@@ -61,14 +41,7 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                commissions: { type: "array", items: { type: "object" } },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/CommissionTiersUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Broker fixed commissions updated" } },
@@ -88,14 +61,7 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                commissions: { type: "array", items: { type: "object" } },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/CommissionTiersUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Broker variable commissions updated" } },
@@ -115,14 +81,7 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                commissions: { type: "array", items: { type: "object" } },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/CommissionTiersUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Customer commissions adjusted" } },
@@ -141,9 +100,7 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: { type: "object" },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/CommissionTiersUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Affiliate fixed commissions updated" } },
@@ -162,9 +119,7 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: { type: "object" },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/CommissionTiersUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Affiliate variable commissions updated" } },
@@ -205,19 +160,24 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["userId", "status"],
-              properties: {
-                userId: { type: "integer", example: 10 },
-                status: { type: "integer", example: 0, description: "0: Active, 1: Inactive/Deactivated, 2: Review" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/UpdateUserStatusRequest" } },
         },
       },
-      responses: { 200: { description: "Broker status updated" } },
+      responses: {
+        200: { description: "Broker status updated" },
+        400: {
+          description: "status missing/invalid, or no user_id/broker_id/affiliate_id resolvable",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        404: {
+          description: "User not found",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/admin/affiliate/update-status": {
@@ -228,19 +188,24 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["userId", "status"],
-              properties: {
-                userId: { type: "integer" },
-                status: { type: "integer" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/UpdateUserStatusRequest" } },
         },
       },
-      responses: { 200: { description: "Affiliate status updated" } },
+      responses: {
+        200: { description: "Affiliate status updated" },
+        400: {
+          description: "status missing/invalid, or no user_id/broker_id/affiliate_id resolvable",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        404: {
+          description: "User not found",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/admin/brokers-contract": {
@@ -290,44 +255,45 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["user_id", "commission_amount", "order_id"],
-              properties: {
-                user_id: { type: "integer" },
-                commission_amount: { type: "number" },
-                order_id: { type: "string" },
-                product: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/ManualCommissionRequest" } },
         },
       },
-      responses: { 200: { description: "Manual commission recorded" } },
+      responses: {
+        200: { description: "Manual commission recorded" },
+        400: {
+          description: "broker_id, user_id, amount, or order_type missing",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/admin/broker/update-payment-status": {
     post: {
       tags: ["Admin - Commissions"],
       summary: "Update payment status of commission log",
+      description: "Marks matching commission rows as paid (is_payment_done is always set true server-side, not taken from the body).",
       security: [{ bearerAuth: [] }],
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["id", "is_payment_done"],
-              properties: {
-                id: { type: "integer" },
-                is_payment_done: { type: "boolean" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/UpdatePaymentStatusRequest" } },
         },
       },
-      responses: { 200: { description: "Payment status updated" } },
+      responses: {
+        200: { description: "Payment status updated" },
+        400: {
+          description: "order_id is required",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/admin/commission/send-payment-confirmation-email": {
@@ -337,18 +303,20 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                payout_id: { type: "integer" },
-                email: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/PaymentConfirmationEmailRequest" } },
         },
       },
-      responses: { 200: { description: "Email sent" } },
+      responses: {
+        200: { description: "Email sent" },
+        400: {
+          description: "order_id or tree missing",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/admin/commission/send-payment-decline-email": {
@@ -358,18 +326,20 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                payout_id: { type: "integer" },
-                reason: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/PaymentDeclineEmailRequest" } },
         },
       },
-      responses: { 200: { description: "Decline email sent" } },
+      responses: {
+        200: { description: "Decline email sent" },
+        400: {
+          description: "order_id or tree missing",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/admin/order/detail": {
@@ -379,16 +349,20 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["order_id"],
-              properties: { order_id: { type: "string" } },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/OrderDetailByIdRequest" } },
         },
       },
-      responses: { 200: { description: "Order details" } },
+      responses: {
+        200: { description: "Order details" },
+        400: {
+          description: "orderId or orderType missing",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/admin/customer/detail": {
@@ -398,15 +372,20 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: { order_id: { type: "string" } },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/OrderDetailByIdRequest" } },
         },
       },
-      responses: { 200: { description: "Customer details" } },
+      responses: {
+        200: { description: "Customer details" },
+        400: {
+          description: "orderId or orderType missing",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        500: {
+          description: "Internal server error",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/admin/payout/requests": {
@@ -417,7 +396,10 @@ module.exports = {
       parameters: [
         { name: "page", in: "query", schema: { type: "integer", default: 1 } },
         { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
-        { name: "status", in: "query", schema: { type: "string" } },
+        { name: "broker_id", in: "query", schema: { type: "string" } },
+        { name: "email", in: "query", schema: { type: "string" } },
+        { name: "user_id", in: "query", schema: { type: "string" } },
+        { name: "type", in: "query", schema: { type: "string" } },
       ],
       responses: { 200: { description: "Payout requests list" } },
     },
@@ -426,23 +408,22 @@ module.exports = {
     put: {
       tags: ["Admin - Commissions"],
       summary: "Update broker payout request status (approve / reject / paid)",
+      description: "The payout request id is a query parameter, not a body field.",
+      security: [{ bearerAuth: [] }],
+      parameters: [{ name: "id", in: "query", required: true, schema: { type: "string" } }],
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["payout_id", "status"],
-              properties: {
-                payout_id: { type: "integer" },
-                status: { type: "string", enum: ["pending", "completed", "rejected"] },
-                decline_reason: { type: "string" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/PayoutRequestStatusUpdate" } },
         },
       },
-      responses: { 200: { description: "Payout request updated" } },
+      responses: {
+        200: { description: "Payout request updated" },
+        401: {
+          description: "Missing or invalid token",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+      },
     },
   },
   "/api/v1/admin/broker/{brokerId}/bank-details": {
@@ -500,12 +481,7 @@ module.exports = {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
       requestBody: {
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: { status: { type: "string" } },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/ReferralLogStatusUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Referral status updated" } },
@@ -534,16 +510,7 @@ module.exports = {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
       requestBody: {
         content: {
-          "multipart/form-data": {
-            schema: {
-              type: "object",
-              properties: {
-                english_pdf_file: { type: "string", format: "binary" },
-                german_pdf_file: { type: "string", format: "binary" },
-                name: { type: "string" },
-              },
-            },
-          },
+          "multipart/form-data": { schema: { "$ref": "#/components/schemas/AdminContractUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Contract updated" } },
@@ -562,18 +529,7 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "multipart/form-data": {
-            schema: {
-              type: "object",
-              properties: {
-                document_key: { type: "string" },
-                english_name: { type: "string" },
-                german_name: { type: "string" },
-                english_pdf_file: { type: "string", format: "binary" },
-                german_pdf_file: { type: "string", format: "binary" },
-              },
-            },
-          },
+          "multipart/form-data": { schema: { "$ref": "#/components/schemas/TermsCreateRequest" } },
         },
       },
       responses: { 200: { description: "Terms created" } },
@@ -594,15 +550,7 @@ module.exports = {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
       requestBody: {
         content: {
-          "multipart/form-data": {
-            schema: {
-              type: "object",
-              properties: {
-                english_pdf_file: { type: "string", format: "binary" },
-                german_pdf_file: { type: "string", format: "binary" },
-              },
-            },
-          },
+          "multipart/form-data": { schema: { "$ref": "#/components/schemas/TermsUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Terms updated" } },
@@ -621,17 +569,7 @@ module.exports = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: {
-          "multipart/form-data": {
-            schema: {
-              type: "object",
-              properties: {
-                asset: { type: "string", format: "binary" },
-                german_asset: { type: "string", format: "binary" },
-                title: { type: "string" },
-                type: { type: "string", enum: ["banner", "video", "pdf", "brochure"] },
-              },
-            },
-          },
+          "multipart/form-data": { schema: { "$ref": "#/components/schemas/MarketingMaterialCreateRequest" } },
         },
       },
       responses: { 200: { description: "Marketing material created" } },
@@ -645,16 +583,7 @@ module.exports = {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
       requestBody: {
         content: {
-          "multipart/form-data": {
-            schema: {
-              type: "object",
-              properties: {
-                asset: { type: "string", format: "binary" },
-                german_asset: { type: "string", format: "binary" },
-                title: { type: "string" },
-              },
-            },
-          },
+          "multipart/form-data": { schema: { "$ref": "#/components/schemas/MarketingMaterialUpdateRequest" } },
         },
       },
       responses: { 200: { description: "Marketing material updated" } },

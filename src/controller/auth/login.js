@@ -80,9 +80,21 @@ const Login = async (req, res) => {
     // ---------------------
 
     if (userRole === "SUPER_ADMIN") {
-      const { user_pass: _, ...userData } = user.toJSON();
+      const {
+        user_pass: _,
+        // Verified unused anywhere in easygold-vision-flow's login/stored-user path.
+        user_url: __u1, user_activation_key: __u2, user_type: __u3,
+        wallet_payment: __u4, menulogo: __u5, commission_percentage: __u6,
+        api_commission_percentage: __u7, shipping_costs_setting: __u8,
+        temp_pass: __u9, self_service: __u10, deleted_at: __u11,
+        user_login: __u12, user_nicename: __u13, user_status: __u14,
+        ...userData
+      } = user.toJSON();
       userData.role = "SUPER_ADMIN";
       userData.logo = await generateImageUrl(user.logo, "logo");
+      // Raw DB value can carry floating-point accumulation artifacts
+      // (e.g. 4.54747e-13 instead of 0) from repeated wallet increments/decrements.
+      userData.wallet_amount = Math.round((Number(userData.wallet_amount) || 0) * 100) / 100;
 
       const token = jwt.sign({ user: userData }, JWT_ACCESS_TOKEN, {
         expiresIn: process.env.JWT_EXPIRE || "90d",
@@ -211,7 +223,20 @@ const Login = async (req, res) => {
       }
     }
 
-    const { user_pass: _, ...userData } = user.toJSON();
+    const {
+      user_pass: _,
+      // Verified unused anywhere in easygold-vision-flow's login/stored-user path.
+      user_url: __u1, user_activation_key: __u2, user_type: __u3,
+      wallet_payment: __u4, menulogo: __u5, commission_percentage: __u6,
+      api_commission_percentage: __u7, shipping_costs_setting: __u8,
+      temp_pass: __u9, self_service: __u10, deleted_at: __u11,
+      user_login: __u12, user_nicename: __u13, user_status: __u14,
+      ...userData
+    } = user.toJSON();
+
+    // Raw DB value can carry floating-point accumulation artifacts
+    // (e.g. 4.54747e-13 instead of 0) from repeated wallet increments/decrements.
+    userData.wallet_amount = Math.round((Number(userData.wallet_amount) || 0) * 100) / 100;
 
     userData.role = userRole;
     userData.logo = await generateImageUrl(actor.logo, "logo");

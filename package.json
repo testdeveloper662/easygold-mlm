@@ -26,6 +26,8 @@
     "nodemailer": "^7.0.7",
     "nodemon": "^3.1.10",
     "puppeteer": "^24.30.0",
-    "sequelize": "^6.37.7"
+    "sequelize": "^6.37.7",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
   }
 }

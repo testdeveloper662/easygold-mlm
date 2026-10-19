@@ -12,6 +12,7 @@ const brokerRouter = require("./src/routes/broker");
 const userRouter = require("./src/routes/user");
 const uploadRouter = require("./src/routes/upload");
 const getPublicVideos = require("./src/controller/user/getPublicVideos");
+const { swaggerUi, swaggerDocs, swaggerUiOptions } = require("./src/swagger/swaggerConfig");
 
 const port = process.env.PORT || 4000;
 
@@ -51,8 +52,41 @@ app.get("/.well-known/appspecific/com.chrome.devtools.json", (req, res) => {
   res.status(200).json({});
 });
 
+// Swagger Documentation
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs, swaggerUiOptions));
+app.get("/api-docs.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerDocs);
+});
+app.get("/swagger", (req, res) => res.redirect("/api-docs"));
+app.get("/docs", (req, res) => res.redirect("/api-docs"));
+
 app.get("/", (req, res) => {
-  res.send("MLM server...");
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>EasyGold MLM Server</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+          .card { background: #1e293b; padding: 40px; border-radius: 16px; border: 1px solid #334155; text-align: center; max-width: 480px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
+          h1 { margin-top: 0; color: #f59e0b; font-size: 26px; }
+          p { color: #94a3b8; font-size: 15px; line-height: 1.5; }
+          .btn { display: inline-block; margin-top: 20px; padding: 12px 28px; background: #f59e0b; color: #0f172a; text-decoration: none; font-weight: bold; border-radius: 8px; transition: background 0.2s; }
+          .btn:hover { background: #d97706; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h1>EasyGold MLM Server 🚀</h1>
+          <p>Backend API services are running actively.</p>
+          <a class="btn" href="/api-docs">Explore Swagger API Docs →</a>
+        </div>
+      </body>
+    </html>
+  `);
 });
 
 // Routes
@@ -88,4 +122,5 @@ app.get("/api/v1/public/videos", getPublicVideos);
 
 app.listen(port, () => {
   console.log(`Server running on PORT: ${port} 🚀`);
+  console.log(`Swagger API Docs available at: http://localhost:${port}/api-docs 📚`);
 });

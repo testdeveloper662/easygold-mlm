@@ -375,12 +375,19 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
         ? orderUsersMap[order_details.user_id] || "Unknown"
         : "Unknown";
 
+      // order_details is only used internally above to resolve relatedUserLogin —
+      // confirmed unused anywhere in the frontend, so not included in the response.
+      // Same for seller_username (duplicate of user_login), is_send_bonus,
+      // target_customer_log_id, and is_deleted (raw columns via the ...json spread).
+      const {
+        is_send_bonus: __u1, target_customer_log_id: __u2, is_deleted: __u3,
+        ...jsonTrimmed
+      } = json;
+
       return {
-        ...json,
+        ...jsonTrimmed,
         seller_name: sellerInfo.user_nicename || null,
-        seller_username: sellerInfo.user_login || null,
         user_login: relatedUserLogin,
-        order_details,
         diamond_page_source: json.order_type === "diamond_gemstone"
           ? (diamondOrderPageMap[Number(json.order_id)] ?? null)
           : undefined,

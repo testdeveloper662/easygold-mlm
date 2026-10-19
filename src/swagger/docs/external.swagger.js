@@ -38,15 +38,14 @@ module.exports = {
     get: {
       tags: ["External APIs"],
       summary: "Get user balance and bank details externally",
-      description: "Retrieves user's available commission balance, total payouts, and configured bank account info.",
+      description: "Retrieves user's available commission balance, total payouts, and configured bank account info. An unknown email returns 200 with data: null, not a 404.",
       parameters: [
         { name: "email", in: "query", required: true, schema: { type: "string", format: "email" }, example: "user@example.com" },
         { name: "product", in: "query", schema: { type: "string" }, example: "goldflex" },
       ],
       responses: {
-        200: { description: "User balance, payout summaries, and bank info" },
+        200: { description: "User balance, payout summaries, and bank info (data: null if the email isn't found)" },
         400: { description: "Email is required" },
-        404: { description: "User not found" },
       },
     },
   },
@@ -58,25 +57,16 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["email"],
-              properties: {
-                email: { type: "string", format: "email", example: "user@example.com" },
-                ac_holder_name: { type: "string", example: "Max Mustermann" },
-                iban: { type: "string", example: "CH9300000000000000000" },
-                bic_swift_code: { type: "string", example: "UBSWCHZH" },
-                bank_name: { type: "string", example: "UBS Switzerland AG" },
-                banks: { type: "object", description: "Structured JSON of sepa, swift, or ach bank profiles" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/ExternalBankDetailRequest" } },
         },
       },
       responses: {
         200: { description: "Bank details saved successfully" },
         400: { description: "Email is required" },
+        404: {
+          description: "User not found with this email",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
       },
     },
     put: {
@@ -86,24 +76,19 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["email"],
-              properties: {
-                email: { type: "string", format: "email", example: "user@example.com" },
-                ac_holder_name: { type: "string", example: "Max Mustermann" },
-                iban: { type: "string", example: "CH9300000000000000000" },
-                bic_swift_code: { type: "string", example: "UBSWCHZH" },
-                bank_name: { type: "string", example: "UBS Switzerland AG" },
-                banks: { type: "object" },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/ExternalBankDetailRequest" } },
         },
       },
       responses: {
         200: { description: "Bank details updated successfully" },
+        400: {
+          description: "Email is required",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        404: {
+          description: "User not found",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
       },
     },
   },
@@ -115,26 +100,16 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              required: ["email", "amount", "payout_for"],
-              properties: {
-                email: { type: "string", format: "email", example: "user@example.com" },
-                amount: { type: "number", example: 250.00 },
-                payout_for: {
-                  type: "string",
-                  enum: ["easygold_token", "primeinvest", "goldflex", "b2b_dashboard"],
-                  example: "goldflex",
-                },
-              },
-            },
-          },
+          "application/json": { schema: { "$ref": "#/components/schemas/ExternalPayoutRequestCreate" } },
         },
       },
       responses: {
         200: { description: "Payout request created and invoice PDF generated" },
         400: { description: "Insufficient balance or invalid parameters" },
+        404: {
+          description: "User not found",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
       },
     },
     get: {
@@ -149,6 +124,14 @@ module.exports = {
       ],
       responses: {
         200: { description: "List of payout requests with invoice URLs" },
+        400: {
+          description: "Email is required",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
+        404: {
+          description: "User not found",
+          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
+        },
       },
     },
   },

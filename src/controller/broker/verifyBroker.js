@@ -93,7 +93,20 @@ const VerifyBroker = async (req, res) => {
       });
     }
 
-    const { password: _, ...userData } = user.toJSON();
+    // SECURITY FIX: this destructured "password", but the Users model's real
+    // column is "user_pass" — "password" doesn't exist on the row, so the
+    // actual password hash was never stripped and was leaking into both the
+    // JWT payload and the raw JSON response.
+    const {
+      user_pass: _,
+      // Same unused-field set verified and trimmed in login.js.
+      user_url: __u1, user_activation_key: __u2, user_type: __u3,
+      wallet_payment: __u4, menulogo: __u5, commission_percentage: __u6,
+      api_commission_percentage: __u7, shipping_costs_setting: __u8,
+      temp_pass: __u9, self_service: __u10, deleted_at: __u11,
+      user_login: __u12, user_nicename: __u13, user_status: __u14,
+      ...userData
+    } = user.toJSON();
 
     const token = jwt.sign(
       {

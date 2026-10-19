@@ -56,10 +56,19 @@ app.get("/.well-known/appspecific/com.chrome.devtools.json", (req, res) => {
 });
 
 // Swagger Documentation
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs, swaggerUiOptions));
+app.use("/api-docs", (req, res, next) => {
+  req.swaggerDoc = {
+    ...swaggerDocs,
+    servers: [{ url: `${req.protocol}://${req.get("host")}`, description: "Current Host" }],
+  };
+  next();
+}, swaggerUi.serve, swaggerUi.setup(null, swaggerUiOptions));
 app.get("/api-docs.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
-  res.send(swaggerDocs);
+  res.send({
+    ...swaggerDocs,
+    servers: [{ url: `${req.protocol}://${req.get("host")}`, description: "Current Host" }],
+  });
 });
 app.get("/swagger", (req, res) => res.redirect("/api-docs"));
 app.get("/docs", (req, res) => res.redirect("/api-docs"));

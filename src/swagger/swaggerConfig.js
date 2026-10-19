@@ -21,8 +21,6 @@ const combinedPaths = {
   ...kontorDocs,
 };
 
-const port = process.env.PORT || 4000;
-
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
@@ -52,12 +50,8 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: `http://localhost:${port}`,
-      description: "Current Local Server",
-    },
-    {
       url: "/",
-      description: "Relative (Current Host)",
+      description: "Current Host",
     },
   ],
   tags: [

@@ -11,7 +11,6 @@ const adminRouter = require("./src/routes/admin");
 const brokerRouter = require("./src/routes/broker");
 const userRouter = require("./src/routes/user");
 const uploadRouter = require("./src/routes/upload");
-const kontorRouter = require("./src/routes/kontor");
 const getPublicVideos = require("./src/controller/user/getPublicVideos");
 const { swaggerUi, swaggerDocs, swaggerUiOptions } = require("./src/swagger/swaggerConfig");
 
@@ -24,9 +23,7 @@ app.set("trust proxy", true);
 app.use(compression());
 
 app.use(cors(corsOptions));
-// Stash the raw request body so HMAC-signature verification (Kontor API)
-// can hash the exact bytes the client signed, not a re-serialized copy.
-app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -99,7 +96,6 @@ app.use("/api/v1/broker", brokerRouter);
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/users", userRouter); // Support both singular and plural
 app.use("/api/v1/upload-image", uploadRouter); // Support both singular and plural
-app.use("/api/v1/kontor", kontorRouter);
 
 const GetExternalCommissionHistoryLogs = require("./src/controller/external/getCommissionHistoryExternal");
 app.get("/api/v1/commission-history-logs-external", GetExternalCommissionHistoryLogs);

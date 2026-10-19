@@ -47,20 +47,6 @@ async function resolveOrderEUAndVatId(orderType, orderId, cache) {
 
 async function backfillIsPaymentDone() {
   try {
-    // Defensive: choose_payment_option is part of the model but was never
-    // captured as its own migration (assumed pre-existing on whatever DB
-    // this was first developed against) — add it if this DB never had it,
-    // so the backfill query below doesn't fail on a fresh/unmigrated DB.
-    const [choosePaymentOptionColumn] = await db.sequelize.query(
-      "SHOW COLUMNS FROM `broker_commission_histories` LIKE 'choose_payment_option';"
-    );
-    if (choosePaymentOptionColumn.length === 0) {
-      console.log("[BackfillIsPaymentDone] Adding missing choose_payment_option column...");
-      await db.sequelize.query(
-        "ALTER TABLE `broker_commission_histories` ADD COLUMN `choose_payment_option` INT NULL DEFAULT 1 AFTER `selected_payment_method`;"
-      );
-    }
-
     const cache = new Map();
 
     // ---------- Part 1: false/null -> true where the rule now says true ----------

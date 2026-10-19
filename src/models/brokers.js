@@ -98,29 +98,7 @@ const Brokers = sequelize.define(
       type: Sequelize.TEXT("long"),
       allowNull: true,
       defaultValue: null
-    },
-    source: {
-      type: Sequelize.STRING(50),
-      allowNull: true,
-      comment: "External origin of this broker, e.g. 'kontor'. Null for brokers created via our own signup flow.",
-    },
-    external_ref: {
-      type: Sequelize.STRING(255),
-      allowNull: true,
-      unique: true,
-      comment: "Source system's own broker ID, used for idempotent creation/lookup.",
-    },
-    kontor_status: {
-      type: Sequelize.STRING(20),
-      allowNull: true,
-      comment: "Raw status string as sent by Kontor (e.g. approved/activated/blocked/terminated). Separate from user_status so other account types aren't affected.",
-    },
-    mlm_customer_number: {
-      type: Sequelize.STRING(20),
-      allowNull: true,
-      unique: true,
-      comment: "Our own 'M-XXXXX' identifier, generated on creation and returned to Kontor — they store it and send it with every later call for this broker.",
-    },
+    }
   },
   {
     timestamps: true,

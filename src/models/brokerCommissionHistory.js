@@ -94,38 +94,7 @@ const BrokerCommissionHistory = sequelize.define(
       allowNull: false,
       defaultValue: "product",
       comment: "product, diamond or gemstone",
-    },
-    source: {
-      type: Sequelize.STRING(50),
-      allowNull: true,
-      comment: "External origin of this row, e.g. 'kontor'. Null for commissions from our own order flow.",
-    },
-    kontor_acknowledged_at: {
-      type: Sequelize.DATE,
-      allowNull: true,
-      comment: "Set when Kontor confirms receipt of this row's booking reference via POST /acknowledgements.",
-    },
-    kontor_entry_id: {
-      type: Sequelize.STRING(64),
-      allowNull: true,
-      unique: true,
-      comment: "Kontor's own transaction ID (a ULID) — referenced by corrects_entry_id on correction pushes.",
-    },
-    occurred_at: {
-      type: Sequelize.DATE,
-      allowNull: true,
-      comment: "When the event actually happened on Kontor's side, vs createdAt (when we processed it).",
-    },
-    kontor_mode: {
-      type: Sequelize.STRING(10),
-      allowNull: true,
-      comment: "'live' or 'test', as sent by Kontor.",
-    },
-    kontor_idempotency_key: {
-      type: Sequelize.STRING(255),
-      allowNull: true,
-      comment: "Kontor's own idempotency_key (arbitrary string, e.g. 'order_line:4711:paid'). Dedicated column because order_id is a legacy int(11) that can't hold it. Shared across every level-row of one booking, so not unique-constrained.",
-    },
+    }
   },
   {
     timestamps: true,

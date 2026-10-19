@@ -3,41 +3,30 @@ const db = require("../models");
 async function up() {
   try {
     console.log("Updating PersonType table: setting row 2 to Business and inserting Affiliate...");
+    
+    // 1. Update row 2 (company) to business
+    await db.PersonType.update(
+      {
+        value: "business",
+        label_en: "Business",
+        label_de: "Unternehmen",
+      },
+      {
+        where: { id: 2 },
+      }
+    );
 
-    // Idempotency guard: a row with value 'business' may already exist (e.g.
-    // seeded directly, or this migration partially ran before on a DB where
-    // id=2 wasn't 'company') — renaming another row to 'business' in that
-    // case would violate the unique constraint on value, so skip entirely
-    // once the end state is already reached.
-    const businessRow = await db.PersonType.findOne({ where: { value: "business" } });
-
-    if (!businessRow) {
-      // 1. Update row 2 (company) to business
-      await db.PersonType.update(
-        {
-          value: "business",
-          label_en: "Business",
-          label_de: "Unternehmen",
-        },
-        {
-          where: { id: 2 },
-        }
-      );
-
-      // Also handle case where row with value 'company' exists regardless of id
-      await db.PersonType.update(
-        {
-          value: "business",
-          label_en: "Business",
-          label_de: "Unternehmen",
-        },
-        {
-          where: { value: "company" },
-        }
-      );
-    } else {
-      console.log("PersonType 'business' already exists — skipping rename step.");
-    }
+    // Also handle case where row with value 'company' exists regardless of id
+    await db.PersonType.update(
+      {
+        value: "business",
+        label_en: "Business",
+        label_de: "Unternehmen",
+      },
+      {
+        where: { value: "company" },
+      }
+    );
 
     // 2. Ensure affiliate row exists
     const affiliateRow = await db.PersonType.findOne({

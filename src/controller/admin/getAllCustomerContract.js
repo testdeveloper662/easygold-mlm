@@ -165,17 +165,13 @@ const GetAllCustomerContract = async (req, res) => {
             customer.person_name = personName;
             customer.person_email = personEmail;
             customer.broker_name = personName; // backward compatibility
+            customer.person = {
+                name: personName,
+                email: personEmail,
+                referral_code: customer.referred_by_code || customer.user_referral?.referral_code || customer.broker?.referral_code || null,
+            };
 
-            // Confirmed unused anywhere in AdminContracts.tsx (the sole consumer).
-            const {
-                user_referral: __u1, referral_code_id: __u2, parent_customer_id: __u3,
-                referral_code: __u4, referred_by_code: __u5, telephone: __u6,
-                tax_id: __u7, consent_at: __u8, children_count: __u9,
-                bonus_points: __u10, updatedAt: __u11,
-                ...trimmedCustomer
-            } = customer;
-
-            return trimmedCustomer;
+            return customer;
         });
 
         return res.status(200).json({

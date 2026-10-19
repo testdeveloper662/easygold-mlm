@@ -7,20 +7,38 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "multipart/form-data": { schema: { "$ref": "#/components/schemas/ImageUploadRequest" } },
+          "multipart/form-data": {
+            schema: {
+              type: "object",
+              required: ["upload"],
+              properties: {
+                upload: {
+                  type: "string",
+                  format: "binary",
+                  description: "Image file to upload",
+                },
+              },
+            },
+          },
         },
       },
       responses: {
         200: {
           description: "Image uploaded successfully",
           content: {
-            "application/json": { schema: { "$ref": "#/components/schemas/ImageUploadResponse" } },
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  uploaded: { type: "integer", example: 1 },
+                  fileName: { type: "string", example: "1710000000-123456789.png" },
+                  url: { type: "string", example: "http://localhost:4000/uploads/contracts/1710000000-123456789.png" },
+                },
+              },
+            },
           },
         },
-        400: { description: "No file uploaded" },
-        500: {
-          description: "KNOWN BUG, not a documentation choice: an invalid file type or an oversized file is rejected by multer's fileFilter via cb(new Error(...)), which bypasses this route's own try/catch and falls through to Express's default error handler — since no custom error-handling middleware is registered, this returns a plain HTML 500 page, not a clean JSON 400. Needs a dedicated Express error handler to fix.",
-        },
+        400: { description: "No file uploaded or invalid file format" },
       },
     },
   },

@@ -7,7 +7,29 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/LoginRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["email", "password"],
+              properties: {
+                email: {
+                  type: "string",
+                  format: "email",
+                  example: "admin@easygold.ch",
+                },
+                password: {
+                  type: "string",
+                  format: "password",
+                  example: "admin123",
+                },
+                referral_code: {
+                  type: "string",
+                  example: "REF12345",
+                  description: "Optional referral code for new users",
+                },
+              },
+            },
+          },
         },
       },
       responses: {
@@ -16,46 +38,26 @@ module.exports = {
           content: {
             "application/json": {
               schema: {
-                allOf: [
-                  { "$ref": "#/components/schemas/SuccessResponse" },
-                  {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  message: { type: "string", example: "Logged in successfully" },
+                  data: {
                     type: "object",
                     properties: {
-                      message: { type: "string", example: "Logged in successfully" },
-                      data: {
-                        type: "object",
-                        properties: {
-                          user: { "$ref": "#/components/schemas/User" },
-                          token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
-                        },
-                      },
+                      user: { type: "object" },
+                      token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
                     },
                   },
-                ],
+                },
               },
             },
           },
         },
-        400: {
-          description: "Invalid credentials, invalid referral code, or profile under review",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        401: {
-          description: "Incorrect password or unauthorized",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        403: {
-          description: "Account deactivated or access denied",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        404: {
-          description: "Email/password missing, or user/broker not found",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
+        400: { description: "Invalid credentials, invalid referral code, or profile under review" },
+        401: { description: "Incorrect password or unauthorized" },
+        403: { description: "Account deactivated or access denied" },
+        404: { description: "User or broker not found" },
       },
     },
   },
@@ -70,15 +72,22 @@ module.exports = {
           content: {
             "application/json": {
               schema: {
-                allOf: [
-                  { "$ref": "#/components/schemas/SuccessResponse" },
-                  {
-                    type: "object",
-                    properties: {
-                      data: { type: "array", items: { "$ref": "#/components/schemas/PersonType" } },
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: { type: "integer" },
+                        value: { type: "string", example: "business" },
+                        label_en: { type: "string", example: "Business" },
+                        label_de: { type: "string", example: "Unternehmen" },
+                      },
                     },
                   },
-                ],
+                },
               },
             },
           },
@@ -94,20 +103,22 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/BrokerRegisterVerifyRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["email", "password", "referral_code"],
+              properties: {
+                email: { type: "string", format: "email", example: "broker@example.com" },
+                password: { type: "string", example: "password123" },
+                referral_code: { type: "string", example: "REF123" },
+              },
+            },
+          },
         },
       },
       responses: {
         200: { description: "Broker verified and registered" },
         400: { description: "Invalid input or referral code" },
-        401: {
-          description: "Incorrect password",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
   },
@@ -119,16 +130,30 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/AffiliateRegisterRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["u_fname", "u_lname", "email", "password", "empfehlercode"],
+              properties: {
+                u_fname: { type: "string", example: "John" },
+                u_lname: { type: "string", example: "Doe" },
+                email: { type: "string", format: "email", example: "john.doe@example.com" },
+                password: { type: "string", example: "Secret123!" },
+                u_person_type: { type: "string", example: "affiliate" },
+                u_country: { type: "string", example: "Germany" },
+                u_vat_no: { type: "string", example: "DE123456789" },
+                u_role: { type: "string", example: "AFFILIATE" },
+                empfehlercode: { type: "string", example: "PARENTREF1" },
+                language: { type: "string", example: "de" },
+                veriff_session_id: { type: "string" },
+              },
+            },
+          },
         },
       },
       responses: {
         200: { description: "Affiliate registered successfully" },
         400: { description: "Validation error or existing user" },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
   },
@@ -140,20 +165,20 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/EmailRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["email"],
+              properties: {
+                email: { type: "string", format: "email", example: "user@example.com" },
+              },
+            },
+          },
         },
       },
       responses: {
         200: { description: "OTP sent to email" },
-        400: {
-          description: "Email is required",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
         404: { description: "User not found" },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
   },
@@ -165,20 +190,20 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/EmailRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["email"],
+              properties: {
+                email: { type: "string", format: "email", example: "user@example.com" },
+              },
+            },
+          },
         },
       },
       responses: {
         200: { description: "Password reset email sent" },
-        400: {
-          description: "Email is required",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
         404: { description: "User not found" },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
   },
@@ -190,20 +215,21 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/OtpValidateRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["email", "otp"],
+              properties: {
+                email: { type: "string", format: "email", example: "user@example.com" },
+                otp: { type: "string", example: "123456" },
+              },
+            },
+          },
         },
       },
       responses: {
         200: { description: "OTP verified successfully" },
         400: { description: "Invalid or expired OTP" },
-        404: {
-          description: "User not found",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
   },
@@ -215,20 +241,21 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/ResetPasswordRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["token", "newPassword"],
+              properties: {
+                token: { type: "string", example: "jwt-reset-token-here" },
+                newPassword: { type: "string", format: "password", example: "NewSecurePassword123!" },
+              },
+            },
+          },
         },
       },
       responses: {
         200: { description: "Password reset successful" },
         400: { description: "Invalid or expired reset token" },
-        404: {
-          description: "User not found",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
   },
@@ -272,15 +299,7 @@ module.exports = {
       ],
       responses: {
         200: { description: "Referral code found" },
-        400: {
-          description: "Email is required",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
         404: { description: "No customer found" },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
     post: {
@@ -289,20 +308,21 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/PartnerReferralRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["email"],
+              properties: {
+                email: { type: "string", format: "email", example: "customer@example.com" },
+                product: { type: "string", example: "goldflex" },
+              },
+            },
+          },
         },
       },
       responses: {
         200: { description: "Referral code found" },
-        400: {
-          description: "Email is required",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
         404: { description: "No customer found" },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
   },
@@ -316,15 +336,6 @@ module.exports = {
       ],
       responses: {
         200: { description: "Referral code found" },
-        400: {
-          description: "Email is required",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        404: { description: "No customer found" },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
     post: {
@@ -332,20 +343,20 @@ module.exports = {
       summary: "Get customer partner referral code (Alias POST)",
       requestBody: {
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/PartnerReferralRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["email"],
+              properties: {
+                email: { type: "string", format: "email" },
+                product: { type: "string" },
+              },
+            },
+          },
         },
       },
       responses: {
         200: { description: "Referral code found" },
-        400: {
-          description: "Email is required",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        404: { description: "No customer found" },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
   },

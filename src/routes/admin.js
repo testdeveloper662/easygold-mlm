@@ -123,7 +123,7 @@ adminRouter.post("/order/detail", authenticateToken, GetOrderDetails);
 adminRouter.post("/customer/detail", authenticateToken, GetCustomerDetails);
 
 adminRouter.get("/payout/requests", authenticateToken, GetBrokerPayoutRequests);
-adminRouter.put("/payout/request", authenticateToken, UpdateBrokerPayoutRequest);
+adminRouter.put("/payout/request", UpdateBrokerPayoutRequest);
 
 adminRouter.get("/broker/:brokerId/bank-details", authenticateToken, GetBrokerBankDetails);
 

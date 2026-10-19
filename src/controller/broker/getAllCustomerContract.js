@@ -93,16 +93,7 @@ const GetAllCustomerContract = async (req, res) => {
                 customer.pdf_url = `${process.env.NODE_URL}${customer.pdf_url}`;
             }
 
-            // Confirmed unused anywhere in BrokerContracts.tsx (the sole consumer).
-            const {
-                referral_code_id: __u1, parent_customer_id: __u2, referral_code: __u3,
-                referred_by_code: __u4, telephone: __u5, tax_id: __u6,
-                consent_at: __u7, children_count: __u8, bonus_points: __u9,
-                status: __u10, updatedAt: __u11,
-                ...trimmedCustomer
-            } = customer;
-
-            return trimmedCustomer;
+            return customer;
         });
 
         return res.status(200).json({

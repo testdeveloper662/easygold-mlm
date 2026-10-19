@@ -148,17 +148,7 @@ const GetTargetCustomers = async (req, res) => {
         customer.pdf_url = `${process.env.NODE_URL}${customer.pdf_url}`;
       }
 
-      // Confirmed unused anywhere in TargetCustomers.tsx (the sole consumer);
-      // the detail page fetches its own data rather than reusing this row.
-      const {
-        broker_id: __u1, referral_code_id: __u2, parent_customer_id: __u3,
-        referral_code: __u4, referred_by_code: __u5, telephone: __u6,
-        tax_id: __u7, consent_at: __u8, children_count: __u9,
-        bonus_points: __u10, updatedAt: __u11,
-        ...trimmedCustomer
-      } = customer;
-
-      return trimmedCustomer;
+      return customer;
     });
 
     let brokerLanguage = "en"; // Default to English

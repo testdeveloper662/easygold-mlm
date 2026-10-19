@@ -7,16 +7,26 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/CaptureOrderRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["orderId"],
+              properties: {
+                orderId: { type: "string", example: "ORD-99824" },
+                orderType: { type: "string", example: "goldflex" },
+                b2bCommissionAmount: { type: "number", example: 150.00 },
+                selected_payment_method: { type: "string", example: "bank_transfer" },
+                b2bEmail: { type: "string", format: "email", example: "buyer@example.com" },
+                b2bName: { type: "string", example: "Max Mustermann" },
+                b2bAddress: { type: "string", example: "Musterstrasse 1, 8000 Zurich" },
+              },
+            },
+          },
         },
       },
       responses: {
         200: { description: "Order captured and commissions processed" },
         400: { description: "Invalid request payload or missing orderId" },
-        404: {
-          description: "Order, customer, or referrer/seller not found",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
         500: { description: "Internal server error" },
       },
     },
@@ -29,23 +39,22 @@ module.exports = {
       requestBody: {
         required: true,
         content: {
-          "application/json": { schema: { "$ref": "#/components/schemas/CaptureOrderPreviewRequest" } },
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["orderId"],
+              properties: {
+                orderId: { type: "string", example: "ORD-99824" },
+                orderType: { type: "string", example: "goldflex" },
+                b2bCommissionAmount: { type: "number", example: 150.00 },
+                b2bEmail: { type: "string", format: "email", example: "buyer@example.com" },
+              },
+            },
+          },
         },
       },
       responses: {
         200: { description: "Order preview calculation returned successfully" },
-        400: {
-          description: "Missing orderId, orderType, or b2bCommissionAmount",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        404: {
-          description: "Order, customer, or broker not found",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: { "$ref": "#/components/schemas/ErrorResponse" } } },
-        },
       },
     },
   },
@@ -58,7 +67,18 @@ module.exports = {
         200: {
           description: "Geo information",
           content: {
-            "application/json": { schema: { "$ref": "#/components/schemas/GeoLookupResponse" } },
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  ip: { type: "string", example: "127.0.0.1" },
+                  country_code: { type: "string", example: "CH" },
+                  city: { type: "string", example: "Zurich" },
+                  timezone: { type: "string", example: "Europe/Zurich" },
+                },
+              },
+            },
           },
         },
       },

@@ -72,13 +72,14 @@ const currentHost = (req) => req.get("x-forwarded-host") || req.get("host");
 // it ourselves avoids building an http:// URL on an https:// page, which
 // browsers block outright as mixed content.
 const currentProtocol = (req) => (req.get("x-forwarded-proto") || req.protocol).split(",")[0].trim();
-// PUBLIC_BASE_URL, when set, wins outright — it's not derived from proxy
-// headers at all, so it stays correct even if the proxy in front of this
-// app doesn't forward X-Forwarded-Proto/Host (confirmed not reliable here).
-// Set it in staging/production's .env (e.g. https://mlmapi-stage.kretoss.in);
-// local dev can leave it unset and fall back to the per-request detection.
+// NODE_URL, when set, wins outright — it's not derived from proxy headers
+// at all, so it stays correct even if the proxy in front of this app
+// doesn't forward X-Forwarded-Proto/Host (confirmed not reliable here).
+// Already set per-environment and used as the public base URL everywhere
+// else in the codebase; local dev can leave it unset and fall back to the
+// per-request detection.
 const currentOrigin = (req) =>
-  process.env.PUBLIC_BASE_URL ? process.env.PUBLIC_BASE_URL.replace(/\/+$/, "") : `${currentProtocol(req)}://${currentHost(req)}`;
+  process.env.NODE_URL ? process.env.NODE_URL.replace(/\/+$/, "") : `${currentProtocol(req)}://${currentHost(req)}`;
 app.use("/api-docs", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   req.swaggerDoc = {

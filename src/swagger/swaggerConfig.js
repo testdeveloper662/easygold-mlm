@@ -24,7 +24,7 @@ const combinedPaths = {
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
-    title: "EasyGold MLM Backend API",
+    title: "EasyGold MLM Backend APIs",
     version: "1.0.0",
     // description: `
     // ### EasyGold Multi-Level Marketing (MLM) Platform Backend API

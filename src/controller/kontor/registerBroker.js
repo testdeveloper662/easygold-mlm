@@ -6,9 +6,11 @@ const { createStoreUser } = require("../../utils/registerStoreUserHelper");
 const { mapStatusToUserStatus } = require("../../utils/kontorBrokerUpdateHelper");
 const { encryptJson } = require("../../utils/encryptionHelper");
 const { kontorError } = require("../../utils/kontorErrorCodes");
+const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
 
 const ADMIN_REFERRAL_CODE = process.env.ADMIN_REFERRAL_CODE;
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
+const KONTOR_INVITE_EMAIL_TEMPLATE_ID = 163;
 
 const generateReferralCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -24,15 +26,11 @@ const sendInvitationEmail = async (user, languageForApi) => {
   );
   const setPasswordLink = `${process.env.FRONTEND_URL || "http://localhost:8080"}/reset-password?token=${token}`;
 
-  const subject = "Welcome to EasyGold MLM — set your password";
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h2>Welcome, ${user.display_name || ""}</h2>
-      <p>Your broker account has been created via Kontor. Click the link below to set your password and access your dashboard:</p>
-      <p><a href="${setPasswordLink}" style="padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Set Password</a></p>
-      <p>This link is valid for 7 days.</p>
-    </div>
-  `;
+  const lang = String(languageForApi || "").toLowerCase().startsWith("de") ? "de" : "en";
+  const { subject, htmlContent } = await getRenderedEmail(KONTOR_INVITE_EMAIL_TEMPLATE_ID, lang, {
+    name: user.display_name || "",
+    set_password_link: `<a href="${setPasswordLink}">${setPasswordLink}</a>`,
+  });
 
   await SendEmailHelper(subject, htmlContent, user.user_email);
 };

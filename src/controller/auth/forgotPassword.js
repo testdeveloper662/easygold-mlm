@@ -1,6 +1,9 @@
 const db = require("../../models");
 const jwt = require("jsonwebtoken");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
+const { getRenderedEmail } = require("../../utils/emailTemplateHelper");
+
+const RESET_PASSWORD_EMAIL_TEMPLATE_ID = 162;
 
 const ForgotPassword = async (req, res) => {
   try {
@@ -35,18 +38,15 @@ const ForgotPassword = async (req, res) => {
 
     const resetLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=${token}`;
 
-    // Send email with reset link
-    const subject = "Password Reset Request";
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Password Reset Request</h2>
-        <p>Dear User,</p>
-        <p>You requested a password reset. Click the link below to set a new password:</p>
-        <p><a href="${resetLink}" style="padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
-        <p>This link is valid for 15 minutes.</p>
-        <p>If you did not request this, please ignore this email.</p>
-      </div>
-    `;
+    const languageMeta = await db.UsersMeta.findOne({
+      where: { user_id: user.ID, meta_key: "language" },
+      attributes: ["meta_value"],
+    });
+    const lang = String(languageMeta?.meta_value || "").toLowerCase().startsWith("de") ? "de" : "en";
+
+    const { subject, htmlContent } = await getRenderedEmail(RESET_PASSWORD_EMAIL_TEMPLATE_ID, lang, {
+      reset_link: `<a href="${resetLink}">${resetLink}</a>`,
+    });
 
     await SendEmailHelper(subject, htmlContent, email);
 

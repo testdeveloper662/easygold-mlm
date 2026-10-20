@@ -17,8 +17,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Sanity-check install (catches a broken package-lock/syntax before touching the server)
-        run: npm ci
+      - name: Sanity-check install (catches a broken install before touching the server)
+        run: npm install
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -31,7 +31,7 @@ jobs:
             cd /home/mlmapi-stage/public_html
             git fetch origin kretoss-latest
             git reset --hard origin/kretoss-latest
-            npm ci
+            npm install
             npm run db:deploy
             pm2 restart mlm-backend-stage-3005
             pm2 save

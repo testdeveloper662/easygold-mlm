@@ -57,7 +57,11 @@ app.get("/.well-known/appspecific/com.chrome.devtools.json", (req, res) => {
 });
 
 // Swagger Documentation
+// no-store: the spec embeds a host-specific "servers" URL built from the
+// request, so a cached copy would keep serving a stale (or wrong-host) URL
+// to every later visitor.
 app.use("/api-docs", (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
   req.swaggerDoc = {
     ...swaggerDocs,
     servers: [{ url: `${req.protocol}://${req.get("host")}`, description: "Current Host" }],
@@ -66,6 +70,7 @@ app.use("/api-docs", (req, res, next) => {
 }, swaggerUi.serve, swaggerUi.setup(null, swaggerUiOptions));
 app.get("/api-docs.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
+  res.setHeader("Cache-Control", "no-store");
   res.send({
     ...swaggerDocs,
     servers: [{ url: `${req.protocol}://${req.get("host")}`, description: "Current Host" }],

@@ -98,10 +98,10 @@ const swaggerDefinition = {
       User: {
         type: "object",
         properties: {
-          ID: { type: "integer", example: 43416 },
-          user_login: { type: "string", example: "broker18@yopmail.com" },
-          user_nicename: { type: "string", example: "broker18@yopmail.com" },
-          user_email: { type: "string", format: "email", example: "broker18@yopmail.com" },
+          ID: { type: "integer", example: 1001 },
+          user_login: { type: "string", example: "broker18@example.com" },
+          user_nicename: { type: "string", example: "broker18@example.com" },
+          user_email: { type: "string", format: "email", example: "broker18@example.com" },
           user_url: { type: "string", example: "" },
           user_registered: { type: "string", format: "date-time" },
           user_activation_key: { type: "string", example: "" },
@@ -116,14 +116,14 @@ const swaggerDefinition = {
           api_commission_percentage: { type: "number", example: 10 },
           shipping_costs_setting: { type: "number", example: 0 },
           temp_pass: { type: "string", nullable: true },
-          mystorekey: { type: "string", nullable: true, example: "broker123" },
+          mystorekey: { type: "string", nullable: true, example: "demo123" },
           self_service: { type: "integer", example: 1 },
           landing_page: { type: "boolean", example: true },
           deleted_at: { type: "string", nullable: true },
           role_id: { type: "integer", example: 2 },
           role: { type: "string", example: "BROKER", description: "e.g. BROKER, AFFILIATE, ADMIN" },
-          referral_code: { type: "string", nullable: true, example: "BIXBC8" },
-          broker_id: { type: "integer", nullable: true, example: 130 },
+          referral_code: { type: "string", nullable: true, example: "DEMO12" },
+          broker_id: { type: "integer", nullable: true, example: 42 },
           profile_image: { type: "string", example: "http://localhost:4000/public/default/default_org.png" },
           landing_pageurl: { type: "string", nullable: true },
           goldbuying_page: { type: "string", nullable: true },
@@ -212,7 +212,7 @@ const swaggerDefinition = {
         type: "object",
         required: ["email", "password"],
         properties: {
-          email: { type: "string", format: "email", example: "admin@easygold.ch" },
+          email: { type: "string", format: "email", example: "admin@example.com" },
           password: { type: "string", format: "password", example: "admin123" },
           referral_code: { type: "string", example: "REF12345" },
         },
@@ -940,12 +940,101 @@ const customJsStr = `
       attributeFilter: ["class"],
     });
   })();
+
+  // Kontor "Try it out" forms need a valid HMAC signature. The secret used
+  // to compute it never reaches this page — clicking the button asks the
+  // server (/_dev/kontor-sign, dev-only) to sign and hands back just
+  // the three header values.
+  (function () {
+    function setNativeValue(el, value) {
+      var proto = el.tagName === "TEXTAREA" ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, "value").set.call(el, value);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function addAutofillButtons() {
+      document.querySelectorAll('input[placeholder="X-Kontor-Signature"]').forEach(function (sigInput) {
+        var opblock = sigInput.closest(".opblock");
+        if (!opblock || opblock.dataset.kontorAutofillAdded) return;
+
+        var tsInput = opblock.querySelector('input[placeholder="X-Kontor-Timestamp"]');
+        var nonceInput = opblock.querySelector('input[placeholder="X-Kontor-Nonce"]');
+        var headerRow = opblock.querySelector("table.parameters thead tr");
+        var headerCell = headerRow && headerRow.lastElementChild;
+        if (!tsInput || !nonceInput || !headerCell) return;
+
+        opblock.dataset.kontorAutofillAdded = "1";
+
+        // Overlay via absolute positioning rather than display:flex on the
+        // <th> itself — changing the cell's display type was disrupting the
+        // table's native border/row-height rendering (the header's bottom
+        // divider line stopped short, not spanning the full row width).
+        headerCell.style.position = "relative";
+
+        var wrapper = document.createElement("div");
+        wrapper.style.cssText =
+          "position:absolute;top:50%;right:0;transform:translateY(-50%);display:flex;align-items:center;gap:8px;";
+
+        var label = document.createElement("span");
+        label.textContent = "Testing & staging environment only";
+        label.style.cssText = "font-size:11px;color:#b45309;font-weight:600;";
+
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "Autofill Kontor Signature";
+        btn.className = "btn";
+        btn.style.cssText = "white-space:nowrap;";
+
+        btn.addEventListener("click", function () {
+          btn.disabled = true;
+          var originalText = btn.textContent;
+          btn.textContent = "Signing...";
+
+          var bodyTextarea = opblock.querySelector(".body-param textarea");
+          var rawBody = bodyTextarea ? bodyTextarea.value : "";
+
+          fetch("/_dev/kontor-sign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rawBody: rawBody }),
+          })
+            .then(function (res) {
+              if (!res.ok) throw new Error("Signing endpoint returned " + res.status);
+              return res.json();
+            })
+            .then(function (data) {
+              setNativeValue(tsInput, data.timestamp);
+              setNativeValue(nonceInput, data.nonce);
+              setNativeValue(sigInput, data.signature);
+            })
+            .catch(function (err) {
+              alert("Autofill failed: " + err.message);
+            })
+            .finally(function () {
+              btn.disabled = false;
+              btn.textContent = originalText;
+            });
+        });
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(btn);
+        headerCell.appendChild(wrapper);
+      });
+    }
+
+    addAutofillButtons();
+    new MutationObserver(addAutofillButtons).observe(document.getElementById("swagger-ui") || document.body, {
+      childList: true,
+      subtree: true,
+    });
+  })();
 `;
 
 // Hide just the logo image in the black topbar — the bar and its text stay,
 // only the icon graphic itself is removed.
 const customCss = `
   .swagger-ui .topbar .topbar-wrapper img { display: none; }
+  .swagger-ui .topbar .dark-mode-toggle { display: none; }
 `;
 
 const swaggerUiOptions = { customJsStr, customCss };

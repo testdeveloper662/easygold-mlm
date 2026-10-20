@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const app = express();
+const crypto = require("crypto");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const compression = require("compression");
@@ -72,6 +73,30 @@ app.get("/api-docs.json", (req, res) => {
 });
 app.get("/swagger", (req, res) => res.redirect("/api-docs"));
 app.get("/docs", (req, res) => res.redirect("/api-docs"));
+
+// Dev-only helper behind the Swagger UI "Autofill" button — signs a Kontor
+// request server-side so KONTOR_HMAC_SECRET never has to reach the browser.
+// Disabled outright in production. Kept outside /api-docs on purpose: the
+// swagger-ui-express setup middleware answers every request under that
+// prefix itself (no path/method check), so it would swallow this route.
+if (process.env.NODE_ENV !== "production") {
+  app.post("/_dev/kontor-sign", (req, res) => {
+    const secret = process.env.KONTOR_HMAC_SECRET;
+    if (!secret) {
+      return res.status(500).json({ message: "KONTOR_HMAC_SECRET is not configured." });
+    }
+
+    const rawBody = typeof req.body?.rawBody === "string" ? req.body.rawBody : "";
+    const timestamp = Date.now().toString();
+    const nonce = crypto.randomUUID();
+    const signature = crypto
+      .createHmac("sha256", secret)
+      .update(`${timestamp}.${nonce}.${rawBody}`)
+      .digest("hex");
+
+    res.json({ timestamp, nonce, signature });
+  });
+}
 
 app.get("/", (req, res) => {
   res.send(`

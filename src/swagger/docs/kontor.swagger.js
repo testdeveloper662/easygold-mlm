@@ -117,7 +117,7 @@ module.exports = {
           content: {
             "application/json": {
               schema: { "$ref": "#/components/schemas/SuccessResponse" },
-              example: { success: true, data: { referral_code: "ESYGOLD916", valid: true } },
+              example: { success: true, data: { referral_code: "ABC12345", valid: true } },
             },
           },
         },

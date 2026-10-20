@@ -9,10 +9,12 @@ const META_KEYS = [
   "u_postcode",
   "u_country",
   "u_vat_no",
+  "u_vat_id_verified_at",
+  "u_tax_number",
   "u_phone",
   "kontor_package",
   "kontor_approved_at",
-  "kontor_activated_at",
+  "kontor_bank_details_encrypted",
 ];
 
 // Batch-fetches UsersMeta for a set of user_ids and groups it, so list
@@ -31,8 +33,12 @@ const fetchMetaByUserId = async (userIds) => {
   return byUserId;
 };
 
+// Kontor references brokers by broker_id now; external_ref (their own
+// customer number) and mlm_customer_number (our legacy internal id) are
+// kept for reference/backward compatibility.
 const formatPartner = (broker, user, meta = {}) => ({
-  customer_no: broker.external_ref,
+  broker_id: broker.id,
+  external_ref: broker.external_ref,
   mlm_customer_number: broker.mlm_customer_number,
   status: broker.kontor_status,
   company: {
@@ -43,15 +49,19 @@ const formatPartner = (broker, user, meta = {}) => ({
     city: meta.u_location || null,
     country: meta.u_country || null,
     vat_id: meta.u_vat_no || null,
+    vat_id_verified_at: meta.u_vat_id_verified_at || null,
+    tax_number: meta.u_tax_number || null,
   },
   contact: {
     name: user?.display_name || null,
     email: user?.user_email || null,
     phone: meta.u_phone || null,
   },
+  // Never surface the decrypted bank data on a list/read call — just
+  // whether one is on file.
+  bank_on_file: Boolean(meta.kontor_bank_details_encrypted),
   package: meta.kontor_package || null,
   approved_at: meta.kontor_approved_at || null,
-  activated_at: meta.kontor_activated_at || null,
   created_at: broker.createdAt,
   updated_at: broker.updatedAt,
 });

@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { kontorError } = require("../utils/kontorErrorCodes");
 
 // Replay protection: remember nonces we've already seen for the lifetime of
 // the timestamp window, then forget them. In-memory only (single-instance
@@ -18,10 +19,7 @@ const kontorHmacAuth = (req, res, next) => {
 
   if (!secret) {
     console.error("[Kontor] KONTOR_HMAC_SECRET is not configured — rejecting all signed requests.");
-    return res.status(500).json({
-      success: false,
-      message: "Server is not configured for Kontor request signing.",
-    });
+    return kontorError(res, 500, "INTERNAL_ERROR", "Server is not configured for Kontor request signing.");
   }
 
   const timestamp = req.headers["x-kontor-timestamp"];
@@ -29,25 +27,16 @@ const kontorHmacAuth = (req, res, next) => {
   const signature = req.headers["x-kontor-signature"];
 
   if (!timestamp || !nonce || !signature) {
-    return res.status(401).json({
-      success: false,
-      message: "Missing request signature headers (X-Kontor-Timestamp, X-Kontor-Nonce, X-Kontor-Signature).",
-    });
+    return kontorError(res, 401, "UNAUTHORIZED", "Missing request signature headers (X-Kontor-Timestamp, X-Kontor-Nonce, X-Kontor-Signature).");
   }
 
   const timestampMs = Number(timestamp);
   if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > TIMESTAMP_WINDOW_MS) {
-    return res.status(401).json({
-      success: false,
-      message: "Request timestamp is missing, invalid, or outside the allowed window.",
-    });
+    return kontorError(res, 401, "UNAUTHORIZED", "Request timestamp is missing, invalid, or outside the allowed window.");
   }
 
   if (seenNonces.has(nonce)) {
-    return res.status(401).json({
-      success: false,
-      message: "Nonce already used (possible replay).",
-    });
+    return kontorError(res, 401, "UNAUTHORIZED", "Nonce already used (possible replay).");
   }
 
   // express.json()'s verify callback captures the exact raw bytes for every
@@ -66,10 +55,7 @@ const kontorHmacAuth = (req, res, next) => {
     crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
 
   if (!isValid) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid request signature.",
-    });
+    return kontorError(res, 401, "UNAUTHORIZED", "Invalid request signature.");
   }
 
   seenNonces.set(nonce, Date.now());

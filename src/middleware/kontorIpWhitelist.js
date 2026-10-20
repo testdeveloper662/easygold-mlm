@@ -1,3 +1,5 @@
+const { kontorError } = require("../utils/kontorErrorCodes");
+
 const getClientIp = (req) => {
   const forwarded = req.headers["x-forwarded-for"];
   let ip = forwarded ? forwarded.split(",")[0].trim() : req.ip || req.socket.remoteAddress;
@@ -17,10 +19,7 @@ const kontorIpWhitelist = (req, res, next) => {
 
   if (!clientIp || !allowedIps.includes(clientIp)) {
     console.warn(`[Kontor] Blocked request from non-whitelisted IP: ${clientIp}`);
-    return res.status(403).json({
-      success: false,
-      message: "Access denied. This IP address is not authorized to access the Kontor API.",
-    });
+    return kontorError(res, 403, "FORBIDDEN", "Access denied. This IP address is not authorized to access the Kontor API.");
   }
 
   next();

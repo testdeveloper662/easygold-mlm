@@ -4,16 +4,16 @@ const jwt = require("jsonwebtoken");
 const SendEmailHelper = require("../../utils/sendEmailHelper");
 const { createStoreUser } = require("../../utils/registerStoreUserHelper");
 const { mapStatusToUserStatus } = require("../../utils/kontorBrokerUpdateHelper");
+const { encryptJson } = require("../../utils/encryptionHelper");
+const { kontorError } = require("../../utils/kontorErrorCodes");
 
 const ADMIN_REFERRAL_CODE = process.env.ADMIN_REFERRAL_CODE;
 const JWT_ACCESS_TOKEN = process.env.JWT_ACCESS_TOKEN;
 
 const generateReferralCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
-// Our own identifier, generated once a broker row exists and handed back to
-// Kontor — they store it and echo it on every later call for this broker.
-// Derived from the auto-increment broker id (offset so it doesn't start at
-// M-00001), so it's guaranteed unique with no extra counter table needed.
+// Kept for our own internal/admin use (not part of the Kontor contract —
+// Kontor references brokers by our own broker_id going forward).
 const generateMlmCustomerNumber = (brokerId) => `M-${10000 + Number(brokerId)}`;
 
 const sendInvitationEmail = async (user, languageForApi) => {
@@ -37,89 +37,94 @@ const sendInvitationEmail = async (user, languageForApi) => {
   await SendEmailHelper(subject, htmlContent, user.user_email);
 };
 
+const resolveParentByReferralCode = async (referralCode) => {
+  if (!referralCode || referralCode === ADMIN_REFERRAL_CODE) {
+    return { isAdminParent: true, parentBroker: null };
+  }
+
+  let parentBroker = await db.Brokers.findOne({ where: { referral_code: referralCode } });
+  if (!parentBroker && db.Affiliates) {
+    parentBroker = await db.Affiliates.findOne({ where: { referral_code: referralCode } });
+  }
+  if (!parentBroker) {
+    const parentUserReferral = await db.UserReferrals.findOne({ where: { referral_code: referralCode } });
+    if (parentUserReferral) {
+      return { isAdminParent: false, parentBroker: { user_id: parentUserReferral.user_id, referral_code: referralCode } };
+    }
+  }
+
+  if (!parentBroker) {
+    return { isAdminParent: false, parentBroker: null, invalid: true };
+  }
+
+  return { isAdminParent: false, parentBroker };
+};
+
 const RegisterKontorBroker = async (req, res) => {
   try {
     const {
-      customer_no,
+      source,
+      external_ref,
       organisation_id,
       status,
       approved_at,
-      activated_at,
       package: kontorPackage,
+      referralCode,
       company = {},
       contact = {},
-      referral = {},
+      bank,
     } = req.body;
 
-    const { legal_name, legal_form, street, postcode, city, country, vat_id } = company;
-    const { name: contactName, email, phone, locale } = contact;
-    const { code: kontorReferralCode, sponsor_mlm_ref } = referral;
+    const { legal_name, legal_form, street, postcode, city, country, vat_id, vat_id_verified_at, tax_number } = company;
+    const { name: contactName, email, phone, language } = contact;
 
-    if (!customer_no || !status || !legal_name || !postcode || !city || !country || !contactName || !email) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Missing required fields: customer_no, status, company.legal_name, company.postcode, company.city, company.country, contact.name, contact.email",
-      });
+    if (!external_ref || !status || !legal_name || !postcode || !city || !country || !contactName || !email) {
+      return kontorError(
+        res,
+        400,
+        "VALIDATION_ERROR",
+        "Missing required fields: external_ref, status, company.legal_name, company.postcode, company.city, company.country, contact.name, contact.email"
+      );
     }
 
-    // Idempotency: a retried call with the same customer_no returns the
-    // existing broker instead of creating a duplicate.
+    // Idempotency: a retried call with the same external_ref returns the
+    // existing broker (created: false) instead of creating a duplicate.
     const existingBroker = await db.Brokers.findOne({
-      where: { source: "kontor", external_ref: String(customer_no) },
+      where: { source: "kontor", external_ref: String(external_ref) },
     });
     if (existingBroker) {
       return res.status(200).json({
         success: true,
-        message: "Broker already exists for this customer_no",
-        data: {
-          mlm_customer_number: existingBroker.mlm_customer_number,
-          broker_id: existingBroker.id,
-          user_id: existingBroker.user_id,
-        },
+        broker_id: existingBroker.id,
+        user_id: existingBroker.user_id,
+        created: false,
       });
     }
 
     const existingUserByEmail = await db.Users.findOne({ where: { user_email: email } });
     if (existingUserByEmail) {
-      return res.status(400).json({
-        success: false,
-        message: "A user with this email already exists. Please use a different email address.",
-      });
+      return kontorError(res, 400, "ALREADY_EXISTS", "A user with this email already exists. Please use a different email address.");
     }
 
     const mystorekey = String(legal_name).replace(/ /g, "_");
     const existingUserByMyStore = await db.Users.findOne({ where: { mystorekey } });
     if (existingUserByMyStore) {
-      return res.status(400).json({
-        success: false,
-        message: "This company name is already taken. Please choose a different company name.",
-      });
+      return kontorError(res, 400, "ALREADY_EXISTS", "This company name is already taken. Please choose a different company name.");
     }
 
-    // The sponsor, if any, is identified by OUR mlm_customer_number — not a
-    // referral-code string — per how Kontor's payload references it.
-    let parentBroker = null;
-    if (sponsor_mlm_ref) {
-      parentBroker = await db.Brokers.findOne({ where: { mlm_customer_number: String(sponsor_mlm_ref) } });
-      if (!parentBroker) {
-        return res.status(400).json({
-          success: false,
-          message: `No broker found for sponsor_mlm_ref: ${sponsor_mlm_ref}`,
-        });
-      }
+    const { isAdminParent, parentBroker, invalid } = await resolveParentByReferralCode(referralCode);
+    if (invalid) {
+      return kontorError(res, 400, "VALIDATION_ERROR", `No broker/affiliate found for referralCode: ${referralCode}`);
     }
-    const isAdminParent = !parentBroker;
 
     let languageForApi = "en-US";
-    if (locale) {
-      const localeStr = String(locale).toLowerCase().trim();
-      if (localeStr === "de" || localeStr === "de-de") languageForApi = "de-DE";
+    if (language) {
+      const languageStr = String(language).toLowerCase().trim();
+      if (languageStr === "de" || languageStr === "de-de") languageForApi = "de-DE";
     }
 
-    // Kontor never sends a password, ID/KYC data, or documents — every
-    // Kontor broker gets a random unguessable password plus an invitation
-    // email to set their real one via the existing reset-password flow.
+    // Kontor never sends a password — every Kontor broker gets a random
+    // unguessable password plus an invitation email to set their real one.
     const randomPassword = crypto.randomBytes(24).toString("hex");
     const effectiveUsername = `kontor_${email.split("@")[0]}_${Date.now().toString(36)}`;
 
@@ -144,44 +149,41 @@ const RegisterKontorBroker = async (req, res) => {
     });
 
     if (!registrationResult.success) {
-      return res.status(400).json({
-        success: false,
-        message: registrationResult.message || "Registration failed",
-      });
+      return kontorError(res, 400, "VALIDATION_ERROR", registrationResult.message || "Registration failed");
     }
 
     const user_id = registrationResult.data.user_id;
 
-    // "approved" (Kontor's initial status) grants immediate, active access —
-    // Kontor-approved brokers skip our normal pending-approval status call.
+    // "activated" (Kontor's confirmed initial status) grants immediate,
+    // active access — Kontor-approved brokers skip our normal pending step.
     await db.Users.update({ user_status: mapStatusToUserStatus(status) }, { where: { ID: user_id } });
 
     const newReferralCode = generateReferralCode();
     const broker = await db.Brokers.create({
       user_id,
-      parent_id: isAdminParent ? null : parentBroker.id,
+      parent_id: isAdminParent ? null : parentBroker?.id || null,
       referral_code: newReferralCode,
-      referred_by_code: isAdminParent ? ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+      referred_by_code: isAdminParent ? ADMIN_REFERRAL_CODE : parentBroker?.referral_code || referralCode,
       children_count: 0,
       total_commission_amount: 0,
-      source: "kontor",
-      external_ref: String(customer_no),
+      source: source || "kontor",
+      external_ref: String(external_ref),
       kontor_status: String(status).toLowerCase().trim(),
     });
 
-    const mlmCustomerNumber = generateMlmCustomerNumber(broker.id);
-    await broker.update({ mlm_customer_number: mlmCustomerNumber });
+    // Kept for our own internal reference only — not part of the Kontor contract.
+    await broker.update({ mlm_customer_number: generateMlmCustomerNumber(broker.id) });
 
     if (db.UserReferrals) {
       await db.UserReferrals.create({
         user_id,
         referral_code: newReferralCode,
-        referred_by_code: isAdminParent ? ADMIN_REFERRAL_CODE : parentBroker.referral_code,
-        parent_user_id: isAdminParent ? null : parentBroker.user_id,
+        referred_by_code: isAdminParent ? ADMIN_REFERRAL_CODE : parentBroker?.referral_code || referralCode,
+        parent_user_id: isAdminParent ? null : parentBroker?.user_id || null,
         children_count: 0,
       });
 
-      if (!isAdminParent) {
+      if (!isAdminParent && parentBroker?.user_id) {
         await db.UserReferrals.increment("children_count", {
           by: 1,
           where: { user_id: parentBroker.user_id },
@@ -193,18 +195,29 @@ const RegisterKontorBroker = async (req, res) => {
       await parentBroker.update({ children_count: (parentBroker.children_count || 0) + 1 });
     }
 
-    // Kontor-specific metadata that doesn't warrant its own broker column.
+    // Kontor-specific / VAT / tax metadata that doesn't warrant its own
+    // broker column — vat_id_verified_at tracked per Christian's "so you
+    // know whether a broker is EU-based and VAT-registered" requirement.
     const metaToSave = {
       kontor_organisation_id: organisation_id,
       kontor_package: kontorPackage,
-      kontor_referral_code: kontorReferralCode,
       kontor_approved_at: approved_at,
-      kontor_activated_at: activated_at,
+      u_vat_id_verified_at: vat_id_verified_at,
+      u_tax_number: tax_number,
     };
     for (const [key, value] of Object.entries(metaToSave)) {
       if (value !== undefined && value !== null) {
         await db.UsersMeta.create({ user_id, meta_key: key, meta_value: String(value) });
       }
+    }
+
+    // Bank details are optional at registration and must be stored encrypted.
+    if (bank) {
+      await db.UsersMeta.create({
+        user_id,
+        meta_key: "kontor_bank_details_encrypted",
+        meta_value: encryptJson(bank),
+      });
     }
 
     try {
@@ -216,20 +229,13 @@ const RegisterKontorBroker = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Broker registered successfully",
-      data: {
-        mlm_customer_number: mlmCustomerNumber,
-        broker_id: broker.id,
-        user_id,
-      },
+      broker_id: broker.id,
+      user_id,
+      created: true,
     });
   } catch (error) {
     console.error("[Kontor] Error in RegisterKontorBroker:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+    return kontorError(res, 500, "INTERNAL_ERROR", "Internal server error");
   }
 };
 

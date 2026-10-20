@@ -1,4 +1,5 @@
 const { getOurDailyTotals } = require("../../utils/kontorReconciliationHelper");
+const { kontorError } = require("../../utils/kontorErrorCodes");
 
 const AMOUNT_TOLERANCE = 0.01;
 
@@ -11,18 +12,12 @@ const PostKontorDailyReconciliation = async (req, res) => {
     const { date, brokers } = req.body;
 
     if (!date || !Array.isArray(brokers)) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields: date, brokers (array)",
-      });
+      return kontorError(res, 400, "VALIDATION_ERROR", "Missing required fields: date, brokers (array)");
     }
 
     const targetDate = new Date(date);
     if (isNaN(targetDate.getTime())) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid date. Use format YYYY-MM-DD.",
-      });
+      return kontorError(res, 400, "VALIDATION_ERROR", "Invalid date. Use format YYYY-MM-DD.");
     }
 
     console.log(`[Kontor] Received daily reconciliation submission for ${date}:`, JSON.stringify(req.body));
@@ -30,13 +25,14 @@ const PostKontorDailyReconciliation = async (req, res) => {
     const ours = await getOurDailyTotals(targetDate);
     const ourByKey = {};
     ours.brokers.forEach((b) => {
-      if (b.customer_no) ourByKey[b.customer_no] = b;
+      if (b.broker_id) ourByKey[b.broker_id] = b;
+      if (b.external_ref) ourByKey[b.external_ref] = b;
       if (b.mlm_customer_number) ourByKey[b.mlm_customer_number] = b;
     });
 
     const matchedKeys = new Set();
     const comparison = brokers.map((theirs) => {
-      const key = theirs.mlm_customer_number || theirs.customer_no || theirs.partner;
+      const key = theirs.broker_id || theirs.external_ref || theirs.mlm_customer_number || theirs.partner;
       const ourEntry = key ? ourByKey[key] : null;
       if (ourEntry) matchedKeys.add(ourEntry.broker_id);
 
@@ -64,7 +60,8 @@ const PostKontorDailyReconciliation = async (req, res) => {
     const missingFromTheirSubmission = ours.brokers
       .filter((b) => !matchedKeys.has(b.broker_id))
       .map((b) => ({
-        partner: b.mlm_customer_number || b.customer_no,
+        partner: b.broker_id,
+        external_ref: b.external_ref,
         ours: { order_count: b.order_count, total_commission_amount: b.total_commission_amount },
       }));
 
@@ -72,22 +69,15 @@ const PostKontorDailyReconciliation = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Reconciliation comparison completed",
-      data: {
-        date: ours.date,
-        all_match: allMatch,
-        comparison,
-        missing_from_submission: missingFromTheirSubmission,
-        our_totals: ours.totals,
-      },
+      date: ours.date,
+      all_match: allMatch,
+      comparison,
+      missing_from_submission: missingFromTheirSubmission,
+      our_totals: ours.totals,
     });
   } catch (error) {
     console.error("[Kontor] Error in PostKontorDailyReconciliation:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+    return kontorError(res, 500, "INTERNAL_ERROR", "Internal server error");
   }
 };
 

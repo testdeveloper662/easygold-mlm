@@ -46,7 +46,7 @@ const getOurDailyTotals = async (targetDate) => {
     const broker = brokerMap[r.broker_id];
     return {
       broker_id: r.broker_id,
-      customer_no: broker?.external_ref || null,
+      external_ref: broker?.external_ref || null,
       mlm_customer_number: broker?.mlm_customer_number || null,
       order_count: Number(r.order_count) || 0,
       total_order_amount: Math.round((Number(r.total_order_amount) || 0) * 100) / 100,

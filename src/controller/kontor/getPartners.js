@@ -1,6 +1,7 @@
 const db = require("../../models");
 const { Op } = require("sequelize");
 const { fetchMetaByUserId, formatPartner } = require("../../utils/kontorPartnerFormatter");
+const { kontorError } = require("../../utils/kontorErrorCodes");
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -38,11 +39,7 @@ const GetKontorPartners = async (req, res) => {
     });
   } catch (error) {
     console.error("[Kontor] Error in GetKontorPartners:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+    return kontorError(res, 500, "INTERNAL_ERROR", "Internal server error");
   }
 };
 

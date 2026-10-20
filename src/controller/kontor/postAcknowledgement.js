@@ -1,30 +1,24 @@
 const db = require("../../models");
+const { kontorError } = require("../../utils/kontorErrorCodes");
 
-// reference_id is our own booking reference as returned by capture-order /
-// capture-order/reverse, formatted "KONTOR-CMM-<id>" or "KONTOR-REV-<id>".
-const parseEntryIdFromReference = (referenceId) => {
-  const match = String(referenceId || "").match(/^KONTOR-(?:CMM|REV)-(\d+)$/);
+// reference is our own booking reference as returned by capture-order /
+// capture-order/reverse, formatted "MLM-TX-<6-digit id>".
+const parseEntryIdFromReference = (reference) => {
+  const match = String(reference || "").match(/^MLM-TX-(\d+)$/);
   return match ? parseInt(match[1], 10) : null;
 };
 
 const PostKontorAcknowledgement = async (req, res) => {
   try {
-    const { reference_id, booking_reference, acknowledged_at } = req.body;
-    const reference = reference_id || booking_reference;
+    const { reference, acknowledged_at } = req.body;
 
     if (!reference) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required field: reference_id",
-      });
+      return kontorError(res, 400, "VALIDATION_ERROR", "Missing required field: reference");
     }
 
     const entryId = parseEntryIdFromReference(reference);
     if (!entryId) {
-      return res.status(400).json({
-        success: false,
-        message: "Unrecognized reference_id format. Expected KONTOR-CMM-<id> or KONTOR-REV-<id>.",
-      });
+      return kontorError(res, 400, "VALIDATION_ERROR", "Unrecognized reference format. Expected MLM-TX-<id>.");
     }
 
     const row = await db.BrokerCommissionHistory.findOne({
@@ -32,10 +26,7 @@ const PostKontorAcknowledgement = async (req, res) => {
     });
 
     if (!row) {
-      return res.status(404).json({
-        success: false,
-        message: "No Kontor transaction found for this reference_id",
-      });
+      return kontorError(res, 404, "NOT_FOUND", "No Kontor transaction found for this reference");
     }
 
     const ackTimestamp = acknowledged_at ? new Date(acknowledged_at) : new Date();
@@ -43,20 +34,12 @@ const PostKontorAcknowledgement = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Acknowledgement recorded",
-      data: {
-        reference_id: reference,
-        entry_id: row.id,
-        acknowledged_at: row.kontor_acknowledged_at,
-      },
+      reference,
+      acknowledged_at: row.kontor_acknowledged_at,
     });
   } catch (error) {
     console.error("[Kontor] Error in PostKontorAcknowledgement:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+    return kontorError(res, 500, "INTERNAL_ERROR", "Internal server error");
   }
 };
 

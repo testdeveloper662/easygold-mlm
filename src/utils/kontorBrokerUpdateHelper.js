@@ -1,14 +1,15 @@
 const db = require("../models");
+const { encryptJson } = require("./encryptionHelper");
 
-// Kontor's own status vocabulary isn't fully pinned down yet (their example
-// payload used "approved" as the initial state, not "activated"), so this
-// maps loosely by intent rather than an exact enum match.
-const ACTIVE_STATUSES = ["approved", "activated", "active"];
+// Confirmed by Christian: "activated" is the live example value. Mapped
+// loosely by intent rather than an exact enum match, since the exact set of
+// strings Kontor might send (blocked, deactivated, suspended, rejected,
+// terminated, cancelled, ...) isn't fully pinned down.
+const ACTIVE_STATUSES = ["activated", "approved", "active"];
 const PENDING_STATUSES = ["pending", "submitted", "review"];
-// Anything else (blocked, deactivated, suspended, rejected, terminated,
-// cancelled, ...) suspends login via user_status=1. The exact reason stays
-// on brokers.kontor_status, not on user_status, so other account types
-// sharing that column are unaffected.
+// Anything else suspends login via user_status=1. The exact reason stays on
+// brokers.kontor_status (plus reason_key in meta), not on user_status, so
+// other account types sharing that column are unaffected.
 
 const mapStatusToUserStatus = (status) => {
   const s = String(status || "").toLowerCase().trim();
@@ -26,14 +27,24 @@ const saveMeta = async (user_id, meta_key, meta_value) => {
   }
 };
 
-// Applies whatever subset of {status, company, contact, package, approved_at,
-// activated_at} is present in body to an existing Kontor-sourced broker.
-// Used by both the dedicated status endpoint and the general update endpoint
-// since Kontor described both as "updates of the same record".
+// Applies whatever subset of fields is present in body to an existing
+// Kontor-sourced broker. Used by both the dedicated status endpoint and the
+// general update endpoint since Kontor described both as "updates of the
+// same record".
 const applyKontorBrokerUpdate = async (broker, body) => {
-  const { status, approved_at, activated_at, package: kontorPackage, company = {}, contact = {} } = body;
-  const { legal_name, legal_form, street, postcode, city, country, vat_id } = company;
-  const { name: contactName, email, phone, locale } = contact;
+  const {
+    status,
+    approved_at,
+    package: kontorPackage,
+    company = {},
+    contact = {},
+    bank,
+    effective_at,
+    reason_key,
+    lang,
+  } = body;
+  const { legal_name, legal_form, street, postcode, city, country, vat_id, vat_id_verified_at, tax_number } = company;
+  const { name: contactName, email, phone, language } = contact;
 
   if (status) {
     await broker.update({ kontor_status: String(status).toLowerCase().trim() });
@@ -51,6 +62,8 @@ const applyKontorBrokerUpdate = async (broker, body) => {
     await db.Users.update(userUpdates, { where: { ID: broker.user_id } });
   }
 
+  const resolvedLanguage = language || lang;
+
   const metaUpdates = {
     u_company: legal_name,
     u_legal_status: legal_form,
@@ -59,11 +72,16 @@ const applyKontorBrokerUpdate = async (broker, body) => {
     u_postcode: postcode,
     u_country: country,
     u_vat_no: vat_id,
+    u_vat_id_verified_at: vat_id_verified_at,
+    u_tax_number: tax_number,
     u_phone: phone,
-    language: locale ? (String(locale).toLowerCase().startsWith("de") ? "de-DE" : "en-US") : undefined,
+    language: resolvedLanguage
+      ? (String(resolvedLanguage).toLowerCase().startsWith("de") ? "de-DE" : "en-US")
+      : undefined,
     kontor_package: kontorPackage,
     kontor_approved_at: approved_at,
-    kontor_activated_at: activated_at,
+    kontor_effective_at: effective_at,
+    kontor_reason_key: reason_key,
   };
 
   for (const [key, value] of Object.entries(metaUpdates)) {
@@ -71,12 +89,24 @@ const applyKontorBrokerUpdate = async (broker, body) => {
       await saveMeta(broker.user_id, key, value);
     }
   }
+
+  if (bank) {
+    await saveMeta(broker.user_id, "kontor_bank_details_encrypted", encryptJson(bank));
+  }
 };
 
-const findKontorBroker = async ({ customer_no, mlm_customer_number }) => {
-  if (customer_no) {
+// Kontor references brokers by our own broker_id going forward, with
+// external_ref as a fallback (and mlm_customer_number kept for our own
+// internal/legacy use only).
+const findKontorBroker = async ({ broker_id, external_ref, customer_no, mlm_customer_number }) => {
+  if (broker_id) {
+    const broker = await db.Brokers.findOne({ where: { id: broker_id, source: "kontor" } });
+    if (broker) return broker;
+  }
+  const ref = external_ref ?? customer_no;
+  if (ref) {
     const broker = await db.Brokers.findOne({
-      where: { source: "kontor", external_ref: String(customer_no) },
+      where: { source: "kontor", external_ref: String(ref) },
     });
     if (broker) return broker;
   }

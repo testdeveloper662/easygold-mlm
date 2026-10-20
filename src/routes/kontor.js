@@ -40,7 +40,7 @@ kontorRouter.post("/broker/register", RegisterKontorBroker);
 kontorRouter.put("/broker/update", UpdateKontorBroker);
 kontorRouter.post("/broker/status", UpdateKontorBrokerStatus);
 kontorRouter.get("/partners", GetKontorPartners);
-kontorRouter.get("/partners/:customer_no", GetKontorPartnerByCustomerNo);
+kontorRouter.get("/partners/:external_ref", GetKontorPartnerByCustomerNo);
 
 // Commission booking.
 kontorRouter.post("/capture-order", CaptureKontorOrder);

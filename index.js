@@ -13,6 +13,7 @@ const brokerRouter = require("./src/routes/broker");
 const userRouter = require("./src/routes/user");
 const uploadRouter = require("./src/routes/upload");
 const kontorRouter = require("./src/routes/kontor");
+const kontorIpWhitelist = require("./src/middleware/kontorIpWhitelist");
 const getPublicVideos = require("./src/controller/user/getPublicVideos");
 const { swaggerUi, swaggerDocs, swaggerUiOptions } = require("./src/swagger/swaggerConfig");
 
@@ -65,11 +66,17 @@ app.get("/.well-known/appspecific/com.chrome.devtools.json", (req, res) => {
 // upstream address, e.g. "localhost:<port>", ends up as the raw Host header
 // instead of the public domain), X-Forwarded-Host still carries the real one.
 const currentHost = (req) => req.get("x-forwarded-host") || req.get("host");
+// Same problem as the host: the proxy terminates TLS and talks plain HTTP to
+// this app internally, so req.protocol (even with trust proxy on) resolves
+// to "http" unless X-Forwarded-Proto is actually being forwarded. Checking
+// it ourselves avoids building an http:// URL on an https:// page, which
+// browsers block outright as mixed content.
+const currentProtocol = (req) => (req.get("x-forwarded-proto") || req.protocol).split(",")[0].trim();
 app.use("/api-docs", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   req.swaggerDoc = {
     ...swaggerDocs,
-    servers: [{ url: `${req.protocol}://${currentHost(req)}`, description: "Current Host" }],
+    servers: [{ url: `${currentProtocol(req)}://${currentHost(req)}`, description: "Current Host" }],
   };
   next();
 }, swaggerUi.serve, swaggerUi.setup(null, swaggerUiOptions));
@@ -78,7 +85,7 @@ app.get("/api-docs.json", (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.send({
     ...swaggerDocs,
-    servers: [{ url: `${req.protocol}://${currentHost(req)}`, description: "Current Host" }],
+    servers: [{ url: `${currentProtocol(req)}://${currentHost(req)}`, description: "Current Host" }],
   });
 });
 app.get("/swagger", (req, res) => res.redirect("/api-docs"));
@@ -90,7 +97,7 @@ app.get("/docs", (req, res) => res.redirect("/api-docs"));
 // swagger-ui-express setup middleware answers every request under that
 // prefix itself (no path/method check), so it would swallow this route.
 if (process.env.NODE_ENV !== "production") {
-  app.post("/_dev/kontor-sign", (req, res) => {
+  app.post("/_dev/kontor-sign", kontorIpWhitelist, (req, res) => {
     const secret = process.env.KONTOR_HMAC_SECRET;
     if (!secret) {
       return res.status(500).json({ message: "KONTOR_HMAC_SECRET is not configured." });

@@ -60,11 +60,16 @@ app.get("/.well-known/appspecific/com.chrome.devtools.json", (req, res) => {
 // no-store: the spec embeds a host-specific "servers" URL built from the
 // request, so a cached copy would keep serving a stale (or wrong-host) URL
 // to every later visitor.
+// Host is read from X-Forwarded-Host first: behind a reverse proxy that
+// forwards to this app without rewriting the Host header (the proxy's own
+// upstream address, e.g. "localhost:<port>", ends up as the raw Host header
+// instead of the public domain), X-Forwarded-Host still carries the real one.
+const currentHost = (req) => req.get("x-forwarded-host") || req.get("host");
 app.use("/api-docs", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   req.swaggerDoc = {
     ...swaggerDocs,
-    servers: [{ url: `${req.protocol}://${req.get("host")}`, description: "Current Host" }],
+    servers: [{ url: `${req.protocol}://${currentHost(req)}`, description: "Current Host" }],
   };
   next();
 }, swaggerUi.serve, swaggerUi.setup(null, swaggerUiOptions));
@@ -73,7 +78,7 @@ app.get("/api-docs.json", (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.send({
     ...swaggerDocs,
-    servers: [{ url: `${req.protocol}://${req.get("host")}`, description: "Current Host" }],
+    servers: [{ url: `${req.protocol}://${currentHost(req)}`, description: "Current Host" }],
   });
 });
 app.get("/swagger", (req, res) => res.redirect("/api-docs"));

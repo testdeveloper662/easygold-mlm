@@ -81,7 +81,17 @@ const currentProtocol = (req) => (req.get("x-forwarded-proto") || req.protocol).
 const currentOrigin = (req) =>
   process.env.NODE_URL ? process.env.NODE_URL.replace(/\/+$/, "") : `${currentProtocol(req)}://${currentHost(req)}`;
 app.use("/api-docs", (req, res, next) => {
-  res.setHeader("Cache-Control", "no-store");
+  // Only the HTML shell and swagger-ui-init.js actually embed the
+  // host-specific "servers" URL — the vendored JS/CSS/font/image assets
+  // never change per request, so forcing no-store on them too meant the
+  // browser re-downloaded several MB from scratch on every single page
+  // load instead of ever caching them. Scope no-store to just those two.
+  const isVersionedAsset = /\.(js|css|png|ico|map|woff2?)$/.test(req.path) && !req.path.endsWith("swagger-ui-init.js");
+  if (isVersionedAsset) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  } else {
+    res.setHeader("Cache-Control", "no-store");
+  }
   req.swaggerDoc = {
     ...swaggerDocs,
     servers: [{ url: currentOrigin(req), description: "Current Host" }],

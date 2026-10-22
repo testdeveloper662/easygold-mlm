@@ -1057,7 +1057,23 @@ const customCss = `
   .swagger-ui .topbar .dark-mode-toggle { display: none; }
 `;
 
-const swaggerUiOptions = { customJsStr, customCss };
+const swaggerUiOptions = {
+  customJsStr,
+  customCss,
+  // The combined spec (Auth + Admin + Broker + User + External + Upload +
+  // Kontor) has dozens of operations and schemas. Swagger UI's default
+  // behavior is to fully render the "Schemas" section — every model, fully
+  // expanded — on initial mount even though it's collapsed and nobody's
+  // looking at it yet, and to syntax-highlight every example body up front.
+  // Both are well-known perf sinks for large specs; collapsing/disabling
+  // them cuts the client-side render work that happens after the network
+  // part of the page load (already fixed separately) finishes.
+  swaggerOptions: {
+    docExpansion: "list",
+    defaultModelsExpandDepth: -1,
+    syntaxHighlight: false,
+  },
+};
 
 // The 3 vendor <script src> tags in swagger-ui-express's own HTML template
 // are plain, render-blocking scripts with no async/defer, placed right after

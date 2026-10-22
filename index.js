@@ -14,6 +14,7 @@ const userRouter = require("./src/routes/user");
 const uploadRouter = require("./src/routes/upload");
 const kontorRouter = require("./src/routes/kontor");
 const kontorIpWhitelist = require("./src/middleware/kontorIpWhitelist");
+const { servePrecompressedSwaggerAssets, warmPrecompressedSwaggerAssets } = require("./src/middleware/precompressedSwaggerAssets");
 const getPublicVideos = require("./src/controller/user/getPublicVideos");
 const { swaggerUi, swaggerDocs, swaggerUiOptions } = require("./src/swagger/swaggerConfig");
 
@@ -97,7 +98,7 @@ app.use("/api-docs", (req, res, next) => {
     servers: [{ url: currentOrigin(req), description: "Current Host" }],
   };
   next();
-}, swaggerUi.serve, swaggerUi.setup(null, swaggerUiOptions));
+}, servePrecompressedSwaggerAssets, swaggerUi.serve, swaggerUi.setup(null, swaggerUiOptions));
 app.get("/api-docs.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
@@ -196,4 +197,5 @@ app.get("/api/v1/public/videos", getPublicVideos);
 app.listen(port, () => {
   console.log(`Server running on PORT: ${port} 🚀`);
   console.log(`Swagger API Docs available at: http://localhost:${port}/api-docs 📚`);
+  warmPrecompressedSwaggerAssets();
 });

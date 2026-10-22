@@ -21,7 +21,7 @@ const unauthorizedResponses = {
   },
   403: {
     description: "Request IP is not on the Kontor allow-list",
-    content: { "application/json": { schema: { "$ref": "#/components/schemas/KontorErrorResponse" }, example: { success: false, code: "FORBIDDEN", message: "Access denied. This IP address is not authorized to access the Kontor API." } } },
+    content: { "application/json": { schema: { "$ref": "#/components/schemas/KontorErrorResponse" }, example: { success: false, code: "FORBIDDEN", message: "Access denied. Your IP address (203.0.113.42) is not whitelisted for the Kontor API. Please share this exact IP with the EasyGold team to get it added." } } },
   },
 };
 

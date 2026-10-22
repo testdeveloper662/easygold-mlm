@@ -19,7 +19,12 @@ const kontorIpWhitelist = (req, res, next) => {
 
   if (!clientIp || !allowedIps.includes(clientIp)) {
     console.warn(`[Kontor] Blocked request from non-whitelisted IP: ${clientIp}`);
-    return kontorError(res, 403, "FORBIDDEN", "Access denied. This IP address is not authorized to access the Kontor API.");
+    return kontorError(
+      res,
+      403,
+      "FORBIDDEN",
+      `Access denied. Your IP address (${clientIp || "unknown"}) is not whitelisted for the Kontor API. Please share this exact IP with the EasyGold team to get it added.`
+    );
   }
 
   next();

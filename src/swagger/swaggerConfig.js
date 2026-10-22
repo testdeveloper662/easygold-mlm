@@ -1059,8 +1059,32 @@ const customCss = `
 
 const swaggerUiOptions = { customJsStr, customCss };
 
+// The 3 vendor <script src> tags in swagger-ui-express's own HTML template
+// are plain, render-blocking scripts with no async/defer, placed right after
+// this empty div — so the browser can't finish building the real UI (or even
+// apply our own customCss, which lands in a <style> tag further down the
+// page) until all 3 have downloaded and run. Everything before that point in
+// the document, including this div's own inline <style> and markup, renders
+// immediately. SwaggerUIBundle overwrites this div's contents the moment it
+// mounts, so the spinner disappears on its own — no extra JS needed to hide it.
+const loadingPlaceholderHtml = `<style>
+  #swagger-ui-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 120px 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #3b4151; }
+  #swagger-ui-loading .spinner { width: 40px; height: 40px; border: 4px solid #e8e8e8; border-top-color: #49cc90; border-radius: 50%; animation: swagger-ui-spin 0.8s linear infinite; }
+  @keyframes swagger-ui-spin { to { transform: rotate(360deg); } }
+</style>
+<div id="swagger-ui-loading">
+  <div class="spinner"></div>
+  <div>Loading API documentation…</div>
+</div>`;
+
+const renderSwaggerHtml = (swaggerDoc) => {
+  const html = swaggerUi.generateHTML(swaggerDoc, swaggerUiOptions);
+  return html.replace('<div id="swagger-ui"></div>', `<div id="swagger-ui">${loadingPlaceholderHtml}</div>`);
+};
+
 module.exports = {
   swaggerUi,
   swaggerDocs,
   swaggerUiOptions,
+  renderSwaggerHtml,
 };

@@ -16,7 +16,7 @@ const kontorRouter = require("./src/routes/kontor");
 const kontorIpWhitelist = require("./src/middleware/kontorIpWhitelist");
 const { servePrecompressedSwaggerAssets, warmPrecompressedSwaggerAssets } = require("./src/middleware/precompressedSwaggerAssets");
 const getPublicVideos = require("./src/controller/user/getPublicVideos");
-const { swaggerUi, swaggerDocs, swaggerUiOptions } = require("./src/swagger/swaggerConfig");
+const { swaggerUi, swaggerDocs, swaggerUiOptions, renderSwaggerHtml } = require("./src/swagger/swaggerConfig");
 
 const port = process.env.PORT || 4000;
 
@@ -98,7 +98,9 @@ app.use("/api-docs", (req, res, next) => {
     servers: [{ url: currentOrigin(req), description: "Current Host" }],
   };
   next();
-}, servePrecompressedSwaggerAssets, swaggerUi.serve, swaggerUi.setup(null, swaggerUiOptions));
+}, servePrecompressedSwaggerAssets, swaggerUi.serve, (req, res) => {
+  res.send(renderSwaggerHtml(req.swaggerDoc));
+});
 app.get("/api-docs.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");

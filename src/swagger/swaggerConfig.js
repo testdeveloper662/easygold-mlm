@@ -1068,7 +1068,7 @@ const swaggerUiOptions = { customJsStr, customCss };
 // immediately. SwaggerUIBundle overwrites this div's contents the moment it
 // mounts, so the spinner disappears on its own — no extra JS needed to hide it.
 const loadingPlaceholderHtml = `<style>
-  #swagger-ui-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 120px 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #3b4151; }
+  #swagger-ui-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 100vh; box-sizing: border-box; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #3b4151; }
   #swagger-ui-loading .spinner { width: 40px; height: 40px; border: 4px solid #e8e8e8; border-top-color: #49cc90; border-radius: 50%; animation: swagger-ui-spin 0.8s linear infinite; }
   @keyframes swagger-ui-spin { to { transform: rotate(360deg); } }
 </style>

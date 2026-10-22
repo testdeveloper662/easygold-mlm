@@ -23,7 +23,7 @@ const kontorIpWhitelist = (req, res, next) => {
       res,
       403,
       "FORBIDDEN",
-      `Access denied. Your IP address (${clientIp || "unknown"}) is not whitelisted for the Kontor API. Please share this exact IP with the EasyGold team to get it added.`
+      `Access denied. Your IP address (${clientIp || "unknown"}) is not whitelisted for the Kontor API. Please share this exact IP with the EasyGold MLM team to get it added.`
     );
   }
 

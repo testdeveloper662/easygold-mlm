@@ -1077,9 +1077,27 @@ const loadingPlaceholderHtml = `<style>
   <div>Loading API documentation…</div>
 </div>`;
 
+// The 3 vendor files swagger-ui-express hardcodes into its template
+// (swagger-ui-bundle.js, swagger-ui-standalone-preset.js, swagger-ui.css)
+// are generic — they're the same bytes for everyone on this swagger-ui-dist
+// version, not specific to this app. Self-hosting them meant every visitor's
+// download of ~2MB of vendor code went through this one shared, often
+// congested VPS (confirmed: even a 628-byte favicon from this server
+// sometimes took 5+ seconds — the delay isn't about file size at all).
+// Pointing the browser at a CDN moves that traffic onto infrastructure that
+// isn't shared with the dozen other apps on this box, leaving only the
+// genuinely per-request files (the HTML shell and the live spec/API list in
+// swagger-ui-init.js) still depending on this server.
+const SWAGGER_UI_DIST_VERSION = require("swagger-ui-dist/package.json").version;
+const SWAGGER_UI_CDN_BASE = `https://cdn.jsdelivr.net/npm/swagger-ui-dist@${SWAGGER_UI_DIST_VERSION}`;
+
 const renderSwaggerHtml = (swaggerDoc) => {
   const html = swaggerUi.generateHTML(swaggerDoc, swaggerUiOptions);
-  return html.replace('<div id="swagger-ui"></div>', `<div id="swagger-ui">${loadingPlaceholderHtml}</div>`);
+  return html
+    .replace('<div id="swagger-ui"></div>', `<div id="swagger-ui">${loadingPlaceholderHtml}</div>`)
+    .replace('href="./swagger-ui.css"', `href="${SWAGGER_UI_CDN_BASE}/swagger-ui.css"`)
+    .replace('src="./swagger-ui-bundle.js"', `src="${SWAGGER_UI_CDN_BASE}/swagger-ui-bundle.js"`)
+    .replace('src="./swagger-ui-standalone-preset.js"', `src="${SWAGGER_UI_CDN_BASE}/swagger-ui-standalone-preset.js"`);
 };
 
 module.exports = {

@@ -14,7 +14,6 @@ const userRouter = require("./src/routes/user");
 const uploadRouter = require("./src/routes/upload");
 const kontorRouter = require("./src/routes/kontor");
 const kontorIpWhitelist = require("./src/middleware/kontorIpWhitelist");
-const { servePrecompressedSwaggerAssets, warmPrecompressedSwaggerAssets } = require("./src/middleware/precompressedSwaggerAssets");
 const getPublicVideos = require("./src/controller/user/getPublicVideos");
 const { swaggerUi, swaggerDocs, swaggerUiOptions, renderSwaggerHtml } = require("./src/swagger/swaggerConfig");
 
@@ -98,7 +97,7 @@ app.use("/api-docs", (req, res, next) => {
     servers: [{ url: currentOrigin(req), description: "Current Host" }],
   };
   next();
-}, servePrecompressedSwaggerAssets, swaggerUi.serve, (req, res) => {
+}, swaggerUi.serve, (req, res) => {
   res.send(renderSwaggerHtml(req.swaggerDoc));
 });
 app.get("/api-docs.json", (req, res) => {

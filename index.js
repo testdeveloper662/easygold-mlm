@@ -198,5 +198,4 @@ app.get("/api/v1/public/videos", getPublicVideos);
 app.listen(port, () => {
   console.log(`Server running on PORT: ${port} 🚀`);
   console.log(`Swagger API Docs available at: http://localhost:${port}/api-docs 📚`);
-  warmPrecompressedSwaggerAssets();
 });

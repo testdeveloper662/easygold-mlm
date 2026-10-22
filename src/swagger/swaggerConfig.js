@@ -2,22 +2,26 @@ const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 
 // Import modular path specifications
-const authDocs = require("./docs/auth.swagger");
-const adminDocs = require("./docs/admin.swagger");
-const brokerDocs = require("./docs/broker.swagger");
-const userDocs = require("./docs/user.swagger");
-const externalDocs = require("./docs/external.swagger");
-const uploadDocs = require("./docs/upload.swagger");
+// Auth/Admin/Broker/User/External/Upload docs are temporarily disabled below
+// (Kontor-only docs for now) — kept here, commented out, so restoring them
+// is a one-line uncomment, not a rewrite. Nothing was deleted; every file
+// still exists under ./docs and is untouched.
+// const authDocs = require("./docs/auth.swagger");
+// const adminDocs = require("./docs/admin.swagger");
+// const brokerDocs = require("./docs/broker.swagger");
+// const userDocs = require("./docs/user.swagger");
+// const externalDocs = require("./docs/external.swagger");
+// const uploadDocs = require("./docs/upload.swagger");
 const kontorDocs = require("./docs/kontor.swagger");
 
 // Combine all pre-defined paths
 const combinedPaths = {
-  ...authDocs,
-  ...brokerDocs,
-  ...adminDocs,
-  ...userDocs,
-  ...externalDocs,
-  ...uploadDocs,
+  // ...authDocs,
+  // ...brokerDocs,
+  // ...adminDocs,
+  // ...userDocs,
+  // ...externalDocs,
+  // ...uploadDocs,
   ...kontorDocs,
 };
 
@@ -55,19 +59,22 @@ const swaggerDefinition = {
     },
   ],
   tags: [
-    { name: "Auth", description: "Authentication, Registration & Referral Verification" },
-    { name: "Admin - Brokers & Affiliates", description: "Broker & Affiliate approval, status, and network contracts" },
-    { name: "Admin - Commissions", description: "Fixed/variable commissions, manual adjustments, and payout confirmation" },
-    { name: "Admin - Customers", description: "Lead management and referral log status" },
-    { name: "Admin - Contracts & Terms", description: "Contract agreements, legal terms & PDF documents" },
-    { name: "Admin - Marketing", description: "Admin marketing materials (banners, videos, PDFs)" },
-    { name: "Broker - Profile & Network", description: "Downline network, upline hierarchy, and profile branding" },
-    { name: "Broker - Commissions & Payouts", description: "Commissions logs, bank account info, and payout withdrawals" },
-    { name: "Broker - Target Customers", description: "Target customer lead generation, contracts, and tracking" },
-    { name: "Broker - Marketing & Invitations", description: "Affiliate banners, invitations, and assets" },
-    { name: "User & Orders", description: "Order capture engine, preview calculator, and location services" },
-    { name: "External APIs", description: "External partner & customer dashboard endpoints" },
-    { name: "Upload", description: "Media and document upload endpoints" },
+    // Non-Kontor tags, disabled alongside their paths above — restore both
+    // together.
+    // { name: "Auth", description: "Authentication, Registration & Referral Verification" },
+    // { name: "Admin - Brokers & Affiliates", description: "Broker & Affiliate approval, status, and network contracts" },
+    // { name: "Admin - Commissions", description: "Fixed/variable commissions, manual adjustments, and payout confirmation" },
+    // { name: "Admin - Customers", description: "Lead management and referral log status" },
+    // { name: "Admin - Contracts & Terms", description: "Contract agreements, legal terms & PDF documents" },
+    // { name: "Admin - Marketing", description: "Admin marketing materials (banners, videos, PDFs)" },
+    // { name: "Broker - Profile & Network", description: "Downline network, upline hierarchy, and profile branding" },
+    // { name: "Broker - Commissions & Payouts", description: "Commissions logs, bank account info, and payout withdrawals" },
+    // { name: "Broker - Target Customers", description: "Target customer lead generation, contracts, and tracking" },
+    // { name: "Broker - Marketing & Invitations", description: "Affiliate banners, invitations, and assets" },
+    // { name: "User & Orders", description: "Order capture engine, preview calculator, and location services" },
+    // { name: "External APIs", description: "External partner & customer dashboard endpoints" },
+    // { name: "Upload", description: "Media and document upload endpoints" },
+    { name: "Kontor Integration", description: "Hartmann & Benz (Kontor) broker, order, and reconciliation integration" },
   ],
   components: {
     securitySchemes: {

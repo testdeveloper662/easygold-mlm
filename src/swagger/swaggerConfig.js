@@ -758,6 +758,7 @@ const swaggerDefinition = {
           effective_at: { type: "string", format: "date-time" },
           reason_key: { type: "string" },
           lang: { type: "string", example: "de" },
+          landing_page_url: { type: "string", nullable: true, description: "The partner's page hosted by Kontor, e.g. https://goldsilberstore.com/partner/<name>. Kontor owns name selection and hosting; we just mirror the URL for our own dashboard.", example: "https://goldsilberstore.com/partner/beispiel-edelmetalle" },
         },
       },
       KontorBrokerStatusRequest: {
@@ -791,6 +792,7 @@ const swaggerDefinition = {
           bank_on_file: { type: "boolean", description: "Whether an encrypted bank record exists — the decrypted data is never returned here" },
           package: { type: "string", nullable: true },
           approved_at: { type: "string", nullable: true },
+          landing_page_url: { type: "string", nullable: true, description: "The partner's page hosted by Kontor, as last sent via broker/update", example: "https://goldsilberstore.com/partner/beispiel-edelmetalle" },
           created_at: { type: "string", format: "date-time" },
           updated_at: { type: "string", format: "date-time" },
         },

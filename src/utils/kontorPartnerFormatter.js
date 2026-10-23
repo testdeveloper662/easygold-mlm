@@ -15,6 +15,7 @@ const META_KEYS = [
   "kontor_package",
   "kontor_approved_at",
   "kontor_bank_details_encrypted",
+  "kontor_landing_page_url",
 ];
 
 // Batch-fetches UsersMeta for a set of user_ids and groups it, so list
@@ -62,6 +63,10 @@ const formatPartner = (broker, user, meta = {}) => ({
   bank_on_file: Boolean(meta.kontor_bank_details_encrypted),
   package: meta.kontor_package || null,
   approved_at: meta.kontor_approved_at || null,
+  // Kontor owns name selection and hosting for this page — we just mirror
+  // whatever URL they send us via broker/update so our own dashboard can
+  // show/link it without rebuilding that logic.
+  landing_page_url: meta.kontor_landing_page_url || null,
   created_at: broker.createdAt,
   updated_at: broker.updatedAt,
 });

@@ -42,6 +42,7 @@ const applyKontorBrokerUpdate = async (broker, body) => {
     effective_at,
     reason_key,
     lang,
+    landing_page_url,
   } = body;
   const { legal_name, legal_form, street, postcode, city, country, vat_id, vat_id_verified_at, tax_number } = company;
   const { name: contactName, email, phone, language } = contact;
@@ -82,6 +83,10 @@ const applyKontorBrokerUpdate = async (broker, body) => {
     kontor_approved_at: approved_at,
     kontor_effective_at: effective_at,
     kontor_reason_key: reason_key,
+    // The Kontor-hosted page at goldsilberstore.com/partner/<name> — Kontor
+    // owns name selection and hosting, this is just a read-only mirror so
+    // our own dashboard can show/link it without building that logic twice.
+    kontor_landing_page_url: landing_page_url,
   };
 
   for (const [key, value] of Object.entries(metaUpdates)) {

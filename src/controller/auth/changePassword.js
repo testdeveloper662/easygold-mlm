@@ -1,8 +1,5 @@
 const db = require("../../models");
-const nodemailer = require("nodemailer");
-
-const MAIL_SENDER = process.env.MAIL_SENDER;
-const MAIL_PASSWORD = process.env.MAIL_PASSWORD;
+const SendEmailHelper = require("../../utils/sendEmailHelper");
 
 const ChangePassword = async (req, res) => {
   try {
@@ -38,27 +35,14 @@ const ChangePassword = async (req, res) => {
     });
 
     // Send email with generated OTP
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: MAIL_SENDER,
-        pass: MAIL_PASSWORD,
-      },
-    });
-
-    const mailOptions = {
-      from: MAIL_SENDER,
-      to: email,
-      subject: "Password Reset OTP",
-      html: `
+    const htmlContent = `
         <h3>Password reset request</h3>
         <p>Your OTP for password change is: <strong>${otp}</strong></p>
         <p>This OTP will expire at ${otpExpires.toLocaleString()}.</p>
         <p>If you did not request this, please ignore this email.</p>
-      `,
-    };
+      `;
 
-    await transporter.sendMail(mailOptions);
+    await SendEmailHelper("Password Reset OTP", htmlContent, email);
 
     return res.status(200).json({
       success: true,

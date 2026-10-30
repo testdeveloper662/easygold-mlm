@@ -9,7 +9,9 @@ const MailComposer = require("nodemailer/lib/mail-composer");
 // "send mail as" alias (no-reply@) — Gmail rewrites any other From to
 // support@, per Chris's explicit instruction.
 const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
-const IMPERSONATED_USER = '"GoldSilberStore" <support@goldsilberstore.com>';
+// JWT "sub" (impersonation) must be a bare email address - Google rejects a
+// display-name-formatted string here with "Invalid impersonation sub field".
+const IMPERSONATED_USER = "support@goldsilberstore.com";
 const SYSTEM_FROM = '"GoldSilberStore" <no-reply@goldsilberstore.com>';
 
 let cachedClient = null;

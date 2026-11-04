@@ -119,40 +119,42 @@ const runBrokerRegisterBackground = async ({
 
     const formattedAddress = addressParts.join(", ");
 
-    const parentCompanyName = getMetaValue(
-      parentBroker.user?.user_meta,
+    const parentMeta = parentBroker?.user?.user_meta || [];
+
+    const parentCompanyName = parentBroker ? getMetaValue(
+      parentMeta,
       "u_company"
-    );
+    ) : "Easy Gold";
 
-    const parentSignature = getMetaValue(
-      parentBroker.user?.user_meta,
+    const parentSignature = parentBroker ? getMetaValue(
+      parentMeta,
       "signatureData"
-    );
+    ) : null;
 
-    const parentstreetno = getMetaValue(
-      parentBroker.user?.user_meta,
+    const parentstreetno = parentBroker ? getMetaValue(
+      parentMeta,
       "u_street_no"
-    );
+    ) : "";
 
-    const parentaddress = getMetaValue(
-      parentBroker.user?.user_meta,
+    const parentaddress = parentBroker ? getMetaValue(
+      parentMeta,
       "u_street"
-    );
+    ) : "";
 
-    const parentcity = getMetaValue(
-      parentBroker.user?.user_meta,
+    const parentcity = parentBroker ? getMetaValue(
+      parentMeta,
       "u_location"
-    );
+    ) : "";
 
-    const parentpostalcode = getMetaValue(
-      parentBroker.user?.user_meta,
+    const parentpostalcode = parentBroker ? getMetaValue(
+      parentMeta,
       "u_postcode"
-    );
+    ) : "";
 
-    const parentCountry = getMetaValue(
-      parentBroker.user?.user_meta,
+    const parentCountry = parentBroker ? getMetaValue(
+      parentMeta,
       "u_country"
-    )
+    ) : "";
 
     const parentaddressParts = [parentstreetno, parentaddress, parentcity, parentpostalcode, parentCountry]
       .map(v => v?.toString().trim())                                          // remove spaces
@@ -160,22 +162,25 @@ const runBrokerRegisterBackground = async ({
 
     const parentformattedAddress = parentaddressParts.join(", ");
 
-    const parentVatId = getMetaValue(
-      parentBroker.user?.user_meta,
+    const parentVatId = parentBroker ? getMetaValue(
+      parentMeta,
       "u_vat_no"
-    )
+    ) : "";
 
-    const parentTaxId = getMetaValue(
-      parentBroker.user?.user_meta,
+    const parentTaxId = parentBroker ? getMetaValue(
+      parentMeta,
       "u_tax_no"
-    )
+    ) : "";
 
-    const parentPhone = getMetaValue(
-      parentBroker.user?.user_meta,
+    const parentPhone = parentBroker ? getMetaValue(
+      parentMeta,
       "u_phone"
-    )
+    ) : "";
 
-    const parentInfoParts = [parentBroker.user?.display_name, parentVatId, parentTaxId, parentformattedAddress, parentPhone]
+    const parentDisplayName = parentBroker?.user?.display_name || (isAdminParent ? "Easy Gold Admin" : "");
+    const parentEmail = parentBroker?.user?.user_email || (isAdminParent ? (process.env.ADMIN_NOTIFICATION_EMAIL || process.env.MAIL_SENDER || "") : "");
+
+    const parentInfoParts = [parentDisplayName, parentVatId, parentTaxId, parentformattedAddress, parentPhone]
       .map(v => v?.toString().trim())                                          // remove spaces
       .filter(v => v && v !== "undefined" && v !== "null");                    // remove bad values
 
@@ -212,9 +217,9 @@ const runBrokerRegisterBackground = async ({
       parent_b2b_signature: getSignatureImgHtml(parentSignature),
       date: new Date().toISOString().split("T")[0],
       ip_address: ip || "",
-      parent_b2b_name: parentBroker.user?.display_name || "",
+      parent_b2b_name: parentDisplayName || "",
       parent_b2b_address: parentformattedAddress || "",
-      parent_b2b_email: parentBroker.user?.user_email || "",
+      parent_b2b_email: parentEmail || "",
       parent_b2b_location: parentcity || "",
       language: languageForApi,
       day: day,
@@ -233,7 +238,13 @@ const runBrokerRegisterBackground = async ({
 
     console.log("📄 [partnerPdfData Data Check]:", JSON.stringify(partnerPdfData, null, 2));
 
-    let partnerDocsData = await generatePartnerPDF(partnerPdfData);
+    let partnerDocsData = {};
+    try {
+      partnerDocsData = (await generatePartnerPDF(partnerPdfData)) || {};
+    } catch (pdfErr) {
+      console.error("Error generating partner PDFs during broker registration:", pdfErr);
+      partnerDocsData = {};
+    }
 
     const user_id = apiResponse.data?.data?.user_id;
     console.log("user_id:", user_id);
@@ -306,23 +317,26 @@ const runBrokerRegisterBackground = async ({
       }
     }
 
+    const effectiveAdminCode = process.env.ADMIN_REFERRAL_CODE || "ADMIN";
+    const refByCode = isAdminParent ? effectiveAdminCode : (parentBroker ? parentBroker.referral_code : null);
+
     // Create or update broker entry
     let broker = await db.Brokers.findOne({ where: { user_id: user_id } });
     if (broker && isCustomerUpgrading) {
       await broker.update({
         parent_id: isAdminParent ? null : brokerParentId,
         referral_code: newReferralCode,
-        referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+        referred_by_code: refByCode,
         veriff_session_id: veriff_session_id || null,
-        untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
-        maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
-        inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
-        llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
-        goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
-        hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
-        binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
-        partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
-        uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
+        untermaklervertrag_doc: partnerDocsData.untermaklervertrag_doc ? `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}` : null,
+        maklervertrag_doc: partnerDocsData.maklervertrag_doc ? `uploads/agreements/${partnerDocsData.maklervertrag_doc}` : null,
+        inc_partnership_doc: partnerDocsData.inc_partnership_doc ? `uploads/agreements/${partnerDocsData.inc_partnership_doc}` : null,
+        llc_partnership_doc: partnerDocsData.llc_partnership_doc ? `uploads/agreements/${partnerDocsData.llc_partnership_doc}` : null,
+        goldflex_partnership_doc: partnerDocsData.goldflex_partnership_doc ? `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}` : null,
+        hartmann_benz_gmbh_doc: partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"] ? `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}` : null,
+        binding_loi_doc: partnerDocsData.binding_loi_doc ? `uploads/agreements/${partnerDocsData.binding_loi_doc}` : null,
+        partner_tax_billing_doc: partnerDocsData.partner_tax_billing_doc ? `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}` : null,
+        uk_company_sales_platform_doc: partnerDocsData.uk_company_sales_platform_doc ? `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}` : null,
         ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
         option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
       });
@@ -331,19 +345,19 @@ const runBrokerRegisterBackground = async ({
         user_id: user_id,
         parent_id: isAdminParent ? null : brokerParentId,
         referral_code: newReferralCode,
-        referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+        referred_by_code: refByCode,
         children_count: 0,
         total_commission_amount: 0,
         veriff_session_id: veriff_session_id || null,
-        untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
-        maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
-        inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
-        llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
-        goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
-        hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
-        binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
-        partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
-        uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
+        untermaklervertrag_doc: partnerDocsData.untermaklervertrag_doc ? `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}` : null,
+        maklervertrag_doc: partnerDocsData.maklervertrag_doc ? `uploads/agreements/${partnerDocsData.maklervertrag_doc}` : null,
+        inc_partnership_doc: partnerDocsData.inc_partnership_doc ? `uploads/agreements/${partnerDocsData.inc_partnership_doc}` : null,
+        llc_partnership_doc: partnerDocsData.llc_partnership_doc ? `uploads/agreements/${partnerDocsData.llc_partnership_doc}` : null,
+        goldflex_partnership_doc: partnerDocsData.goldflex_partnership_doc ? `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}` : null,
+        hartmann_benz_gmbh_doc: partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"] ? `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}` : null,
+        binding_loi_doc: partnerDocsData.binding_loi_doc ? `uploads/agreements/${partnerDocsData.binding_loi_doc}` : null,
+        partner_tax_billing_doc: partnerDocsData.partner_tax_billing_doc ? `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}` : null,
+        uk_company_sales_platform_doc: partnerDocsData.uk_company_sales_platform_doc ? `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}` : null,
         ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
         option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
       });
@@ -357,20 +371,20 @@ const runBrokerRegisterBackground = async ({
           await affiliate.update({
             parent_id: isAdminParent ? null : affiliateParentId,
             referral_code: newReferralCode,
-            referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+            referred_by_code: refByCode,
             person_typ: legalStatus || "",
             land: country || "",
             steuer_id: taxNumber || "",
             veriff_session_id: veriff_session_id || null,
-            untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
-            maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
-            inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
-            llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
-            goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
-            hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
-            binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
-            partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
-            uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
+            untermaklervertrag_doc: partnerDocsData.untermaklervertrag_doc ? `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}` : null,
+            maklervertrag_doc: partnerDocsData.maklervertrag_doc ? `uploads/agreements/${partnerDocsData.maklervertrag_doc}` : null,
+            inc_partnership_doc: partnerDocsData.inc_partnership_doc ? `uploads/agreements/${partnerDocsData.inc_partnership_doc}` : null,
+            llc_partnership_doc: partnerDocsData.llc_partnership_doc ? `uploads/agreements/${partnerDocsData.llc_partnership_doc}` : null,
+            goldflex_partnership_doc: partnerDocsData.goldflex_partnership_doc ? `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}` : null,
+            hartmann_benz_gmbh_doc: partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"] ? `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}` : null,
+            binding_loi_doc: partnerDocsData.binding_loi_doc ? `uploads/agreements/${partnerDocsData.binding_loi_doc}` : null,
+            partner_tax_billing_doc: partnerDocsData.partner_tax_billing_doc ? `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}` : null,
+            uk_company_sales_platform_doc: partnerDocsData.uk_company_sales_platform_doc ? `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}` : null,
             ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
             option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
           });
@@ -379,22 +393,22 @@ const runBrokerRegisterBackground = async ({
             user_id: user_id,
             parent_id: isAdminParent ? null : affiliateParentId,
             referral_code: newReferralCode,
-            referred_by_code: isAdminParent ? process.env.ADMIN_REFERRAL_CODE : parentBroker.referral_code,
+            referred_by_code: refByCode,
             person_typ: legalStatus || "",
             land: country || "",
             steuer_id: taxNumber || "",
             children_count: 0,
             total_commission_amount: 0,
             veriff_session_id: veriff_session_id || null,
-            untermaklervertrag_doc: `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}`,
-            maklervertrag_doc: `uploads/agreements/${partnerDocsData.maklervertrag_doc}`,
-            inc_partnership_doc: `uploads/agreements/${partnerDocsData.inc_partnership_doc}`,
-            llc_partnership_doc: `uploads/agreements/${partnerDocsData.llc_partnership_doc}`,
-            goldflex_partnership_doc: `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}`,
-            hartmann_benz_gmbh_doc: `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}`,
-            binding_loi_doc: `uploads/agreements/${partnerDocsData.binding_loi_doc}`,
-            partner_tax_billing_doc: `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}`,
-            uk_company_sales_platform_doc: `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}`,
+            untermaklervertrag_doc: partnerDocsData.untermaklervertrag_doc ? `uploads/agreements/${partnerDocsData.untermaklervertrag_doc}` : null,
+            maklervertrag_doc: partnerDocsData.maklervertrag_doc ? `uploads/agreements/${partnerDocsData.maklervertrag_doc}` : null,
+            inc_partnership_doc: partnerDocsData.inc_partnership_doc ? `uploads/agreements/${partnerDocsData.inc_partnership_doc}` : null,
+            llc_partnership_doc: partnerDocsData.llc_partnership_doc ? `uploads/agreements/${partnerDocsData.llc_partnership_doc}` : null,
+            goldflex_partnership_doc: partnerDocsData.goldflex_partnership_doc ? `uploads/agreements/${partnerDocsData.goldflex_partnership_doc}` : null,
+            hartmann_benz_gmbh_doc: partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"] ? `uploads/agreements/${partnerDocsData["hartmann_benz_gmbh_white-label_service_doc"]}` : null,
+            binding_loi_doc: partnerDocsData.binding_loi_doc ? `uploads/agreements/${partnerDocsData.binding_loi_doc}` : null,
+            partner_tax_billing_doc: partnerDocsData.partner_tax_billing_doc ? `uploads/agreements/${partnerDocsData.partner_tax_billing_doc}` : null,
+            uk_company_sales_platform_doc: partnerDocsData.uk_company_sales_platform_doc ? `uploads/agreements/${partnerDocsData.uk_company_sales_platform_doc}` : null,
             ncnda_doc: partnerDocsData.ncnda_doc ? `uploads/agreements/${partnerDocsData.ncnda_doc}` : null,
             option_subscription_doc: partnerDocsData.option_subscription_doc ? `uploads/agreements/${partnerDocsData.option_subscription_doc}` : null,
           });
@@ -408,7 +422,6 @@ const runBrokerRegisterBackground = async ({
     if (db.UserReferrals) {
       try {
         const parentUserId = (!isAdminParent && parentBroker) ? parentBroker.user_id : null;
-        const refByCode = isAdminParent ? process.env.ADMIN_REFERRAL_CODE : (parentBroker ? parentBroker.referral_code : null);
 
         const existingRef = await db.UserReferrals.findOne({ where: { user_id: user_id } });
         if (existingRef) {
@@ -588,18 +601,21 @@ const runBrokerRegisterBackground = async ({
     };
 
     try {
-      const emailData = await getRenderedEmail(96, parentBroker?.language || "en", templateVariables);
-      const finalFrom = MAIL_SENDER;
+      const parentEmail = parentBroker?.user?.user_email;
+      if (parentEmail) {
+        const emailData = await getRenderedEmail(96, parentBroker?.language || "en", templateVariables);
+        const finalFrom = MAIL_SENDER;
 
-      const mailOptions = {
-        from: finalFrom,
-        to: parentBroker.user?.user_email,
-        subject: emailData?.subject,
-        html: emailData?.htmlContent,
-      };
+        const mailOptions = {
+          from: finalFrom,
+          to: parentEmail,
+          subject: emailData?.subject,
+          html: emailData?.htmlContent,
+        };
 
-      if (mailOptions.to && mailOptions.subject && mailOptions.html) {
-        await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to);
+        if (mailOptions.to && mailOptions.subject && mailOptions.html) {
+          await SendEmailHelper(mailOptions.subject, mailOptions.html, mailOptions.to);
+        }
       }
     } catch (templateError) {
       console.error("Error sending broker registration email to parent:", templateError.message);
@@ -889,12 +905,17 @@ const BrokerRegistration = async (req, res) => {
     console.log("222222222222222222222222222");
 
     // Determine parent (admin or broker)
-    const isAdminParent = referralCode === process.env.ADMIN_REFERRAL_CODE;
+    const cleanReferralCode = (referralCode || "").trim().toUpperCase();
+    const adminReferralCode = (process.env.ADMIN_REFERRAL_CODE || "ADMIN").trim().toUpperCase();
+    const isAdminParent =
+      cleanReferralCode === adminReferralCode ||
+      cleanReferralCode === "ADMIN" ||
+      cleanReferralCode === "ADMINISTRATOR";
     let parentBroker = null;
 
     if (!isAdminParent) {
       parentBroker = await db.Brokers.findOne({
-        where: { referral_code: referralCode },
+        where: { referral_code: [referralCode, cleanReferralCode] },
         include: [
           {
             model: db.Users,
@@ -927,7 +948,7 @@ const BrokerRegistration = async (req, res) => {
       // Fallback: check Affiliates table if not found in Brokers table
       if (!parentBroker && db.Affiliates) {
         parentBroker = await db.Affiliates.findOne({
-          where: { referral_code: referralCode },
+          where: { referral_code: [referralCode, cleanReferralCode] },
           include: [
             {
               model: db.Users,

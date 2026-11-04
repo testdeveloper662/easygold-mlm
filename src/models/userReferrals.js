@@ -20,12 +20,12 @@ const UserReferrals = sequelize.define(
       onDelete: "CASCADE",
     },
     referral_code: {
-      type: Sequelize.STRING(20),
+      type: Sequelize.STRING(50),
       unique: true,
       allowNull: true,
     },
     referred_by_code: {
-      type: Sequelize.STRING(20),
+      type: Sequelize.STRING(50),
       allowNull: true,
     },
     parent_user_id: {

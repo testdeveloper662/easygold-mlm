@@ -50,6 +50,7 @@ const RegisterAffiliate = async (req, res) => {
       email: email,
       referral_code: referralCodeToUse,
       referal_code_link: `<a href="${registerUrl}" style="color: #7c3aed; text-decoration: none; font-weight: bold;">${linkText}</a>`,
+      referral_code_link: `<a href="${registerUrl}" style="color: #7c3aed; text-decoration: none; font-weight: bold;">${linkText}</a>`,
       brokerName: affiliateName || email.split("@")[0],
     };
 

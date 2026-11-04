@@ -104,21 +104,21 @@ const AffiliateRegistration = async (req, res) => {
       // 1. Search in UserReferrals table first
       if (db.UserReferrals) {
         parentUserRef = await db.UserReferrals.findOne({
-          where: { referral_code: empfehlercode },
+          where: { referral_code: [empfehlercode, cleanCode] },
         });
       }
 
       // 2. Search in Brokers table
       if (!parentUserRef) {
         parentBroker = await db.Brokers.findOne({
-          where: { referral_code: empfehlercode },
+          where: { referral_code: [empfehlercode, cleanCode] },
         });
       }
 
       // 3. Search in Affiliates table if not found in Brokers
       if (!parentUserRef && !parentBroker && db.Affiliates) {
         const parentAffiliate = await db.Affiliates.findOne({
-          where: { referral_code: empfehlercode },
+          where: { referral_code: [empfehlercode, cleanCode] },
         });
         if (parentAffiliate) {
           parentBroker = parentAffiliate;
@@ -192,23 +192,51 @@ const AffiliateRegistration = async (req, res) => {
       ? null
       : (parentUserRef ? parentUserRef.user_id : (parentBroker ? parentBroker.user_id : null));
 
+    const effectiveAdminCode = ADMIN_REFERRAL_CODE || "ADMIN";
+    const refByCode = isAdminParent
+      ? effectiveAdminCode
+      : (parentBroker?.referral_code || parentUserRef?.referral_code || empfehlercode || null);
+
+    let brokerParentId = null;
+    let affiliateParentId = null;
+
+    if (!isAdminParent && parentUserId) {
+      if (db.Brokers) {
+        const parentInBrokers = await db.Brokers.findOne({
+          where: { user_id: parentUserId },
+        });
+        if (parentInBrokers) brokerParentId = parentInBrokers.id;
+      }
+
+      if (db.Affiliates) {
+        const parentInAffiliates = await db.Affiliates.findOne({
+          where: { user_id: parentUserId },
+        });
+        if (parentInAffiliates) affiliateParentId = parentInAffiliates.id;
+      }
+    }
+
+    if (!affiliateParentId && parentBroker && parentBroker.id) {
+      affiliateParentId = parentBroker.id;
+    }
+
     // Create or Update Affiliate entry (every Broker is an Affiliate, but not every Affiliate is a Broker)
     if (db.Affiliates) {
       try {
         let affiliate = await db.Affiliates.findOne({ where: { user_id: newUser.ID } });
         if (affiliate && isCustomerUpgrading) {
           await affiliate.update({
-            parent_id: isAdminParent ? null : parentBroker?.id || null,
+            parent_id: isAdminParent ? null : affiliateParentId || null,
             referral_code: newReferralCode,
-            referred_by_code: empfehlercode,
+            referred_by_code: refByCode,
             veriff_session_id: null,
           });
         } else {
           await db.Affiliates.create({
             user_id: newUser.ID,
-            parent_id: isAdminParent ? null : parentBroker?.id || null,
+            parent_id: isAdminParent ? null : affiliateParentId || null,
             referral_code: newReferralCode,
-            referred_by_code: empfehlercode,
+            referred_by_code: refByCode,
             children_count: 0,
             total_commission_amount: 0,
             veriff_session_id: null,
@@ -221,40 +249,24 @@ const AffiliateRegistration = async (req, res) => {
     }
 
     // Every affiliate is also registered in the Brokers table so they exist in the broker network too.
-    // Private individuals (role_id 4) are excluded — they belong to the affiliate network only.
     if (db.Brokers) {
       try {
-        let brokerParentId = null;
-        if (!isAdminParent && parentUserId) {
-          const parentInBrokers = await db.Brokers.findOne({
-            where: { user_id: parentUserId },
-          });
-          if (parentInBrokers) brokerParentId = parentInBrokers.id;
-        }
-
         let broker = await db.Brokers.findOne({ where: { user_id: newUser.ID } });
         if (broker && isCustomerUpgrading) {
           await broker.update({
-            parent_id: brokerParentId,
+            parent_id: isAdminParent ? null : brokerParentId || null,
             referral_code: newReferralCode,
-            referred_by_code: empfehlercode || null,
+            referred_by_code: refByCode,
           });
         } else {
           await db.Brokers.create({
             user_id: newUser.ID,
-            parent_id: brokerParentId,
+            parent_id: isAdminParent ? null : brokerParentId || null,
             referral_code: newReferralCode,
-            referred_by_code: empfehlercode || null,
+            referred_by_code: refByCode,
             children_count: 0,
             total_commission_amount: 0,
           });
-
-          if (brokerParentId && !isCustomerUpgrading) {
-            await db.Brokers.increment("children_count", {
-              by: 1,
-              where: { id: brokerParentId },
-            });
-          }
         }
       } catch (brokErr) {
         console.error("Error inserting/updating Brokers table:", brokErr);
@@ -268,20 +280,20 @@ const AffiliateRegistration = async (req, res) => {
         if (userRef) {
           await userRef.update({
             referral_code: newReferralCode,
-            referred_by_code: empfehlercode || null,
+            referred_by_code: refByCode,
             parent_user_id: parentUserId,
           });
         } else {
           await db.UserReferrals.create({
             user_id: newUser.ID,
             referral_code: newReferralCode,
-            referred_by_code: empfehlercode || null,
+            referred_by_code: refByCode,
             parent_user_id: parentUserId,
             children_count: 0,
           });
 
           // Increment parent's children_count in UserReferrals
-          if (parentUserId) {
+          if (parentUserId && !isCustomerUpgrading) {
             await db.UserReferrals.increment('children_count', {
               by: 1,
               where: { user_id: parentUserId },
@@ -293,11 +305,29 @@ const AffiliateRegistration = async (req, res) => {
       }
     }
 
-    // Update parent children count
-    if (!isAdminParent && parentBroker && !isCustomerUpgrading) {
-      await parentBroker.update({
-        children_count: (parentBroker.children_count || 0) + 1,
-      });
+    // Update parent children count in Affiliates and Brokers tables
+    if (!isAdminParent && !isCustomerUpgrading) {
+      if (affiliateParentId && db.Affiliates) {
+        try {
+          await db.Affiliates.increment("children_count", {
+            by: 1,
+            where: { id: affiliateParentId },
+          });
+        } catch (cntErr) {
+          console.error("Error incrementing Affiliates children_count:", cntErr.message);
+        }
+      }
+
+      if (brokerParentId && db.Brokers) {
+        try {
+          await db.Brokers.increment("children_count", {
+            by: 1,
+            where: { id: brokerParentId },
+          });
+        } catch (cntErr) {
+          console.error("Error incrementing Brokers children_count:", cntErr.message);
+        }
+      }
     }
 
     // Save metadata
@@ -359,7 +389,7 @@ const AffiliateRegistration = async (req, res) => {
     try {
       const invData = {
         invitation_status: "REGISTERED",
-        ...(parentBroker?.id ? { invited_by: parentBroker.id } : {}),
+        ...(affiliateParentId || parentBroker?.id ? { invited_by: affiliateParentId || parentBroker.id } : {}),
       };
 
       if (db.AffiliateInvitations) {
@@ -370,7 +400,7 @@ const AffiliateRegistration = async (req, res) => {
           await db.AffiliateInvitations.create({
             email,
             invitation_status: "REGISTERED",
-            invited_by: parentBroker?.id || null,
+            invited_by: affiliateParentId || parentBroker?.id || null,
             last_invitation_sent: new Date(),
           });
         }

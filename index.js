@@ -6,6 +6,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const compression = require("compression");
 const path = require("path");
+const morgan = require("morgan");
 const authRouter = require("./src/routes/auth");
 const adminRouter = require("./src/routes/admin");
 const brokerRouter = require("./src/routes/broker");
@@ -30,6 +31,19 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/public", express.static(path.join(__dirname, "public")));
 
 app.use(bodyParser.json({ limit: "35mb" }));
+
+// Morgan HTTP request logging: scoped to Kontor routes and Order Capture APIs
+const morganFormat = process.env.NODE_ENV === "production" ? "combined" : "dev";
+app.use(
+  morgan(morganFormat, {
+    skip: (req, res) => {
+      const url = req.originalUrl || req.url || "";
+      const isKontor = url.includes("/kontor");
+      const isOrderCapture = url.includes("capture-order");
+      return !isKontor && !isOrderCapture;
+    },
+  })
+);
 
 // Custom middleware for logging
 app.use((req, res, next) => {

@@ -40,7 +40,7 @@ const RegisterAffiliate = async (req, res) => {
       }
     }
 
-    const referralCodeToUse = senderReferralCode || ADMIN_REFERRAL_CODE || "ADMIN";
+    const referralCodeToUse = senderReferralCode || ADMIN_REFERRAL_CODE || "ROOTPARTNER";
     const encodedReferralCode = Buffer.from(String(referralCodeToUse), "utf-8").toString("base64");
 
     const registerUrl = `${FRONTEND_URL}/affiliate-register?referral=${encodedReferralCode}`;

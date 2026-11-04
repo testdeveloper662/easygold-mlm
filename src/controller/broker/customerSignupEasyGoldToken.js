@@ -194,8 +194,8 @@ const customerSignupEasyGoldToken = async (req, res) => {
             }
         }
 
-        const adminCode = (process.env.ADMIN_REFERRAL_CODE || "ADMIN").trim().toUpperCase();
-        if (!parentBroker && !parentCustomer && (normalizedCode.toUpperCase() === adminCode || normalizedCode.toUpperCase() === "ESYGOLD916")) {
+        const adminCode = (process.env.ADMIN_REFERRAL_CODE || "ROOTPARTNER").trim().toUpperCase();
+        if (!parentBroker && !parentCustomer && (normalizedCode.toUpperCase() === adminCode || normalizedCode.toUpperCase() === "ROOTPARTNER" || normalizedCode.toUpperCase() === "ESYGOLD916" || normalizedCode.toUpperCase() === "ADMIN")) {
             parentBroker = await db.Brokers.findOne({
                 include: [
                     {

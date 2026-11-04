@@ -89,11 +89,13 @@ const AffiliateRegistration = async (req, res) => {
 
     // Validate referral code (must exist or be admin code)
     const cleanCode = (empfehlercode || "").trim().toUpperCase();
-    const adminCode = (ADMIN_REFERRAL_CODE || "ADMIN").trim().toUpperCase();
+    const adminCode = (ADMIN_REFERRAL_CODE || "ROOTPARTNER").trim().toUpperCase();
 
     const isAdminParent =
       !empfehlercode ||
       cleanCode === adminCode ||
+      cleanCode === "ROOTPARTNER" ||
+      cleanCode === "ESYGOLD916" ||
       cleanCode === "ADMIN" ||
       cleanCode === "ADMINISTRATOR";
 
@@ -192,7 +194,7 @@ const AffiliateRegistration = async (req, res) => {
       ? null
       : (parentUserRef ? parentUserRef.user_id : (parentBroker ? parentBroker.user_id : null));
 
-    const effectiveAdminCode = ADMIN_REFERRAL_CODE || "ADMIN";
+    const effectiveAdminCode = ADMIN_REFERRAL_CODE || "ROOTPARTNER";
     const refByCode = isAdminParent
       ? effectiveAdminCode
       : (parentBroker?.referral_code || parentUserRef?.referral_code || empfehlercode || null);

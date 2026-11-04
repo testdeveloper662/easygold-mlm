@@ -70,7 +70,7 @@ const RegisterBroker = async (req, res) => {
     }
 
     // Create register URL with base64 encoded referral code (Node.js uses Buffer, not btoa)
-    const encodedReferralCode = Buffer.from(ADMIN_REFERRAL_CODE || "ADMIN").toString("base64");
+    const encodedReferralCode = Buffer.from(ADMIN_REFERRAL_CODE || "ROOTPARTNER").toString("base64");
     const registerUrl = `${process.env.FRONTEND_URL || FRONTEND_URL}/broker-register/step1/${encodedReferralCode}`;
 
     // Create clickable link text based on language
@@ -80,7 +80,7 @@ const RegisterBroker = async (req, res) => {
     // Variable names must match EXACTLY the placeholders in database template: [email], [referral_code], [referal_code_link], [brokerName], [tempPassword]
     const templateVariables = {
       email: email, // Replaces [email]
-      referral_code: ADMIN_REFERRAL_CODE || "ADMIN", // Replaces [referral_code]
+      referral_code: ADMIN_REFERRAL_CODE || "ROOTPARTNER", // Replaces [referral_code]
       referal_code_link: `<a href="${registerUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${linkText}</a>`, // Replaces [referal_code_link] - now a complete HTML anchor tag
       referral_code_link: `<a href="${registerUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${linkText}</a>`, // Fallback for alternate spelling
       brokerName: brokerName || email.split("@")[0], // Replaces [brokerName] - fallback to email username if not provided

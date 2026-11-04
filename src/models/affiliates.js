@@ -31,12 +31,12 @@ const Affiliates = sequelize.define(
       allowNull: true,
     },
     referral_code: {
-      type: Sequelize.STRING(10),
+      type: Sequelize.STRING(50),
       unique: true,
       allowNull: true,
     },
     referred_by_code: {
-      type: Sequelize.STRING(10),
+      type: Sequelize.STRING(50),
       allowNull: true,
     },
     children_count: {

@@ -317,7 +317,7 @@ const runBrokerRegisterBackground = async ({
       }
     }
 
-    const effectiveAdminCode = process.env.ADMIN_REFERRAL_CODE || "ADMIN";
+    const effectiveAdminCode = process.env.ADMIN_REFERRAL_CODE || "ROOTPARTNER";
     const refByCode = isAdminParent ? effectiveAdminCode : (parentBroker ? parentBroker.referral_code : null);
 
     // Create or update broker entry
@@ -906,9 +906,11 @@ const BrokerRegistration = async (req, res) => {
 
     // Determine parent (admin or broker)
     const cleanReferralCode = (referralCode || "").trim().toUpperCase();
-    const adminReferralCode = (process.env.ADMIN_REFERRAL_CODE || "ADMIN").trim().toUpperCase();
+    const adminReferralCode = (process.env.ADMIN_REFERRAL_CODE || "ROOTPARTNER").trim().toUpperCase();
     const isAdminParent =
       cleanReferralCode === adminReferralCode ||
+      cleanReferralCode === "ROOTPARTNER" ||
+      cleanReferralCode === "ESYGOLD916" ||
       cleanReferralCode === "ADMIN" ||
       cleanReferralCode === "ADMINISTRATOR";
     let parentBroker = null;

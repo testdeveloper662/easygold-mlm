@@ -66,7 +66,7 @@ const GetReferralDetails = async (req, res) => {
     const cleanCode = (referralCode || "").trim().toUpperCase();
     const adminCode = (process.env.ADMIN_REFERRAL_CODE || "ROOTPARTNER").trim().toUpperCase();
 
-    if (cleanCode === adminCode || cleanCode === "ROOTPARTNER" || cleanCode === "ESYGOLD916" || cleanCode === "ADMIN" || cleanCode === "ADMINISTRATOR") {
+    if (cleanCode === adminCode || cleanCode === "ROOTPARTNER" || cleanCode === "ESYGOLD916") {
       return res.json({
         success: true,
         referral_code: referralCode,

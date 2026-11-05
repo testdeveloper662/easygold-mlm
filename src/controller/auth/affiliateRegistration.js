@@ -95,9 +95,7 @@ const AffiliateRegistration = async (req, res) => {
       !empfehlercode ||
       cleanCode === adminCode ||
       cleanCode === "ROOTPARTNER" ||
-      cleanCode === "ESYGOLD916" ||
-      cleanCode === "ADMIN" ||
-      cleanCode === "ADMINISTRATOR";
+      cleanCode === "ESYGOLD916";
 
     let parentBroker = null;
     let parentUserRef = null;

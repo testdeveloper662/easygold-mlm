@@ -22,7 +22,24 @@ const GetAllRootPartners = async (req, res) => {
       filterCode = "all", // "all" | "ESYGOLD916" | "ROOTPARTNER"
     } = req.query;
 
-    const rootCodes = ["ESYGOLD916", "ROOTPARTNER"];
+    // Compare with root / admin referral code from environment variables
+    const adminEnvCode = (process.env.ADMIN_REFERRAL_CODE || "ROOTPARTNER").trim();
+    const envCodes = (process.env.ROOT_PARTNER_CODES || "")
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    const rootCodes = Array.from(
+      new Set(
+        [
+          "ESYGOLD916",
+          "ROOTPARTNER",
+          adminEnvCode,
+          adminEnvCode.toUpperCase(),
+          ...envCodes,
+        ].filter(Boolean)
+      )
+    );
 
     // 1. Fetch brokers where referred_by_code IN ('ESYGOLD916', 'ROOTPARTNER') and parent_id IS NULL OR 0
     const brokers = await db.Brokers.findAll({
@@ -207,11 +224,15 @@ const GetAllRootPartners = async (req, res) => {
     const totalRootPartners = enrichedPartners.length;
     const brokersCount = enrichedPartners.filter((p) => p.type === "broker").length;
     const affiliatesCount = enrichedPartners.filter((p) => p.type === "affiliate").length;
-    const rootpartnerCount = enrichedPartners.filter(
-      (p) => (p.referred_by_code || "").toUpperCase() === "ROOTPARTNER"
-    ).length;
+    const rootpartnerCount = enrichedPartners.filter((p) => {
+      const code = (p.referred_by_code || "").trim().toUpperCase();
+      return (
+        code === adminEnvCode.toUpperCase() ||
+        code === "ROOTPARTNER"
+      );
+    }).length;
     const esygoldCount = enrichedPartners.filter(
-      (p) => (p.referred_by_code || "").toUpperCase() === "ESYGOLD916"
+      (p) => (p.referred_by_code || "").trim().toUpperCase() === "ESYGOLD916"
     ).length;
 
     // 7. Filter
@@ -222,9 +243,14 @@ const GetAllRootPartners = async (req, res) => {
     }
 
     if (filterCode && filterCode !== "all") {
-      filtered = filtered.filter(
-        (p) => (p.referred_by_code || "").toUpperCase() === filterCode.toUpperCase()
-      );
+      const target = filterCode.trim().toUpperCase();
+      filtered = filtered.filter((p) => {
+        const code = (p.referred_by_code || "").trim().toUpperCase();
+        if (target === "ROOTPARTNER" || target === adminEnvCode.toUpperCase()) {
+          return code === "ROOTPARTNER" || code === adminEnvCode.toUpperCase();
+        }
+        return code === target;
+      });
     }
 
     if (search && search.trim() !== "") {

@@ -910,9 +910,7 @@ const BrokerRegistration = async (req, res) => {
     const isAdminParent =
       cleanReferralCode === adminReferralCode ||
       cleanReferralCode === "ROOTPARTNER" ||
-      cleanReferralCode === "ESYGOLD916" ||
-      cleanReferralCode === "ADMIN" ||
-      cleanReferralCode === "ADMINISTRATOR";
+      cleanReferralCode === "ESYGOLD916";
     let parentBroker = null;
 
     if (!isAdminParent) {

@@ -90,7 +90,7 @@ const GetPartnerReferralCode = async (req, res) => {
 
     // Fallback to ADMIN referral code if no parent code was configured
     if (!rawReferralCode) {
-      rawReferralCode = process.env.ADMIN_REFERRAL_CODE || "ADMIN";
+      rawReferralCode = process.env.ADMIN_REFERRAL_CODE || "ROOTPARTNER";
     }
 
     // Base64 encode referral code for URLs

@@ -17,6 +17,14 @@ if (!ADMIN_REFERRAL_CODE) {
 
 const RegisterBroker = async (req, res) => {
   try {
+    const senderUser = req.user?.user || req.user;
+    if (senderUser?.role !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Access not allowed. Only admin can register brokers via admin referral.",
+      });
+    }
+
     const { brokerName, email, lang } = req.body;
 
     let language = "en"; // Default to English
@@ -69,9 +77,14 @@ const RegisterBroker = async (req, res) => {
       });
     }
 
+    // Reload env to ensure latest value from .env is used
+    require("dotenv").config();
+    const adminReferralCode = (process.env.ADMIN_REFERRAL_CODE || "ROOTPARTNER").trim();
+
     // Create register URL with base64 encoded referral code (Node.js uses Buffer, not btoa)
-    const encodedReferralCode = Buffer.from(ADMIN_REFERRAL_CODE || "ROOTPARTNER").toString("base64");
-    const registerUrl = `${process.env.FRONTEND_URL || FRONTEND_URL}/broker-register/step1/${encodedReferralCode}`;
+    const encodedReferralCode = Buffer.from(adminReferralCode).toString("base64");
+    const frontendBaseUrl = (process.env.FRONTEND_URL || FRONTEND_URL || "http://localhost:8080").replace(/\/+$/, "");
+    const registerUrl = `${frontendBaseUrl}/broker-register/step1/${encodedReferralCode}`;
 
     // Create clickable link text based on language
     const linkText = language === "de-DE" || language === "de" ? "Jetzt mit Empfehlungscode registrieren" : "Register now with referral code";
@@ -80,7 +93,7 @@ const RegisterBroker = async (req, res) => {
     // Variable names must match EXACTLY the placeholders in database template: [email], [referral_code], [referal_code_link], [brokerName], [tempPassword]
     const templateVariables = {
       email: email, // Replaces [email]
-      referral_code: ADMIN_REFERRAL_CODE || "ROOTPARTNER", // Replaces [referral_code]
+      referral_code: adminReferralCode, // Replaces [referral_code]
       referal_code_link: `<a href="${registerUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${linkText}</a>`, // Replaces [referal_code_link] - now a complete HTML anchor tag
       referral_code_link: `<a href="${registerUrl}" style="color: #0066cc; text-decoration: none; font-weight: bold;">${linkText}</a>`, // Fallback for alternate spelling
       brokerName: brokerName || email.split("@")[0], // Replaces [brokerName] - fallback to email username if not provided
@@ -112,7 +125,7 @@ const RegisterBroker = async (req, res) => {
       message: "Email has been sent with Registration details.",
       data: {
         registerUrl,
-        referralCode: ADMIN_REFERRAL_CODE || "ROOTPARTNER",
+        referralCode: adminReferralCode,
         encodedReferralCode,
       },
     });

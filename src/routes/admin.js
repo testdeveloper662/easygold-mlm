@@ -42,6 +42,7 @@ const GetFixedCustomerCommissions = require('../controller/admin/getFixedCustome
 const AdjustFixedCustomerCommissions = require('../controller/admin/adjustFixedCustomerCommissions');
 const GetAllBrokers = require("../controller/admin/getAllBrokers");
 const GetAllAffiliates = require("../controller/admin/getAllAffiliates");
+const GetAllRootPartners = require("../controller/admin/getAllRootPartners");
 const GetAllBrokerCommissionHistory = require("../controller/admin/getAllBrokerCommissionHistory");
 const GetBrokersList = require("../controller/admin/getBrokersList");
 const UpdateBrokerPaymentStatus = require("../controller/admin/updateBrokerPaymentStatus");
@@ -109,6 +110,7 @@ adminRouter.post("/affiliate/variable-commissions", authenticateToken, AdjustVar
 // Brokers & Affiliates
 adminRouter.get("/brokers", authenticateToken, GetAllBrokers);
 adminRouter.get("/affiliates", authenticateToken, GetAllAffiliates);
+adminRouter.get("/root-partners", authenticateToken, GetAllRootPartners);
 adminRouter.post("/broker/update-status", authenticateToken, UpdateUserStatus);
 adminRouter.post("/affiliate/update-status", authenticateToken, UpdateUserStatus);
 adminRouter.get("/brokers-contract", authenticateToken, GetAllBrokerContract);

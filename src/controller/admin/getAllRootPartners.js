@@ -98,6 +98,24 @@ const GetAllRootPartners = async (req, res) => {
       });
     }
 
+    // 3b. Build a lookup of every user whose user_referrals.parent_user_id is wrongly set,
+    // regardless of referred_by_code — brokers/affiliates rows must be cross-checked against
+    // this, since captureOrder.js's commission chain walks user_referrals.parent_user_id,
+    // not brokers.parent_id / affiliates.parent_id.
+    const badParentUserIds = new Set();
+    if (db.UserReferrals) {
+      const badUserReferrals = await db.UserReferrals.findAll({
+        where: {
+          [Op.and]: [
+            { parent_user_id: { [Op.ne]: null } },
+            { parent_user_id: { [Op.ne]: 0 } },
+          ],
+        },
+        attributes: ["user_id"],
+      });
+      badUserReferrals.forEach((ur) => badParentUserIds.add(ur.user_id));
+    }
+
     // 4. Merge and deduplicate by user_id
     const partnersMap = new Map();
 
@@ -105,7 +123,7 @@ const GetAllRootPartners = async (req, res) => {
     for (const b of brokers) {
       const u = b.user;
       const uid = b.user_id || u?.ID;
-      if (!uid) continue;
+      if (!uid || badParentUserIds.has(uid)) continue;
       partnersMap.set(uid, {
         id: b.id,
         user_id: uid,
@@ -127,7 +145,7 @@ const GetAllRootPartners = async (req, res) => {
     for (const a of affiliates) {
       const u = a.user;
       const uid = a.user_id || u?.ID;
-      if (!uid) continue;
+      if (!uid || badParentUserIds.has(uid)) continue;
       if (!partnersMap.has(uid)) {
         partnersMap.set(uid, {
           id: a.id,
@@ -151,7 +169,7 @@ const GetAllRootPartners = async (req, res) => {
     for (const ur of userReferrals) {
       const u = ur.user;
       const uid = ur.user_id || u?.ID;
-      if (!uid) continue;
+      if (!uid || badParentUserIds.has(uid)) continue;
       if (!partnersMap.has(uid)) {
         partnersMap.set(uid, {
           id: ur.id,

@@ -26,24 +26,45 @@ const RegisterAffiliate = async (req, res) => {
       });
     }
 
+    // Reload env to ensure latest value from .env is used
+    require("dotenv").config();
+    const adminReferralCode = (process.env.ADMIN_REFERRAL_CODE || "ROOTPARTNER").trim();
+
     // Get logged-in user's referral code
     const senderUser = req.user?.user || req.user;
-    let senderReferralCode = senderUser?.referral_code || null;
+    const isSuperAdmin = senderUser?.role === "SUPER_ADMIN";
 
-    if (!senderReferralCode && senderUser?.ID) {
-      const broker = await db.Brokers.findOne({ where: { user_id: senderUser.ID }, attributes: ["referral_code"] });
-      if (broker) {
-        senderReferralCode = broker.referral_code;
-      } else if (db.Affiliates) {
-        const aff = await db.Affiliates.findOne({ where: { user_id: senderUser.ID }, attributes: ["referral_code"] });
-        if (aff) senderReferralCode = aff.referral_code;
+    let referralCodeToUse;
+    if (isSuperAdmin) {
+      // ONLY admin uses ADMIN_REFERRAL_CODE from .env
+      referralCodeToUse = adminReferralCode;
+    } else {
+      // Non-admin (broker/affiliate) MUST use their own personal referral code from the database
+      let senderReferralCode = senderUser?.referral_code || null;
+
+      if (!senderReferralCode && senderUser?.ID) {
+        const broker = await db.Brokers.findOne({ where: { user_id: senderUser.ID }, attributes: ["referral_code"] });
+        if (broker) {
+          senderReferralCode = broker.referral_code;
+        } else if (db.Affiliates) {
+          const aff = await db.Affiliates.findOne({ where: { user_id: senderUser.ID }, attributes: ["referral_code"] });
+          if (aff) senderReferralCode = aff.referral_code;
+        }
       }
+
+      if (!senderReferralCode) {
+        return res.status(400).json({
+          success: false,
+          message: "Referral code not found for your account.",
+        });
+      }
+
+      referralCodeToUse = senderReferralCode;
     }
 
-    const referralCodeToUse = senderReferralCode || ADMIN_REFERRAL_CODE || "ROOTPARTNER";
     const encodedReferralCode = Buffer.from(String(referralCodeToUse), "utf-8").toString("base64");
-
-    const registerUrl = `${FRONTEND_URL}/affiliate-register?referral=${encodedReferralCode}`;
+    const frontendBaseUrl = (process.env.FRONTEND_URL || FRONTEND_URL || "http://localhost:8080").replace(/\/+$/, "");
+    const registerUrl = `${frontendBaseUrl}/affiliate-register?referral=${encodedReferralCode}`;
     const linkText = language === "de" ? "Jetzt als Affiliate registrieren" : "Register now as an affiliate";
 
     const templateVariables = {

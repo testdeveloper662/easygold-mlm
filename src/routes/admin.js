@@ -30,6 +30,7 @@ const upload = multer({ storage });
 
 const RegisterBroker = require("../controller/admin/registerBroker");
 const RegisterAffiliate = require("../controller/admin/registerAffiliate");
+const GetAdminReferralInfo = require("../controller/admin/getAdminReferralInfo");
 const GetFixedAffiliateCommissions = require("../controller/admin/getFixedAffiliateCommissions");
 const AdjustFixedAffiliateCommissions = require("../controller/admin/adjustFixedAffiliateCommissions");
 const GetFixedBrokerCommissions = require("../controller/admin/getFixedBrokerCommissions");
@@ -92,7 +93,10 @@ const marketingUpload = multer({ storage: marketingStorage });
 
 // Auth Routes
 adminRouter.post("/broker/referral", authenticateToken, RegisterBroker);
+adminRouter.get("/broker/referral", authenticateToken, GetAdminReferralInfo);
+adminRouter.get("/referral-info", authenticateToken, GetAdminReferralInfo);
 adminRouter.post("/affiliate/referral", authenticateToken, RegisterAffiliate);
+adminRouter.get("/affiliate/referral", authenticateToken, GetAdminReferralInfo);
 
 adminRouter.get("/broker/fixed-commissions", authenticateToken, GetFixedBrokerCommissions);
 adminRouter.post("/broker/fixed-commissions", authenticateToken, AdjustFixedBrokerCommissions);

@@ -109,7 +109,12 @@ const RegisterAffiliate = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Affiliate registration invitation email sent successfully.",
-      data: { registerUrl, invitation: createdInvitation },
+      data: {
+        registerUrl,
+        referralCode: referralCodeToUse,
+        encodedReferralCode,
+        invitation: createdInvitation,
+      },
     });
   } catch (error) {
     console.error("Error in RegisterAffiliate:", error);

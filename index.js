@@ -37,18 +37,9 @@ app.use("/public", express.static(path.join(__dirname, "public")));
 
 app.use(bodyParser.json({ limit: "35mb" }));
 
-// Morgan HTTP request logging: scoped to Kontor routes and Order Capture APIs
+// Morgan HTTP request logging for all APIs
 const morganFormat = process.env.NODE_ENV === "production" ? "combined" : "dev";
-app.use(
-  morgan(morganFormat, {
-    skip: (req, res) => {
-      const url = req.originalUrl || req.url || "";
-      const isKontor = url.includes("/kontor");
-      const isOrderCapture = url.includes("capture-order");
-      return !isKontor && !isOrderCapture;
-    },
-  })
-);
+app.use(morgan(morganFormat));
 
 // Custom middleware for logging
 app.use((req, res, next) => {

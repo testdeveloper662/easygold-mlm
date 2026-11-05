@@ -110,6 +110,11 @@ const RegisterBroker = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Email has been sent with Registration details.",
+      data: {
+        registerUrl,
+        referralCode: ADMIN_REFERRAL_CODE || "ROOTPARTNER",
+        encodedReferralCode,
+      },
     });
   } catch (error) {
     console.log("Error: ", error);

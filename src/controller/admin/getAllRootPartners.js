@@ -41,11 +41,11 @@ const GetAllRootPartners = async (req, res) => {
       )
     );
 
-    // 1. Fetch brokers where referred_by_code IN ('ESYGOLD916', 'ROOTPARTNER') and parent_id IS NOT NULL (wrongly has a parent)
+    // 1. Fetch brokers where referred_by_code IN ('ESYGOLD916', 'ROOTPARTNER') and parent_id IS NULL OR 0
     const brokers = await db.Brokers.findAll({
       where: {
         referred_by_code: { [Op.in]: rootCodes },
-        parent_id: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: 0 }] },
+        [Op.or]: [{ parent_id: null }, { parent_id: 0 }],
       },
       include: [
         {
@@ -58,13 +58,13 @@ const GetAllRootPartners = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    // 2. Fetch affiliates where referred_by_code IN ('ESYGOLD916', 'ROOTPARTNER') and parent_id IS NOT NULL (wrongly has a parent)
+    // 2. Fetch affiliates where referred_by_code IN ('ESYGOLD916', 'ROOTPARTNER') and parent_id IS NULL OR 0
     let affiliates = [];
     if (db.Affiliates) {
       affiliates = await db.Affiliates.findAll({
         where: {
           referred_by_code: { [Op.in]: rootCodes },
-          parent_id: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: 0 }] },
+          [Op.or]: [{ parent_id: null }, { parent_id: 0 }],
         },
         include: [
           {
@@ -78,13 +78,13 @@ const GetAllRootPartners = async (req, res) => {
       });
     }
 
-    // 3. Fetch user_referrals where referred_by_code IN ('ESYGOLD916', 'ROOTPARTNER') and parent_user_id IS NOT NULL (wrongly has a parent)
+    // 3. Fetch user_referrals where referred_by_code IN ('ESYGOLD916', 'ROOTPARTNER') and parent_user_id IS NULL OR 0
     let userReferrals = [];
     if (db.UserReferrals) {
       userReferrals = await db.UserReferrals.findAll({
         where: {
           referred_by_code: { [Op.in]: rootCodes },
-          parent_user_id: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: 0 }] },
+          [Op.or]: [{ parent_user_id: null }, { parent_user_id: 0 }],
         },
         include: [
           {
@@ -97,52 +97,6 @@ const GetAllRootPartners = async (req, res) => {
         order: [["createdAt", "DESC"]],
       });
     }
-
-    // 3b. Fetch the correct (parent IS NULL or 0) counterparts, used only for the stats block below
-    const correctBrokers = await db.Brokers.findAll({
-      where: {
-        referred_by_code: { [Op.in]: rootCodes },
-        [Op.or]: [{ parent_id: null }, { parent_id: 0 }],
-      },
-      attributes: ["id", "user_id", "referred_by_code"],
-    });
-
-    let correctAffiliates = [];
-    if (db.Affiliates) {
-      correctAffiliates = await db.Affiliates.findAll({
-        where: {
-          referred_by_code: { [Op.in]: rootCodes },
-          [Op.or]: [{ parent_id: null }, { parent_id: 0 }],
-        },
-        attributes: ["id", "user_id", "referred_by_code"],
-      });
-    }
-
-    let correctUserReferrals = [];
-    if (db.UserReferrals) {
-      correctUserReferrals = await db.UserReferrals.findAll({
-        where: {
-          referred_by_code: { [Op.in]: rootCodes },
-          [Op.or]: [{ parent_user_id: null }, { parent_user_id: 0 }],
-        },
-        attributes: ["id", "user_id", "referred_by_code"],
-      });
-    }
-
-    const correctPartnersMap = new Map();
-    for (const b of correctBrokers) {
-      if (!b.user_id) continue;
-      correctPartnersMap.set(b.user_id, { type: "broker", referred_by_code: b.referred_by_code || "" });
-    }
-    for (const a of correctAffiliates) {
-      if (!a.user_id || correctPartnersMap.has(a.user_id)) continue;
-      correctPartnersMap.set(a.user_id, { type: "affiliate", referred_by_code: a.referred_by_code || "" });
-    }
-    for (const ur of correctUserReferrals) {
-      if (!ur.user_id || correctPartnersMap.has(ur.user_id)) continue;
-      correctPartnersMap.set(ur.user_id, { type: "affiliate", referred_by_code: ur.referred_by_code || "" });
-    }
-    const correctPartners = Array.from(correctPartnersMap.values());
 
     // 4. Merge and deduplicate by user_id
     const partnersMap = new Map();
@@ -266,18 +220,18 @@ const GetAllRootPartners = async (req, res) => {
       };
     });
 
-    // 6. Compute statistics across the correctly-configured (parent IS NULL) root partners only
-    const totalRootPartners = correctPartners.length;
-    const brokersCount = correctPartners.filter((p) => p.type === "broker").length;
-    const affiliatesCount = correctPartners.filter((p) => p.type === "affiliate").length;
-    const rootpartnerCount = correctPartners.filter((p) => {
+    // 6. Compute statistics across all root partners
+    const totalRootPartners = enrichedPartners.length;
+    const brokersCount = enrichedPartners.filter((p) => p.type === "broker").length;
+    const affiliatesCount = enrichedPartners.filter((p) => p.type === "affiliate").length;
+    const rootpartnerCount = enrichedPartners.filter((p) => {
       const code = (p.referred_by_code || "").trim().toUpperCase();
       return (
         code === adminEnvCode.toUpperCase() ||
         code === "ROOTPARTNER"
       );
     }).length;
-    const esygoldCount = correctPartners.filter(
+    const esygoldCount = enrichedPartners.filter(
       (p) => (p.referred_by_code || "").trim().toUpperCase() === "ESYGOLD916"
     ).length;
 

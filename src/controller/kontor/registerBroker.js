@@ -101,6 +101,22 @@ const RegisterKontorBroker = async (req, res) => {
 
     const existingUserByEmail = await db.Users.findOne({ where: { user_email: email } });
     if (existingUserByEmail) {
+      // If that user is already a Kontor-sourced broker, hand back its
+      // broker_id/user_id instead of erroring, so a repeat registration
+      // (different external_ref, same person) is still go-live-safe.
+      const existingBrokerForEmail = await db.Brokers.findOne({
+        where: { source: "kontor", user_id: existingUserByEmail.ID },
+      });
+      if (existingBrokerForEmail) {
+        return res.status(200).json({
+          success: true,
+          code: "ALREADY_EXISTS",
+          message: "A broker with this email already exists. Returning the existing broker_id.",
+          broker_id: existingBrokerForEmail.id,
+          user_id: existingBrokerForEmail.user_id,
+          created: false,
+        });
+      }
       return kontorError(res, 400, "ALREADY_EXISTS", "A user with this email already exists. Please use a different email address.");
     }
 

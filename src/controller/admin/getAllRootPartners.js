@@ -195,17 +195,16 @@ const GetAllRootPartners = async (req, res) => {
     const allPartners = Array.from(partnersMap.values());
     const userIds = allPartners.map((p) => p.user_id);
 
-    // 4b. Cross-check: which of these users also have an affiliate record
-    // (a broker/user_referral root partner can separately be registered as an affiliate).
+    // 4b. Cross-check: which of these users also have a *root-level* affiliate record
+    // (a broker/user_referral root partner can separately be registered as a root affiliate).
+    // Reuses the already root-filtered `affiliates` array (referred_by_code IN rootCodes,
+    // parent_id NULL/0) instead of matching any affiliate row anywhere in the table, since
+    // a user can have an unrelated, non-root affiliate record further down someone else's tree.
     const affiliateInfoMap = new Map();
-    if (db.Affiliates && userIds.length > 0) {
-      const affiliateRows = await db.Affiliates.findAll({
-        where: { user_id: { [Op.in]: userIds } },
-        attributes: ["user_id", "referral_code"],
-      });
-      affiliateRows.forEach((a) => {
-        affiliateInfoMap.set(a.user_id, a.referral_code || "");
-      });
+    for (const a of affiliates) {
+      const uid = a.user_id || a.user?.ID;
+      if (!uid) continue;
+      affiliateInfoMap.set(uid, a.referral_code || "");
     }
 
     // 5. Fetch user metadata

@@ -51,7 +51,7 @@ const GetAllRootPartners = async (req, res) => {
         {
           model: db.Users,
           as: "user",
-          attributes: ["ID", "user_email", "display_name", "role_id", "user_status"],
+          attributes: ["ID", "user_email", "display_name", "role_id", "user_status", "deleted_at"],
           required: false,
         },
       ],
@@ -70,7 +70,7 @@ const GetAllRootPartners = async (req, res) => {
           {
             model: db.Users,
             as: "user",
-            attributes: ["ID", "user_email", "display_name", "role_id", "user_status"],
+            attributes: ["ID", "user_email", "display_name", "role_id", "user_status", "deleted_at"],
             required: false,
           },
         ],
@@ -90,7 +90,7 @@ const GetAllRootPartners = async (req, res) => {
           {
             model: db.Users,
             as: "user",
-            attributes: ["ID", "user_email", "display_name", "role_id", "user_status"],
+            attributes: ["ID", "user_email", "display_name", "role_id", "user_status", "deleted_at"],
             required: false,
           },
         ],
@@ -124,6 +124,7 @@ const GetAllRootPartners = async (req, res) => {
       const u = b.user;
       const uid = b.user_id || u?.ID;
       if (!uid || badParentUserIds.has(uid)) continue;
+      if (u?.deleted_at) continue;
       partnersMap.set(uid, {
         id: b.id,
         user_id: uid,
@@ -146,6 +147,7 @@ const GetAllRootPartners = async (req, res) => {
       const u = a.user;
       const uid = a.user_id || u?.ID;
       if (!uid || badParentUserIds.has(uid)) continue;
+      if (u?.deleted_at) continue;
       if (!partnersMap.has(uid)) {
         partnersMap.set(uid, {
           id: a.id,
@@ -170,6 +172,7 @@ const GetAllRootPartners = async (req, res) => {
       const u = ur.user;
       const uid = ur.user_id || u?.ID;
       if (!uid || badParentUserIds.has(uid)) continue;
+      if (u?.deleted_at) continue;
       if (!partnersMap.has(uid)) {
         partnersMap.set(uid, {
           id: ur.id,
@@ -191,6 +194,19 @@ const GetAllRootPartners = async (req, res) => {
 
     const allPartners = Array.from(partnersMap.values());
     const userIds = allPartners.map((p) => p.user_id);
+
+    // 4b. Cross-check: which of these users also have an affiliate record
+    // (a broker/user_referral root partner can separately be registered as an affiliate).
+    const affiliateInfoMap = new Map();
+    if (db.Affiliates && userIds.length > 0) {
+      const affiliateRows = await db.Affiliates.findAll({
+        where: { user_id: { [Op.in]: userIds } },
+        attributes: ["user_id", "referral_code"],
+      });
+      affiliateRows.forEach((a) => {
+        affiliateInfoMap.set(a.user_id, a.referral_code || "");
+      });
+    }
 
     // 5. Fetch user metadata
     let userMetaMap = {};
@@ -224,6 +240,8 @@ const GetAllRootPartners = async (req, res) => {
     // Attach metadata to partners
     const enrichedPartners = allPartners.map((partner) => {
       const m = userMetaMap[partner.user_id] || {};
+      const isAlsoAffiliate =
+        partner.type !== "affiliate" && affiliateInfoMap.has(partner.user_id);
       return {
         ...partner,
         company: m.u_company || "-",
@@ -235,6 +253,10 @@ const GetAllRootPartners = async (req, res) => {
         postcode: m.u_postcode || "-",
         language: m.language || "-",
         person_typ: m.person_typ || "-",
+        is_also_affiliate: isAlsoAffiliate,
+        affiliate_referral_code: isAlsoAffiliate
+          ? affiliateInfoMap.get(partner.user_id)
+          : null,
       };
     });
 

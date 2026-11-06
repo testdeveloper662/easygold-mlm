@@ -195,18 +195,6 @@ const GetAllRootPartners = async (req, res) => {
     const allPartners = Array.from(partnersMap.values());
     const userIds = allPartners.map((p) => p.user_id);
 
-    // 4b. Cross-check: which of these users also have a *root-level* affiliate record
-    // (a broker/user_referral root partner can separately be registered as a root affiliate).
-    // Reuses the already root-filtered `affiliates` array (referred_by_code IN rootCodes,
-    // parent_id NULL/0) instead of matching any affiliate row anywhere in the table, since
-    // a user can have an unrelated, non-root affiliate record further down someone else's tree.
-    const affiliateInfoMap = new Map();
-    for (const a of affiliates) {
-      const uid = a.user_id || a.user?.ID;
-      if (!uid) continue;
-      affiliateInfoMap.set(uid, a.referral_code || "");
-    }
-
     // 5. Fetch user metadata
     let userMetaMap = {};
     if (userIds.length > 0) {
@@ -239,10 +227,13 @@ const GetAllRootPartners = async (req, res) => {
     // Attach metadata to partners
     const enrichedPartners = allPartners.map((partner) => {
       const m = userMetaMap[partner.user_id] || {};
-      const isAlsoAffiliate =
-        partner.type !== "affiliate" && affiliateInfoMap.has(partner.user_id);
+      // Same single-valued classification used by /admin/brokers (role_id 2) and
+      // /admin/affiliates (role_id 3/4): a user's role_id decides their displayed
+      // tag, so a root partner shows exactly one of Broker / Affiliate, never both.
+      const displayType = partner.role_id === 2 ? "broker" : "affiliate";
       return {
         ...partner,
+        type: displayType,
         company: m.u_company || "-",
         contact_person: m.u_contact_person || "-",
         phone: m.u_phone || "-",
@@ -252,10 +243,6 @@ const GetAllRootPartners = async (req, res) => {
         postcode: m.u_postcode || "-",
         language: m.language || "-",
         person_typ: m.person_typ || "-",
-        is_also_affiliate: isAlsoAffiliate,
-        affiliate_referral_code: isAlsoAffiliate
-          ? affiliateInfoMap.get(partner.user_id)
-          : null,
       };
     });
 

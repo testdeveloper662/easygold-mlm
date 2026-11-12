@@ -241,7 +241,10 @@ const CaptureOrder = async (req, res) => {
     }
 
     // Determine EU vs non-EU from the order's shipping country (s_country meta),
-    // not IP-based — used to gate is_payment_done for landing_page/my_store/api orders below.
+    // not IP-based — used to gate is_payment_done for landing_page/my_store/api/
+    // diamond_gemstone orders below (goldflex/easygoldtoken/primeinvest are backed
+    // by TargetCustomers, which has no country or vat_id field at all, so this
+    // rule can't be computed for those — they stay outside this scope).
     // Also check for a vat_id meta value, which overrides the EU/non-EU result —
     // except for Germany itself, where VAT always applies regardless of vat_id
     // (Hartmann & Benz GmbH, the B2B_DASHBOARD supplying entity, is registered in
@@ -249,11 +252,19 @@ const CaptureOrder = async (req, res) => {
     let isEU = false;
     let isGermany = false;
     let hasVatId = false;
-    const isStandardStoreOrderType = orderType === "landing_page" || orderType === "my_store" || orderType === "api";
+    const isStandardStoreOrderType = orderType === "landing_page" || orderType === "my_store" || orderType === "api" || isDiamondGemstone;
 
     if (isStandardStoreOrderType) {
-      const ShippingOptionsModel = orderType === "landing_page" ? db.LpOrderShippingOptions : db.MyStoreOrderShippingOptions;
-      const shippingIdField = orderType === "landing_page" ? "lp_order_id" : "my_store_order_id";
+      const ShippingOptionsModel = orderType === "landing_page"
+        ? db.LpOrderShippingOptions
+        : isDiamondGemstone
+          ? db.DiamondOrderShippingOptions
+          : db.MyStoreOrderShippingOptions;
+      const shippingIdField = orderType === "landing_page"
+        ? "lp_order_id"
+        : isDiamondGemstone
+          ? "diamond_order_id"
+          : "my_store_order_id";
 
       const shippingCountryRow = await ShippingOptionsModel.findOne({ where: { [shippingIdField]: orderId, meta_key: "s_country" } });
       if (shippingCountryRow) {

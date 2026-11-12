@@ -51,7 +51,7 @@ const GetAllRootPartners = async (req, res) => {
         {
           model: db.Users,
           as: "user",
-          attributes: ["ID", "user_email", "display_name", "role_id", "user_status"],
+          attributes: ["ID", "user_email", "display_name", "role_id", "user_status", "deleted_at"],
           required: false,
         },
       ],
@@ -70,7 +70,7 @@ const GetAllRootPartners = async (req, res) => {
           {
             model: db.Users,
             as: "user",
-            attributes: ["ID", "user_email", "display_name", "role_id", "user_status"],
+            attributes: ["ID", "user_email", "display_name", "role_id", "user_status", "deleted_at"],
             required: false,
           },
         ],
@@ -90,7 +90,7 @@ const GetAllRootPartners = async (req, res) => {
           {
             model: db.Users,
             as: "user",
-            attributes: ["ID", "user_email", "display_name", "role_id", "user_status"],
+            attributes: ["ID", "user_email", "display_name", "role_id", "user_status", "deleted_at"],
             required: false,
           },
         ],
@@ -124,6 +124,7 @@ const GetAllRootPartners = async (req, res) => {
       const u = b.user;
       const uid = b.user_id || u?.ID;
       if (!uid || badParentUserIds.has(uid)) continue;
+      if (u?.deleted_at) continue;
       partnersMap.set(uid, {
         id: b.id,
         user_id: uid,
@@ -146,6 +147,7 @@ const GetAllRootPartners = async (req, res) => {
       const u = a.user;
       const uid = a.user_id || u?.ID;
       if (!uid || badParentUserIds.has(uid)) continue;
+      if (u?.deleted_at) continue;
       if (!partnersMap.has(uid)) {
         partnersMap.set(uid, {
           id: a.id,
@@ -170,6 +172,7 @@ const GetAllRootPartners = async (req, res) => {
       const u = ur.user;
       const uid = ur.user_id || u?.ID;
       if (!uid || badParentUserIds.has(uid)) continue;
+      if (u?.deleted_at) continue;
       if (!partnersMap.has(uid)) {
         partnersMap.set(uid, {
           id: ur.id,
@@ -224,8 +227,13 @@ const GetAllRootPartners = async (req, res) => {
     // Attach metadata to partners
     const enrichedPartners = allPartners.map((partner) => {
       const m = userMetaMap[partner.user_id] || {};
+      // Same single-valued classification used by /admin/brokers (role_id 2) and
+      // /admin/affiliates (role_id 3/4): a user's role_id decides their displayed
+      // tag, so a root partner shows exactly one of Broker / Affiliate, never both.
+      const displayType = partner.role_id === 2 ? "broker" : "affiliate";
       return {
         ...partner,
+        type: displayType,
         company: m.u_company || "-",
         contact_person: m.u_contact_person || "-",
         phone: m.u_phone || "-",

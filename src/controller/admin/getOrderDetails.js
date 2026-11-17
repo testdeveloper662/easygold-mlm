@@ -218,6 +218,101 @@ const GetOrderDetails = async (req, res) => {
       });
     }
 
+    // ===============================
+    // ✅ SUBSCRIPTION (Kontor) — order_id is hardcoded to 0 on these rows
+    // (captureOrder.js), so orderId here is the commission row's own id,
+    // and the real Kontor order reference lives in notes.order.number.
+    // ===============================
+    if (orderType === "subscription") {
+      const row = await db.BrokerCommissionHistory.findOne({
+        where: { id: normalizedOrderId, order_type: "subscription" },
+      });
+
+      if (!row) {
+        return res.status(404).json({
+          success: false,
+          ordernotfound: true,
+          message: "Order not found",
+        });
+      }
+
+      let parsedNotes = {};
+      try {
+        parsedNotes = row.notes ? JSON.parse(row.notes) : {};
+      } catch {
+        parsedNotes = {};
+      }
+
+      const siblingCommissions = await db.BrokerCommissionHistory.findAll({
+        where: { kontor_idempotency_key: row.kontor_idempotency_key },
+        include: [
+          {
+            model: db.Users,
+            as: "commission_from_user",
+            attributes: ["ID", "user_email"],
+            required: false,
+          },
+        ],
+      });
+
+      const formattedBrokerCommissions = siblingCommissions.map((bc) => {
+        const json = bc.toJSON();
+        return {
+          broker_id: json.broker_id,
+          user_id: json.user_id,
+          user_email: json.commission_from_user?.user_email || null,
+          commission_percent: json.commission_percent,
+          commission_amount: json.commission_amount,
+          is_seller: json.is_seller,
+          is_payment_done: json.is_payment_done,
+          is_payment_declined: json.is_payment_declined,
+          tree: json.tree,
+        };
+      });
+
+      const totalProfit = siblingCommissions.reduce(
+        (sum, bc) => sum + parseFloat(bc.commission_amount || 0),
+        0
+      );
+
+      const paymentMethod = row.selected_payment_method;
+      const paymentType =
+        paymentMethod === 1
+          ? "Bank Transfer"
+          : paymentMethod === 2
+            ? "Crypto Payment"
+            : paymentMethod === 3
+              ? "Cash"
+              : paymentMethod === 4
+                ? "Card"
+                : paymentMethod === 5
+                  ? "FLIZPay"
+                  : null;
+
+      return res.json({
+        success: true,
+        data: {
+          order_id: row.id,
+          order_type: "subscription",
+          order_number: parsedNotes?.order?.number || null,
+          order_amount: row.order_amount,
+          profit_amount: totalProfit,
+          payment_type: paymentType,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          broker_commissions: formattedBrokerCommissions,
+          tree: row.tree,
+          product: parsedNotes?.product
+            ? {
+                name: parsedNotes.product.name,
+                sku: parsedNotes.product.sku,
+                quantity: parsedNotes.product.quantity,
+              }
+            : null,
+        },
+      });
+    }
+
     let orderShippingMeta = [];
     let orderPivots = [];
 

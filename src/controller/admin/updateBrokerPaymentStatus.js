@@ -25,7 +25,7 @@ const EASY_GOLD_SUPPORT_MAIL_FROM_NAME = process.env.EASY_GOLD_SUPPORT_MAIL_FROM
 
 const UpdateBrokerPaymentStatus = async (req, res) => {
   try {
-    const { order_id, order_type, tree, type } = req.body;
+    const { order_id, order_type, tree, type, id } = req.body;
 
     if (
       order_id === undefined ||
@@ -42,42 +42,65 @@ const UpdateBrokerPaymentStatus = async (req, res) => {
 
     const normalizedOrderId = String(order_id).trim();
 
-    // Build where clause
-    const whereClause = { order_id: normalizedOrderId };
-
-    // If order_type is provided, add it to where clause
-    if (order_type) {
-      whereClause.order_type = order_type;
-    }
-
-    // If tree is provided, add it to where clause
-    if (tree) {
-      whereClause.tree = tree;
-    }
-
+    let whereClause;
     let firstRecord = null;
 
-    // Only auto-detect order_type/tree from the first matching record when the
-    // caller didn't already tell us which one — order_id alone isn't unique
-    // (e.g. a my_store order and a landing_page order can share the same
-    // order_id by coincidence), so overriding an explicitly-provided order_type
-    // can silently point the update at the wrong order entirely.
-    if (!order_type && !tree) {
-      firstRecord = await db.BrokerCommissionHistory.findOne({
-        where: { order_id: normalizedOrderId },
-        attributes: ["order_type", "target_customer_log_id"],
+    // Kontor-sourced rows all share the "not applicable" order_id=0 sentinel
+    // (captureOrder.js), and the same broker chain's "tree" repeats across
+    // every booking for that chain — so order_id/order_type/tree can't tell
+    // two different Kontor bookings apart. The row's own id, which the caller
+    // sends for these, lets us look up kontor_idempotency_key instead: that
+    // key is shared only by the levels of the one booking being confirmed.
+    let kontorRow = null;
+    if (id !== undefined && id !== null) {
+      kontorRow = await HistoryModel.findOne({
+        where: { id },
+        attributes: ["source", "kontor_idempotency_key", "order_type", "target_customer_log_id"],
         raw: true,
       });
+    }
 
-      if (firstRecord && firstRecord.order_type) {
-        whereClause.order_type = firstRecord.order_type;
-      }
+    if (kontorRow && kontorRow.source === "kontor" && kontorRow.kontor_idempotency_key) {
+      whereClause = { kontor_idempotency_key: kontorRow.kontor_idempotency_key };
+      firstRecord = kontorRow;
     } else {
-      firstRecord = await db.BrokerCommissionHistory.findOne({
-        where: whereClause,
-        attributes: ["order_type", "target_customer_log_id"],
-        raw: true,
-      });
+      // ---- unchanged, original behavior for every non-Kontor order ----
+
+      // Build where clause
+      whereClause = { order_id: normalizedOrderId };
+
+      // If order_type is provided, add it to where clause
+      if (order_type) {
+        whereClause.order_type = order_type;
+      }
+
+      // If tree is provided, add it to where clause
+      if (tree) {
+        whereClause.tree = tree;
+      }
+
+      // Only auto-detect order_type/tree from the first matching record when the
+      // caller didn't already tell us which one — order_id alone isn't unique
+      // (e.g. a my_store order and a landing_page order can share the same
+      // order_id by coincidence), so overriding an explicitly-provided order_type
+      // can silently point the update at the wrong order entirely.
+      if (!order_type && !tree) {
+        firstRecord = await db.BrokerCommissionHistory.findOne({
+          where: { order_id: normalizedOrderId },
+          attributes: ["order_type", "target_customer_log_id"],
+          raw: true,
+        });
+
+        if (firstRecord && firstRecord.order_type) {
+          whereClause.order_type = firstRecord.order_type;
+        }
+      } else {
+        firstRecord = await db.BrokerCommissionHistory.findOne({
+          where: whereClause,
+          attributes: ["order_type", "target_customer_log_id"],
+          raw: true,
+        });
+      }
     }
 
     // Update payment status to true for all matching the where clause

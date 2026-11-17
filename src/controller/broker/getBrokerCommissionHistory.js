@@ -274,6 +274,18 @@ const GetBrokerCommissionHistory = async (req, res) => {
         ? orderUsersMap[order_details.user_id] || "Unknown"
         : "Unknown";
 
+      // Kontor-sourced subscription rows have no real order_id (hardcoded to
+      // 0 in captureOrder.js) — the actual Kontor order reference lives in
+      // notes.order.number instead.
+      let order_number = null;
+      if (json.order_type === "subscription" && json.notes) {
+        try {
+          order_number = JSON.parse(json.notes)?.order?.number || null;
+        } catch {
+          order_number = null;
+        }
+      }
+
       // order_details is only used internally above to resolve relatedUserLogin —
       // confirmed unused anywhere in the frontend, so not included in the response.
       // Same for seller_username (duplicate of user_login), is_send_bonus,
@@ -285,6 +297,7 @@ const GetBrokerCommissionHistory = async (req, res) => {
 
       return {
         ...jsonTrimmed,
+        order_number,
         seller_name: sellerInfo.user_nicename || null,
         user_login: relatedUserLogin,
         diamond_page_source: json.order_type === "diamond_gemstone"

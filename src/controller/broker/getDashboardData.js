@@ -440,6 +440,7 @@ const GetDashboardData = async (req, res) => {
           "selected_payment_method",
           "createdAt",
           "order_type",
+          "notes",
         ],
         order: [["createdAt", "DESC"]],
         limit,
@@ -646,9 +647,22 @@ const GetDashboardData = async (req, res) => {
         transaction_source = "payout";
       }
 
+      // Kontor-sourced subscription rows have no real order_id (hardcoded to
+      // 0 in captureOrder.js) — the actual Kontor order reference lives in
+      // notes.order.number instead.
+      let order_number = null;
+      if (commission.order_type === "subscription" && commission.notes) {
+        try {
+          order_number = JSON.parse(commission.notes)?.order?.number || null;
+        } catch {
+          order_number = null;
+        }
+      }
+
       return {
         id: commission.id,
         order_id: commission.order_id,
+        order_number,
         order_type: commission.order_type,
         order_amount: commission.order_amount,
         commission_type: commission.commission_type,

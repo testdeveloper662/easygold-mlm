@@ -40,9 +40,9 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
 
     const [countResult] = await sequelize.query(
       `
-      SELECT COUNT(DISTINCT 
-        CASE 
-          WHEN order_id IS NULL THEN id
+      SELECT COUNT(DISTINCT
+        CASE
+          WHEN order_id IS NULL OR order_id <= 0 THEN CONCAT('row_', id)
           ELSE CONCAT(order_id, '_', order_type)
         END
       ) as total
@@ -67,12 +67,15 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
       `
       SELECT
         MAX(id) as id,
-        order_id,
-        order_type
+        MAX(order_id) as order_id,
+        MAX(order_type) as order_type
       FROM ${tableName}
       WHERE is_deleted = 0
       ${search ? "AND order_id LIKE :search" : ""}
-      GROUP BY order_id, order_type
+      GROUP BY CASE
+        WHEN order_id IS NULL OR order_id <= 0 THEN CONCAT('row_', id)
+        ELSE CONCAT(order_id, '_', order_type)
+      END
       ORDER BY MAX(createdAt) DESC
       LIMIT :limit OFFSET :offset
     `,
@@ -113,9 +116,13 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
       order_type: row.order_type,
     }));
 
+    // order_id <= 0 is the Kontor "no real order_id" sentinel (captureOrder.js)
+    // — treat it like NULL and match the specific row by its own id instead,
+    // otherwise every Kontor-sourced row (all order types) would collapse
+    // into a single order_id=0 group.
     const whereConditions = orderPairs
       .map((pair, index) => {
-        if (pair.order_id === null) {
+        if (pair.order_id === null || pair.order_id <= 0) {
           return `(bch.id = :id_${index})`;
         }
 
@@ -127,7 +134,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
     const replacements = {};
 
     orderPairs.forEach((pair, index) => {
-      if (pair.order_id === null) {
+      if (pair.order_id === null || pair.order_id <= 0) {
         replacements[`id_${index}`] = pair.id;
       } else {
         replacements[`order_id_${index}`] =
@@ -188,11 +195,31 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
 
     const groupedMap = results.reduce(
       (acc, record) => {
-        const orderKey = `${record.order_id}_${record.order_type}`;
+        // order_id <= 0 is the Kontor "no real order_id" sentinel — group
+        // those by the row's own id, same rule as the two queries above,
+        // so distinct Kontor orders don't collapse into one group here.
+        const hasNoRealOrderId = record.order_id === null || record.order_id <= 0;
+        const orderKey = hasNoRealOrderId
+          ? `row_${record.id}`
+          : `${record.order_id}_${record.order_type}`;
 
         if (!acc[orderKey]) {
+          // Kontor-sourced subscription rows have no real order_id (hardcoded
+          // to 0 in captureOrder.js) — the actual Kontor order reference
+          // lives in notes.order.number instead.
+          let order_number = null;
+          if (record.order_type === "subscription" && record.notes) {
+            try {
+              order_number = JSON.parse(record.notes)?.order?.number || null;
+            } catch {
+              order_number = null;
+            }
+          }
+
           acc[orderKey] = {
+            id: record.id,
             order_id: record.order_id,
+            order_number,
             order_type: record.order_type,
             order_amount: record.order_amount,
             profit_amount: record.profit_amount,

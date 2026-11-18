@@ -13,7 +13,8 @@ const normalizeProduct = (product) => {
 const GetPartnerReferralCode = async (req, res) => {
   try {
     const email = (req.body?.email || req.query?.email || "").trim();
-    const productInput = (req.body?.product || req.query?.product || "").trim();
+    const platformInput = (req.body?.platform || req.query?.platform || "").trim();
+    const productInput = (platformInput || req.body?.product || req.query?.product || "").trim();
 
     if (!email) {
       return res.status(400).json({
@@ -113,9 +114,10 @@ const GetPartnerReferralCode = async (req, res) => {
         customer_name: customer.customer_name,
         customer_email: customer.customer_email,
         product: customer.interest_in || productInput,
-        partner_referral_url: `${cleanBaseUrl}/partner-referral/${encodedReferralCode}`,
-        broker_registration_url: `${cleanBaseUrl}/broker-register/step1/${encodedReferralCode}`,
-        affiliate_registration_url: `${cleanBaseUrl}/affiliate-register?referral=${encodedReferralCode}`,
+        platform: platformInput || customer.interest_in || productInput,
+        partner_referral_url: `${cleanBaseUrl}/partner-referral/${encodedReferralCode}${platformInput ? `?platform=${encodeURIComponent(platformInput)}` : ""}`,
+        broker_registration_url: `${cleanBaseUrl}/broker-register/step1/${encodedReferralCode}${platformInput ? `?platform=${encodeURIComponent(platformInput)}` : ""}`,
+        affiliate_registration_url: `${cleanBaseUrl}/affiliate-register?referral=${encodedReferralCode}${platformInput ? `&platform=${encodeURIComponent(platformInput)}` : ""}`,
       },
     });
   } catch (error) {

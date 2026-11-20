@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Self-billed invoice - {{document_id}}</title>
+
+    <style>
+        @page {
+            margin: 10mm 0mm 5mm 0mm !important;
+        }
+
+        body {
+            padding-left: 5mm;
+            padding-right: 5mm;
+            font-family: 'Roboto', sans-serif !important;
+            color: #000;
+        }
+
+        .pdf_title h1 {
+            font-size: 24px;
+            margin: 10px 0 0 0;
+            color: #9b373c;
+        }
+
+        .pdf_subtitle {
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .parties_section {
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .party_block {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+            font-size: 12px;
+            line-height: 17px;
+        }
+
+        .party_block .label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #9b373c;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .meta_section {
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+
+        .meta_section p {
+            margin: 2px 0;
+        }
+
+        table.table_section {
+            width: 100%;
+            border-spacing: 0;
+            margin-top: 10px;
+        }
+
+        table.table_section th {
+            border: solid 2px #cfcfcf !important;
+            padding: 6px;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        table.table_section td {
+            font-size: 13px;
+            padding: 8px;
+            border: solid 1px #ccc;
+            text-align: center;
+        }
+
+        table.table_section td.left-text {
+            text-align: left !important;
+        }
+
+        .sub_total_section {
+            display: table;
+            width: 100%;
+            padding: 15px 0 !important;
+        }
+
+        .empty_block {
+            width: 60%;
+            display: table-cell;
+        }
+
+        .sub_total_block {
+            width: 40%;
+            display: table-cell;
+            text-align: right;
+        }
+
+        .sub_total_block p {
+            width: 100%;
+            margin: 2px 0;
+        }
+
+        .notes_section {
+            margin-top: 20px;
+            font-size: 11px;
+            line-height: 16px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+
+        .notes_section .warning {
+            color: #9b373c;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="pdf_title">
+        <h1>Self-billed invoice (Gutschrift) - {{document_id}}</h1>
+    </div>
+    <div class="pdf_subtitle">
+        Issued by the customer on the supplier's behalf, per §14 Abs. 2 UStG (Selbstfakturierung)
+    </div>
+
+    <div class="meta_section">
+        <p><b>Document:</b> {{document_id}}</p>
+        <p><b>Buyer reference:</b> {{buyer_reference}}</p>
+        <p><b>Issue date:</b> {{issue_date}}</p>
+        <p><b>Due date:</b> {{due_date}} (payment due immediately)</p>
+        <p><b>Period:</b> {{period_label}}</p>
+        <p><b>Currency:</b> {{currency}}</p>
+    </div>
+
+    <div class="parties_section">
+        <div class="party_block">
+            <div class="label">Supplier (earned the commission)</div>
+            <p>{{supplier_name}}<br>
+            {{supplier_street}}<br>
+            {{supplier_postcode}} {{supplier_city}}, {{supplier_country}}<br>
+            VAT-ID: {{supplier_vat_id}}<br>
+            Electronic Address: {{supplier_email}}<br>
+            Contact: {{supplier_contact_name}}<br>
+            Email: {{supplier_email}}<br>
+            Phone: {{supplier_phone}}</p>
+        </div>
+        <div class="party_block">
+            <div class="label">Customer (self-billing issuer)</div>
+            <p>{{customer_name}}<br>
+            {{customer_street}}<br>
+            {{customer_postcode}} {{customer_city}}, {{customer_country}}<br>
+            VAT-ID: {{customer_vat_id}}<br>
+            Electronic Address: {{customer_email}}<br>
+            Contact: {{customer_contact_name}}<br>
+            Email: {{customer_email}}<br>
+            Phone: {{customer_phone}}</p>
+        </div>
+    </div>
+
+    <table class="table_section">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Net amount</th>
+                <th>VAT %</th>
+                <th>VAT amount</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="left-text">{{description}}</td>
+                <td>{{currency_symbol}}{{net_amount}}</td>
+                <td>{{vat_percent}}%</td>
+                <td>{{currency_symbol}}{{vat_amount}}</td>
+                <td>{{currency_symbol}}{{payable_amount}}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="sub_total_section">
+        <div class="empty_block"></div>
+        <div class="sub_total_block">
+            <p><b>Net total:</b> {{currency_symbol}}{{net_amount}}</p>
+            <p><b>VAT:</b> {{currency_symbol}}{{vat_amount}}</p>
+            <p><b>Payable amount:</b> {{currency_symbol}}{{payable_amount}}</p>
+        </div>
+    </div>
+
+    <div class="meta_section">
+        <p><b>Account name:</b> {{supplier_account_holder_name}}</p>
+        <p><b>Payment to (IBAN):</b> {{supplier_iban}}</p>
+        <p><b>BIC:</b> {{supplier_bic}}</p>
+    </div>
+
+    <div class="notes_section">
+        {{notes_html}}
+    </div>
+
+</body>
+
+</html>

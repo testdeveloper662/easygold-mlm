@@ -1,5 +1,6 @@
 const db = require("../../models");
 const { kontorError } = require("../../utils/kontorErrorCodes");
+const { splitCommissionByPercent } = require("../../utils/kontorCommissionRounding");
 
 const centsToAmount = (cents) => (cents === undefined || cents === null ? null : Math.round(Number(cents)) / 100);
 
@@ -80,16 +81,29 @@ const ReverseKontorOrder = async (req, res) => {
       commission,
     });
 
-    const reversalRows = originalRows.map((row) => {
-      const commissionAmount =
-        reversalBase !== null
-          ? parseFloat(((row.commission_percent / 100) * reversalBase).toFixed(2))
-          : -row.commission_amount;
+    // originalRows is ordered by id ASC, and captureOrder.js always inserts
+    // the seller row first within a booking, so originalRows[0] is the
+    // seller — same assumption splitCommissionByPercent makes (index 0).
+    const originalIsStructureShare = originalSellerRow.basis_kind === "structure_share";
+    const originalPercentages = originalRows.map((row) => row.commission_percent);
+    // QK-16: same floor-the-non-seller-levels, seller-absorbs-the-remainder
+    // rule as a normal booking, just mirrored for a negative base — a
+    // reversal never claws back more than reversalBase itself.
+    const reversalAmounts =
+      reversalBase !== null
+        ? splitCommissionByPercent(reversalBase, originalPercentages, {
+            sellerFixedAmount: originalIsStructureShare ? 0 : null,
+          })
+        : null;
+
+    const reversalRows = originalRows.map((row, index) => {
+      const commissionAmount = reversalAmounts !== null ? reversalAmounts[index] : -row.commission_amount;
 
       return {
         broker_id: row.broker_id,
         user_id: row.user_id,
         order_id: 0,
+        basis_kind: row.basis_kind,
         kontor_idempotency_key: String(idempotency_key),
         kontor_entry_id: row.is_seller ? (entry_id ? String(entry_id) : null) : null,
         occurred_at: isNaN(occurredAtDate.getTime()) ? new Date() : occurredAtDate,

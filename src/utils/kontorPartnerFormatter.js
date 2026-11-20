@@ -37,11 +37,21 @@ const fetchMetaByUserId = async (userIds) => {
 // Kontor references brokers by broker_id now; external_ref (their own
 // customer number) and mlm_customer_number (our legacy internal id) are
 // kept for reference/backward compatibility.
-const formatPartner = (broker, user, meta = {}) => ({
+//
+// uplineInfo (QK-INV-2): the combined commission rate of the levels that
+// exist above this broker (0 / 20 / 35 / 45 / 50%), so a contract-partner
+// dealer can be billed the exact amount at checkout without ever seeing
+// the chain itself. Computed by getUplineLevelsAndRate and passed in by the
+// caller so this formatter can stay synchronous.
+const formatPartner = (broker, user, meta = {}, uplineInfo = null) => ({
   broker_id: broker.id,
   external_ref: broker.external_ref,
   mlm_customer_number: broker.mlm_customer_number,
   status: broker.kontor_status,
+  commission: {
+    levels_above: uplineInfo?.levels_above ?? null,
+    combined_rate_percent: uplineInfo?.combined_rate_percent ?? null,
+  },
   company: {
     legal_name: meta.u_company || null,
     legal_form: meta.u_legal_status || null,

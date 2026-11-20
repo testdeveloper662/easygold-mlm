@@ -1,5 +1,6 @@
 const db = require("../../models");
 const { kontorError } = require("../../utils/kontorErrorCodes");
+const { splitCommissionByPercent } = require("../../utils/kontorCommissionRounding");
 
 // orderType is now sent directly by Kontor (confirmed) — it already IS our
 // internal order_type string, no channel-name translation needed. This just
@@ -18,6 +19,14 @@ const ORDER_TYPE_TO_SERVICE_TYPE = {
 
 const BROKER_LEVELS = 5;
 const centsToAmount = (cents) => (cents === undefined || cents === null ? null : Math.round(Number(cents)) / 100);
+
+// QK-18: a contract-partner dealer collected the money himself. He keeps no
+// sales commission (he already holds his margin) — only the levels above
+// him get paid, at their normal percentage. A missing level's share is
+// never billed to anyone, including the seller (unlike manual_share, where
+// a missing level's percentage rolls up to the seller).
+const STRUCTURE_SHARE_PERCENTAGES = [0, 20, 15, 10, 5];
+const VALID_BASIS_KINDS = new Set(["manual_share", "structure_share"]);
 
 const CaptureKontorOrder = async (req, res) => {
   try {
@@ -39,7 +48,7 @@ const CaptureKontorOrder = async (req, res) => {
     // both are present and differ, since that's the documented field.
     const idempotency_key = req.body.idempotency_key || req.headers["idempotency-key"];
 
-    const { basis_net_cents } = commission;
+    const { basis_net_cents, basis_kind: rawBasisKind } = commission;
 
     if (!idempotency_key || !orderType || (!broker_id && !external_ref) || basis_net_cents === undefined || basis_net_cents === null) {
       return kontorError(
@@ -54,6 +63,14 @@ const CaptureKontorOrder = async (req, res) => {
     if (!Number.isFinite(base)) {
       return kontorError(res, 400, "VALIDATION_ERROR", "commission.basis_net_cents must be a number");
     }
+
+    // QK-14/QK-18: defaults to a normal commission entry; "structure_share"
+    // is the QK-18 contract-partner record (see STRUCTURE_SHARE_PERCENTAGES).
+    const basisKind = rawBasisKind || "manual_share";
+    if (!VALID_BASIS_KINDS.has(basisKind)) {
+      return kontorError(res, 400, "VALIDATION_ERROR", "commission.basis_kind must be 'manual_share' or 'structure_share'");
+    }
+    const isStructureShare = basisKind === "structure_share";
 
     // Idempotency: dedupe against Kontor's idempotency_key before booking
     // any commission — a retried push, or a resend of an already-processed
@@ -98,24 +115,32 @@ const CaptureKontorOrder = async (req, res) => {
       currentUserId = ref?.parent_user_id || null;
     }
 
-    const serviceType = ORDER_TYPE_TO_SERVICE_TYPE[orderType];
-    let basePercentages = [50, 20, 15, 10, 5];
-    if (serviceType) {
-      await db.AdminVariableBrokerCommission.sync();
-      const commissionRecords = await db.AdminVariableBrokerCommission.findAll({
-        where: { service_type: serviceType },
-        order: [["level", "ASC"]],
-      });
-      if (commissionRecords.length) {
-        basePercentages = commissionRecords.map((r) => r.percentage || 0);
+    let activeBase;
+    if (isStructureShare) {
+      // Fixed table, not the admin-configured one — the seller is always 0%
+      // here regardless of order type, and a missing level's percentage is
+      // simply dropped rather than rolled up to the seller.
+      activeBase = STRUCTURE_SHARE_PERCENTAGES.slice(0, activeLevels.length);
+    } else {
+      const serviceType = ORDER_TYPE_TO_SERVICE_TYPE[orderType];
+      let basePercentages = [50, 20, 15, 10, 5];
+      if (serviceType) {
+        await db.AdminVariableBrokerCommission.sync();
+        const commissionRecords = await db.AdminVariableBrokerCommission.findAll({
+          where: { service_type: serviceType },
+          order: [["level", "ASC"]],
+        });
+        if (commissionRecords.length) {
+          basePercentages = commissionRecords.map((r) => r.percentage || 0);
+        }
       }
-    }
-    while (basePercentages.length < BROKER_LEVELS) basePercentages.push(0);
+      while (basePercentages.length < BROKER_LEVELS) basePercentages.push(0);
 
-    const activeBase = basePercentages.slice(0, activeLevels.length);
-    const totalBase = activeBase.reduce((a, b) => a + b, 0);
-    const remaining = 100 - totalBase;
-    activeBase[0] += remaining; // remainder goes to the seller, same as the existing engine
+      activeBase = basePercentages.slice(0, activeLevels.length);
+      const totalBase = activeBase.reduce((a, b) => a + b, 0);
+      const remaining = 100 - totalBase;
+      activeBase[0] += remaining; // remainder goes to the seller, same as the existing engine
+    }
 
     const tree = activeLevels.map((b) => b.id).join("->");
     const noteData = {
@@ -133,13 +158,21 @@ const CaptureKontorOrder = async (req, res) => {
     const rowsToInsert = [];
     const distribution = [];
 
+    // QK-16: non-seller levels are floored to the cent, the seller absorbs
+    // the remainder, so the booked total always reconciles to base exactly
+    // (never overpays by a stray cent the way independently-rounded levels
+    // can). structure_share pins the seller to 0 instead of a remainder.
+    const commissionAmounts = splitCommissionByPercent(base, activeBase, {
+      sellerFixedAmount: isStructureShare ? 0 : null,
+    });
+
     for (let i = 0; i < activeLevels.length; i++) {
       const currentBroker = activeLevels[i];
       const commissionPercent = parseFloat(activeBase[i].toFixed(2));
       // base can legitimately be 0 (a deal with no profit) or negative (a
       // correction/refund, sent as a new entry with corrects_entry_id set)
       // — the same math applies either way, no special-casing needed.
-      const commissionAmount = parseFloat(((commissionPercent / 100) * base).toFixed(2));
+      const commissionAmount = commissionAmounts[i];
       const isSeller = i === 0;
 
       distribution.push({
@@ -149,6 +182,7 @@ const CaptureKontorOrder = async (req, res) => {
         commission_percent: commissionPercent,
         commission_amount: commissionAmount,
         is_seller: isSeller,
+        basis_kind: basisKind,
       });
 
       rowsToInsert.push({
@@ -161,6 +195,7 @@ const CaptureKontorOrder = async (req, res) => {
         order_type: orderType,
         product_type: "product",
         source: "kontor",
+        basis_kind: basisKind,
         kontor_idempotency_key: String(idempotency_key),
         kontor_entry_id: isSeller ? (entry_id ? String(entry_id) : null) : null, // unique index — only the seller row carries it
         occurred_at: isNaN(occurredAtDate.getTime()) ? new Date() : occurredAtDate,

@@ -780,6 +780,14 @@ const swaggerDefinition = {
           external_ref: { type: "string", example: "60123" },
           mlm_customer_number: { type: "string", nullable: true, description: "Legacy internal identifier, kept for our own reference only" },
           status: { type: "string", example: "activated" },
+          commission: {
+            type: "object",
+            description: "QK-INV-2: the combined rate of the broker levels that exist above this one, so a contract-partner dealer can be billed the exact amount at checkout without seeing the chain itself.",
+            properties: {
+              levels_above: { type: "integer", nullable: true, description: "How many broker levels exist above this one (0-4)", example: 2 },
+              combined_rate_percent: { type: "integer", nullable: true, description: "Combined commission percentage of those levels: 0 / 20 / 35 / 45 / 50", example: 35 },
+            },
+          },
           company: { "$ref": "#/components/schemas/KontorCompany" },
           contact: {
             type: "object",
@@ -849,8 +857,8 @@ const swaggerDefinition = {
             type: "object",
             required: ["basis_net_cents"],
             properties: {
-              basis_kind: { type: "string", example: "commission" },
-              basis_net_cents: { type: "integer", description: "The base we calculate our percentage split on — can be 0 for a deal without profit, or negative for a correction. Our calculation is binding, not Kontor's partner_commission_cents.", example: 248840 },
+              basis_kind: { type: "string", enum: ["manual_share", "structure_share"], default: "manual_share", description: "QK-14/QK-18: 'manual_share' (default) is a normal commission entry, split 50/20/15/10/5 with a missing level's share rolled up to the seller. 'structure_share' is for a contract-partner dealer who collected the money himself (QK-18) — the seller is always 0%, only existing upper levels (20/15/10/5) are billed, and a missing level's share is dropped rather than rolled up.", example: "manual_share" },
+              basis_net_cents: { type: "integer", description: "The base we calculate our percentage split on — can be 0 for a deal without profit, or negative for a correction. Our calculation is binding, not Kontor's partner_commission_cents. For basis_kind 'structure_share', this is the dealer's margin, not the order's net amount.", example: 248840 },
               purchase_net_cents: { type: "integer", example: 241600 },
               partner_commission_cents: { type: "integer", description: "Kontor's own calculation, informational only — never used for our booking", example: 7240 },
               commission_rate_bp: { type: "integer", nullable: true, description: "Only present for subscriptions — Kontor's configured rate, informational only; we always use our own percentage tables", example: 500 },
@@ -902,6 +910,7 @@ const swaggerDefinition = {
           product: { type: "object", nullable: true },
           amounts: { type: "object", nullable: true, description: "As originally sent, in cents" },
           basis_net_amount: { type: "number", nullable: true, description: "commission.basis_net_cents converted to decimal currency" },
+          basis_kind: { type: "string", enum: ["manual_share", "structure_share"], description: "QK-14: 'manual_share' (normal entry) or 'structure_share' (QK-18 contract-partner record)", example: "manual_share" },
           is_seller: { type: "boolean" },
           commission_percent: { type: "number" },
           commission_amount: { type: "number" },

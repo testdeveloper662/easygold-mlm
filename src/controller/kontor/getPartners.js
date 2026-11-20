@@ -1,6 +1,7 @@
 const db = require("../../models");
 const { Op } = require("sequelize");
 const { fetchMetaByUserId, formatPartner } = require("../../utils/kontorPartnerFormatter");
+const { getUplineLevelsAndRate } = require("../../utils/kontorUplineRate");
 const { kontorError } = require("../../utils/kontorErrorCodes");
 
 const DEFAULT_LIMIT = 50;
@@ -27,7 +28,14 @@ const GetKontorPartners = async (req, res) => {
     const page = hasMore ? brokers.slice(0, limit) : brokers;
 
     const metaByUserId = await fetchMetaByUserId(page.map((b) => b.user_id));
-    const partners = page.map((b) => formatPartner(b, b.user, metaByUserId[b.user_id] || {}));
+    // N+1 by design, same as the chain walk in captureOrder.js — the Kontor
+    // partner base is small enough that this isn't worth a bulk query yet.
+    const partners = await Promise.all(
+      page.map(async (b) => {
+        const uplineInfo = await getUplineLevelsAndRate(b.user_id);
+        return formatPartner(b, b.user, metaByUserId[b.user_id] || {}, uplineInfo);
+      })
+    );
 
     return res.status(200).json({
       success: true,

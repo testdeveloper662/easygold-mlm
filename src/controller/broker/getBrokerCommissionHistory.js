@@ -274,11 +274,11 @@ const GetBrokerCommissionHistory = async (req, res) => {
         ? orderUsersMap[order_details.user_id] || "Unknown"
         : "Unknown";
 
-      // Kontor-sourced subscription rows have no real order_id (hardcoded to
-      // 0 in captureOrder.js) — the actual Kontor order reference lives in
-      // notes.order.number instead.
+      // Every Kontor-sourced row has no real order_id (hardcoded to 0 in
+      // captureOrder.js, any order_type) — the actual Kontor order
+      // reference lives in notes.order.number instead.
       let order_number = null;
-      if (json.order_type === "subscription" && json.notes) {
+      if (json.source === "kontor" && json.notes) {
         try {
           order_number = JSON.parse(json.notes)?.order?.number || null;
         } catch {

@@ -23,6 +23,7 @@ const formatTransaction = (row, broker) => {
     product: noteData.product || null,
     amounts: noteData.amounts || null,
     basis_net_amount: commission.basis_net_cents !== undefined ? commission.basis_net_cents / 100 : null,
+    basis_kind: row.basis_kind || "manual_share",
     is_seller: row.is_seller,
     commission_percent: row.commission_percent,
     commission_amount: row.commission_amount,

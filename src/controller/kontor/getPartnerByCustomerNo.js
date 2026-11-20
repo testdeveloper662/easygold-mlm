@@ -1,5 +1,6 @@
 const db = require("../../models");
 const { fetchMetaByUserId, formatPartner } = require("../../utils/kontorPartnerFormatter");
+const { getUplineLevelsAndRate } = require("../../utils/kontorUplineRate");
 const { kontorError } = require("../../utils/kontorErrorCodes");
 
 const GetKontorPartnerByCustomerNo = async (req, res) => {
@@ -30,10 +31,11 @@ const GetKontorPartnerByCustomerNo = async (req, res) => {
     }
 
     const metaByUserId = await fetchMetaByUserId([broker.user_id]);
+    const uplineInfo = await getUplineLevelsAndRate(broker.user_id);
 
     return res.status(200).json({
       success: true,
-      data: formatPartner(broker, broker.user, metaByUserId[broker.user_id] || {}),
+      data: formatPartner(broker, broker.user, metaByUserId[broker.user_id] || {}, uplineInfo),
     });
   } catch (error) {
     console.error("[Kontor] Error in GetKontorPartnerByCustomerNo:", error);

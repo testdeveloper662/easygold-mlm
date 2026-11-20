@@ -126,6 +126,12 @@ const BrokerCommissionHistory = sequelize.define(
       allowNull: true,
       comment: "Kontor's own idempotency_key (arbitrary string, e.g. 'order_line:4711:paid'). Dedicated column because order_id is a legacy int(11) that can't hold it. Shared across every level-row of one booking, so not unique-constrained.",
     },
+    basis_kind: {
+      type: Sequelize.STRING(20),
+      allowNull: false,
+      defaultValue: "manual_share",
+      comment: "'manual_share' (normal commission entry) or 'structure_share' (QK-18: contract-partner dealer collected the money himself).",
+    },
   },
   {
     timestamps: true,

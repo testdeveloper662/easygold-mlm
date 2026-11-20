@@ -40,6 +40,7 @@ const examplePartner = {
   external_ref: "70001",
   mlm_customer_number: "M-10174",
   status: "activated",
+  commission: { levels_above: 2, combined_rate_percent: 35 },
   company: {
     legal_name: "Chris Test GmbH 70001",
     legal_form: "GmbH",
@@ -71,6 +72,7 @@ const exampleTransaction = {
   product: { name: "Test Goldbarren 10 g", sku: "UMI-10G", class: "bullion", metal: "au", fine_weight_mg: 10000, quantity: 2 },
   amounts: { currency: "EUR", unit_net_cents: 124420, net_cents: 248840, vat_cents: 0, gross_cents: 248840, vat_rate_bp: 0, tax_case: "domestic_exempt_gold" },
   basis_net_amount: 2488.4,
+  basis_kind: "manual_share",
   is_seller: true,
   commission_percent: 100,
   commission_amount: 2488.4,
@@ -128,7 +130,7 @@ module.exports = {
     get: {
       tags: ["Kontor Integration"],
       summary: "List Kontor-sourced brokers (cursor-paginated)",
-      description: `Lists every broker created via this namespace, newest-id-last. ${kontorSecurityNote}`,
+      description: `Lists every broker created via this namespace, newest-id-last. Each partner's commission block (QK-INV-2) gives the combined rate of the broker levels above it (0/20/35/45/50%), so a contract-partner dealer can be billed the exact amount at checkout without seeing the chain. ${kontorSecurityNote}`,
       parameters: [
         { name: "cursor", in: "query", schema: { type: "string" }, description: "Opaque cursor from a previous page's next_cursor" },
         { name: "limit", in: "query", schema: { type: "integer", default: 50 }, description: "Max 200" },
@@ -161,7 +163,7 @@ module.exports = {
     get: {
       tags: ["Kontor Integration"],
       summary: "Get one broker by broker_id or external_ref",
-      description: `Accepts our own broker_id or Kontor's external_ref in the same path segment (external_ref can itself be numeric-looking, e.g. "70001" — both are tried). ${kontorSecurityNote}`,
+      description: `Accepts our own broker_id or Kontor's external_ref in the same path segment (external_ref can itself be numeric-looking, e.g. "70001" — both are tried). The commission block (QK-INV-2) gives the combined rate of the broker levels above this one (0/20/35/45/50%), for billing a contract-partner dealer the exact amount at checkout. ${kontorSecurityNote}`,
       parameters: [
         { name: "external_ref", in: "path", required: true, schema: { type: "string" }, description: "broker_id or external_ref", example: "174" },
         ...kontorSignatureHeaders,
@@ -202,8 +204,8 @@ module.exports = {
           description: "Broker created (or already existed for this external_ref, created:false)",
           content: {
             "application/json": {
-              schema: { type: "object", properties: { success: { type: "boolean" }, broker_id: { type: "integer" }, user_id: { type: "integer" }, created: { type: "boolean" } } },
-              example: { success: true, broker_id: 174, user_id: 43531, created: true },
+              schema: { type: "object", properties: { success: { type: "boolean" }, broker_id: { type: "integer" }, user_id: { type: "integer" }, referral_code: { type: "string", description: "This broker's own referral code — send this exact value as referralCode when registering partners this broker refers. Also returned on the created:false idempotent-retry paths." }, created: { type: "boolean" } } },
+              example: { success: true, broker_id: 174, user_id: 43531, referral_code: "K3F9D2", created: true },
             },
           },
         },
@@ -265,7 +267,11 @@ module.exports = {
     post: {
       tags: ["Kontor Integration"],
       summary: "Book commission for a Kontor order line",
-      description: `Books broker-chain commission for one order line and event, trusting Kontor's released commission.basis_net_cents directly as the base rather than recalculating a margin — our percentage split on that base is binding, Kontor's own partner_commission_cents (and commission_rate_bp for subscriptions) is informational only. Amounts are in cents; orderType is sent directly by Kontor (no channel mapping on our side). Every pushed event is booked, including subscriptions (commission-eligible from day one — the parent partner always earns on them) — commission.informational:true describes partner_commission_cents specifically, it is not a skip signal. Corrections/refunds aren't a separate call: they arrive as a new record with negative amounts and corrects_entry_id pointing at the original entry_id, and flow through this same endpoint — the reversal's own commission.basis_net_cents is what gets distributed (handles a partial reversal correctly, not a blanket negation). Deduped against idempotency_key — a retried/resent push returns the existing booking, never double-books. Known v1 limitation: the "view order" drill-down in the dashboard will 404 for Kontor-originated orders since no line-item/shipping detail is stored beyond what's in this payload; commission figures display correctly regardless. ${kontorSecurityNote}`,
+      description: `Books broker-chain commission for one order line and event, trusting Kontor's released commission.basis_net_cents directly as the base rather than recalculating a margin — our percentage split on that base is binding, Kontor's own partner_commission_cents (and commission_rate_bp for subscriptions) is informational only. Amounts are in cents; orderType is sent directly by Kontor (no channel mapping on our side). Every pushed event is booked, including subscriptions (commission-eligible from day one — the parent partner always earns on them) — commission.informational:true describes partner_commission_cents specifically, it is not a skip signal. Corrections/refunds aren't a separate call: they arrive as a new record with negative amounts and corrects_entry_id pointing at the original entry_id, and flow through this same endpoint — the reversal's own commission.basis_net_cents is what gets distributed (handles a partial reversal correctly, not a blanket negation). Deduped against idempotency_key — a retried/resent push returns the existing booking, never double-books. Known v1 limitation: the "view order" drill-down in the dashboard will 404 for Kontor-originated orders since no line-item/shipping detail is stored beyond what's in this payload; commission figures display correctly regardless.
+
+QK-16 rounding: every level above the seller is floored to the cent; the seller's row is the base minus the sum of those rows, so the booked total always reconciles to the base exactly (never pays out a stray extra cent).
+
+QK-14/QK-18: commission.basis_kind defaults to "manual_share" (normal entry). Send "structure_share" when a contract-partner dealer collected the money himself and already keeps his own margin — the seller is always booked at 0%, only existing upper levels (20/15/10/5) are billed, and a missing level's share is simply not billed to anyone (not rolled up to the seller, unlike manual_share). ${kontorSecurityNote}`,
       parameters: [...kontorSignatureHeaders, idempotencyKeyHeader],
       requestBody: {
         required: true,
@@ -282,7 +288,7 @@ module.exports = {
                 success: true,
                 reference: "MLM-TX-000594",
                 distribution: [
-                  { level: 1, broker_id: 174, user_id: 43531, commission_percent: 100, commission_amount: 2488.4, is_seller: true },
+                  { level: 1, broker_id: 174, user_id: 43531, commission_percent: 100, commission_amount: 2488.4, is_seller: true, basis_kind: "manual_share" },
                 ],
               },
             },
@@ -300,7 +306,7 @@ module.exports = {
     post: {
       tags: ["Kontor Integration"],
       summary: "Reverse a previously booked Kontor order commission",
-      description: `Books a negative-adjustment counter-entry against every broker-chain row from the original capture-order call, offsetting a future payout. Looked up via corrects_entry_id (Kontor's ULID) or corrects_reference (our MLM-TX-<id>) — either works. Nothing is deleted or mutated on the original rows. Deduped on idempotency_key. ${kontorSecurityNote}`,
+      description: `Books a negative-adjustment counter-entry against every broker-chain row from the original capture-order call, offsetting a future payout. Looked up via corrects_entry_id (Kontor's ULID) or corrects_reference (our MLM-TX-<id>) — either works. Nothing is deleted or mutated on the original rows. Deduped on idempotency_key. Inherits the original booking's basis_kind automatically (not sent in the request) and applies the same QK-16 floor-and-remainder rounding, mirrored for the negative amount — a reversal never claws back more than it was given. ${kontorSecurityNote}`,
       parameters: [...kontorSignatureHeaders, idempotencyKeyHeader],
       requestBody: {
         required: true,
@@ -389,7 +395,7 @@ module.exports = {
     get: {
       tags: ["Kontor Integration"],
       summary: "Our daily commission totals, all brokers",
-      description: `Bulk, all-brokers daily totals (order count, commission amount) for Kontor-side comparison. Scoped to Kontor-sourced commission rows only, grouped by occurred_at (UTC calendar day) rather than when we processed the row. ${kontorSecurityNote}`,
+      description: `Bulk, all-brokers daily totals (order count, commission amount) for Kontor-side comparison. Scoped to Kontor-sourced commission rows only, grouped by occurred_at (UTC calendar day) rather than when we processed the row. QK-14: manual_share_count/manual_share_cents and structure_share_count/structure_share_cents break the totals down by basis_kind, both per broker and in the grand total — manual_share_cents/structure_share_cents are integer cents, matching Kontor's own basis_net_cents convention. ${kontorSecurityNote}`,
       parameters: [
         { name: "date", in: "query", schema: { type: "string", format: "date" }, description: "UTC calendar day. Defaults to today.", example: "2026-10-20" },
         ...kontorSignatureHeaders,
@@ -403,8 +409,17 @@ module.exports = {
                 success: true,
                 data: {
                   date: "2026-10-20",
-                  brokers: [{ broker_id: 174, external_ref: "70001", mlm_customer_number: "M-10174", order_count: 3, total_order_amount: 2488.4, total_commission_amount: 2488.4 }],
-                  totals: { order_count: 3, total_order_amount: 2488.4, total_commission_amount: 2488.4 },
+                  brokers: [{
+                    broker_id: 174, external_ref: "70001", mlm_customer_number: "M-10174",
+                    order_count: 3, total_order_amount: 2488.4, total_commission_amount: 2488.4,
+                    manual_share_count: 2, manual_share_cents: 223840,
+                    structure_share_count: 1, structure_share_cents: 25000,
+                  }],
+                  totals: {
+                    order_count: 3, total_order_amount: 2488.4, total_commission_amount: 2488.4,
+                    manual_share_count: 2, manual_share_cents: 223840,
+                    structure_share_count: 1, structure_share_cents: 25000,
+                  },
                 },
               },
             },

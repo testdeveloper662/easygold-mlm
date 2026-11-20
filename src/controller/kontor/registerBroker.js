@@ -95,6 +95,7 @@ const RegisterKontorBroker = async (req, res) => {
         success: true,
         broker_id: existingBroker.id,
         user_id: existingBroker.user_id,
+        referral_code: existingBroker.referral_code,
         created: false,
       });
     }
@@ -114,6 +115,7 @@ const RegisterKontorBroker = async (req, res) => {
           message: "A broker with this email already exists. Returning the existing broker_id.",
           broker_id: existingBrokerForEmail.id,
           user_id: existingBrokerForEmail.user_id,
+          referral_code: existingBrokerForEmail.referral_code,
           created: false,
         });
       }
@@ -245,6 +247,10 @@ const RegisterKontorBroker = async (req, res) => {
       success: true,
       broker_id: broker.id,
       user_id,
+      // The exact value to send as referralCode when registering this
+      // broker's own referred partners — resolveParentByReferralCode looks
+      // up brokers by this column, so nothing else will match.
+      referral_code: newReferralCode,
       created: true,
     });
   } catch (error) {

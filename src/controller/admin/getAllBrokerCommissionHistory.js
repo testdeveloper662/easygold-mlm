@@ -169,6 +169,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
         bch.selected_payment_method,
         bch.tree,
         bch.notes,
+        bch.source,
         bch.createdAt,
         bch.updatedAt,
         u.user_email,
@@ -204,11 +205,11 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
           : `${record.order_id}_${record.order_type}`;
 
         if (!acc[orderKey]) {
-          // Kontor-sourced subscription rows have no real order_id (hardcoded
-          // to 0 in captureOrder.js) — the actual Kontor order reference
-          // lives in notes.order.number instead.
+          // Every Kontor-sourced row has no real order_id (hardcoded to 0 in
+          // captureOrder.js, any order_type) — the actual Kontor order
+          // reference lives in notes.order.number instead.
           let order_number = null;
-          if (record.order_type === "subscription" && record.notes) {
+          if (record.source === "kontor" && record.notes) {
             try {
               order_number = JSON.parse(record.notes)?.order?.number || null;
             } catch {

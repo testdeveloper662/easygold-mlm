@@ -1,5 +1,6 @@
 const db = require("../../models");
 const { sequelize } = require("../../config/database");
+const { parseNotes, getKontorStatus, resolveKontorOrderNumber } = require("../../utils/kontorReversalLabel");
 
 const GetAllBrokerCommissionHistory = async (req, res) => {
   try {
@@ -225,6 +226,7 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
             order_amount: record.order_amount,
             profit_amount: record.profit_amount,
             notes: record.notes || null,
+            source: record.source || null,
             createdAt: record.createdAt,
             updatedAt: record.updatedAt,
             broker_commissions: [],
@@ -314,6 +316,32 @@ const GetAllBrokerCommissionHistory = async (req, res) => {
           new Date(b.createdAt) -
           new Date(a.createdAt)
       );
+
+    // ==========================================
+    // REVERSAL / REFUND LABEL
+    // ==========================================
+    // Only Kontor-sourced orders carry a reversal concept today; the
+    // seller's own commission_amount (sign) backstops the notes-based
+    // signal for any row written before type:"reversal" existed.
+    await Promise.all(
+      grouped.map(async (order) => {
+        if (order.source !== "kontor") {
+          order.is_reversal = false;
+          order.status_label = null;
+          return;
+        }
+
+        const noteData = parseNotes(order.notes);
+        const sellerCommission = order.broker_commissions.find((c) => c.is_seller);
+        const status = getKontorStatus(
+          { commission_amount: sellerCommission?.commission_amount },
+          noteData
+        );
+        order.is_reversal = status.is_reversal;
+        order.status_label = status.status_label;
+        order.order_number = await resolveKontorOrderNumber(noteData);
+      })
+    );
 
     // ==========================================
     // RESPONSE

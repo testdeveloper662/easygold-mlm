@@ -71,6 +71,18 @@ const ReverseKontorOrder = async (req, res) => {
     // original amounts. This also handles a partial reversal correctly.
     const reversalBase = commission.basis_net_cents !== undefined ? centsToAmount(commission.basis_net_cents) : null;
     const occurredAtDate = occurred_at ? new Date(occurred_at) : new Date();
+
+    // The reversal itself carries no order/product payload — copy it
+    // forward from the original booking so the commission history list and
+    // order-detail page can show the real order reference and product
+    // directly off this row, without a lookup at read time.
+    let originalNoteData = {};
+    try {
+      originalNoteData = originalSellerRow.notes ? JSON.parse(originalSellerRow.notes) : {};
+    } catch {
+      originalNoteData = {};
+    }
+
     const notes = JSON.stringify({
       source: "kontor",
       type: "reversal",
@@ -79,6 +91,8 @@ const ReverseKontorOrder = async (req, res) => {
       event: event ?? null,
       amounts,
       commission,
+      order: originalNoteData.order || null,
+      product: originalNoteData.product || null,
     });
 
     // originalRows is ordered by id ASC, and captureOrder.js always inserts

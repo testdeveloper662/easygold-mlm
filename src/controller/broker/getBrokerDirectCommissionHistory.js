@@ -1,5 +1,6 @@
 const db = require("../../models");
 const { Op } = require("sequelize");
+const { parseNotes, getKontorStatus, resolveKontorOrderNumber } = require("../../utils/kontorReversalLabel");
 
 const isNumericOrderId = (value) => {
   return !isNaN(Number(value));
@@ -352,7 +353,7 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
       }, {});
     }
 
-    const enrichedHistory = history.map((item) => {
+    const enrichedHistory = await Promise.all(history.map(async (item) => {
       const json = item.toJSON();
       const sellerInfo = usersMap[item.user_id] || {};
 
@@ -375,6 +376,19 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
         ? orderUsersMap[order_details.user_id] || "Unknown"
         : "Unknown";
 
+      // Every Kontor-sourced row has no real order_id (hardcoded to 0 in
+      // captureOrder.js, any order_type) — the actual Kontor order
+      // reference lives in notes.order.number instead (a reversal row
+      // carries that forward from the original booking).
+      let order_number = null;
+      let is_reversal = false;
+      let status_label = null;
+      if (json.source === "kontor") {
+        const noteData = parseNotes(json.notes);
+        order_number = await resolveKontorOrderNumber(noteData);
+        ({ is_reversal, status_label } = getKontorStatus(json, noteData));
+      }
+
       // order_details is only used internally above to resolve relatedUserLogin —
       // confirmed unused anywhere in the frontend, so not included in the response.
       // Same for seller_username (duplicate of user_login), is_send_bonus,
@@ -386,6 +400,9 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
 
       return {
         ...jsonTrimmed,
+        order_number,
+        is_reversal,
+        status_label,
         seller_name: sellerInfo.user_nicename || null,
         user_login: relatedUserLogin,
         diamond_page_source: json.order_type === "diamond_gemstone"
@@ -404,7 +421,7 @@ const GetBrokerDirectCommissionHistory = async (req, res) => {
                     ? "FLIZPay"
                     : null,
       };
-    });
+    }));
 
     return res.status(200).json({
       success: true,

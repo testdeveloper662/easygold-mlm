@@ -1,5 +1,6 @@
 const db = require("../../models");
 const { Op } = require("sequelize");
+const { parseNotes, getKontorStatus, resolveKontorOrderNumber } = require("../../utils/kontorReversalLabel");
 
 const isNumericOrderId = (value) => {
   return !isNaN(Number(value));
@@ -251,7 +252,7 @@ const GetBrokerCommissionHistory = async (req, res) => {
       }, {});
     }
 
-    const enrichedHistory = history.map((item) => {
+    const enrichedHistory = await Promise.all(history.map(async (item) => {
       const json = item.toJSON();
       const sellerInfo = usersMap[item.user_id] || {};
 
@@ -276,14 +277,16 @@ const GetBrokerCommissionHistory = async (req, res) => {
 
       // Every Kontor-sourced row has no real order_id (hardcoded to 0 in
       // captureOrder.js, any order_type) — the actual Kontor order
-      // reference lives in notes.order.number instead.
+      // reference lives in notes.order.number instead (a reversal row
+      // carries that forward from the original booking — see
+      // captureOrderReverse.js / resolveKontorOrderNumber).
       let order_number = null;
-      if (json.source === "kontor" && json.notes) {
-        try {
-          order_number = JSON.parse(json.notes)?.order?.number || null;
-        } catch {
-          order_number = null;
-        }
+      let is_reversal = false;
+      let status_label = null;
+      if (json.source === "kontor") {
+        const noteData = parseNotes(json.notes);
+        order_number = await resolveKontorOrderNumber(noteData);
+        ({ is_reversal, status_label } = getKontorStatus(json, noteData));
       }
 
       // order_details is only used internally above to resolve relatedUserLogin —
@@ -298,6 +301,8 @@ const GetBrokerCommissionHistory = async (req, res) => {
       return {
         ...jsonTrimmed,
         order_number,
+        is_reversal,
+        status_label,
         seller_name: sellerInfo.user_nicename || null,
         user_login: relatedUserLogin,
         diamond_page_source: json.order_type === "diamond_gemstone"
@@ -316,7 +321,7 @@ const GetBrokerCommissionHistory = async (req, res) => {
                     ? "FLIZPay"
                     : null,
       };
-    });
+    }));
 
     return res.status(200).json({
       success: true,

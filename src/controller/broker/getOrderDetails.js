@@ -81,6 +81,7 @@
 
 // module.exports = GetOrderDetails;
 const db = require("../../models");
+const { parseNotes, getKontorStatus, resolveKontorOrderNumber } = require("../../utils/kontorReversalLabel");
 
 const GetOrderDetails = async (req, res) => {
   try {
@@ -118,12 +119,7 @@ const GetOrderDetails = async (req, res) => {
       });
 
       if (kontorRow) {
-        let parsedNotes = {};
-        try {
-          parsedNotes = kontorRow.notes ? JSON.parse(kontorRow.notes) : {};
-        } catch {
-          parsedNotes = {};
-        }
+        const parsedNotes = parseNotes(kontorRow.notes);
 
         const siblingCommissions = await db.BrokerCommissionHistory.findAll({
           where: { kontor_idempotency_key: kontorRow.kontor_idempotency_key },
@@ -157,6 +153,10 @@ const GetOrderDetails = async (req, res) => {
           0
         );
 
+        const sellerRow = siblingCommissions.find((bc) => bc.is_seller) || kontorRow;
+        const { is_reversal, status_label } = getKontorStatus(sellerRow, parsedNotes);
+        const order_number = await resolveKontorOrderNumber(parsedNotes);
+
         const paymentMethod = kontorRow.selected_payment_method;
         const paymentType =
           paymentMethod === 1
@@ -176,7 +176,9 @@ const GetOrderDetails = async (req, res) => {
           data: {
             order_id: kontorRow.id,
             order_type: kontorRow.order_type,
-            order_number: parsedNotes?.order?.number || null,
+            order_number,
+            is_reversal,
+            status_label,
             order_amount: kontorRow.order_amount,
             profit_amount: totalProfit,
             payment_type: paymentType,

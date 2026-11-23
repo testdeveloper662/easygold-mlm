@@ -1,6 +1,7 @@
 const db = require("../../models");
 const { Op } = db.Sequelize;
 const { roundToTwoDecimalPlaces } = require("../../utils/Helper");
+const { parseNotes, getKontorStatus, resolveKontorOrderNumber } = require("../../utils/kontorReversalLabel");
 
 const MAX_LEVEL = 5;
 const RECENT_ORDERS_LIMIT = 5;
@@ -441,6 +442,7 @@ const GetDashboardData = async (req, res) => {
           "createdAt",
           "order_type",
           "notes",
+          "source",
         ],
         order: [["createdAt", "DESC"]],
         limit,
@@ -598,7 +600,7 @@ const GetDashboardData = async (req, res) => {
       "primeinvest",
     ];
 
-    const recentOrders = recentOrdersResult.rows.map(commission => {
+    const recentOrders = await Promise.all(recentOrdersResult.rows.map(async commission => {
 
       let transaction_source = "system";
 
@@ -647,16 +649,17 @@ const GetDashboardData = async (req, res) => {
         transaction_source = "payout";
       }
 
-      // Kontor-sourced subscription rows have no real order_id (hardcoded to
-      // 0 in captureOrder.js) — the actual Kontor order reference lives in
-      // notes.order.number instead.
+      // Every Kontor-sourced row has no real order_id (hardcoded to 0 in
+      // captureOrder.js, any order_type, not just subscription) — the real
+      // Kontor order reference lives in notes.order.number instead (a
+      // reversal row carries that forward from the original booking).
       let order_number = null;
-      if (commission.order_type === "subscription" && commission.notes) {
-        try {
-          order_number = JSON.parse(commission.notes)?.order?.number || null;
-        } catch {
-          order_number = null;
-        }
+      let is_reversal = false;
+      let status_label = null;
+      if (commission.source === "kontor") {
+        const noteData = parseNotes(commission.notes);
+        order_number = await resolveKontorOrderNumber(noteData);
+        ({ is_reversal, status_label } = getKontorStatus(commission, noteData));
       }
 
       return {
@@ -670,8 +673,10 @@ const GetDashboardData = async (req, res) => {
         is_seller: commission.is_seller,
         createdAt: commission.createdAt,
         transaction_source,
+        is_reversal,
+        status_label,
       };
-    });
+    }));
 
     // 5. Commission Summary by Level
     // Group commissions by their position in the commission tree (distribution level)

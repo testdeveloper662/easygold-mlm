@@ -1,7 +1,8 @@
 const db = require("../../models");
+const { Op } = require("sequelize");
 const {
-  DECLARATION_DOCUMENT_KEY,
   DECLARATION_PRODUCTS,
+  getDeclarationDocumentKey,
 } = require("../../utils/brokerProductDeclaration");
 
 const GetBrokerProductDeclarations = async (req, res) => {
@@ -26,8 +27,10 @@ const GetBrokerProductDeclarations = async (req, res) => {
       });
     }
 
-    const terms = await db.TermsAndCondition.findOne({
-      where: { document_key: DECLARATION_DOCUMENT_KEY },
+    const documentKeys = DECLARATION_PRODUCTS.map(({ key }) => getDeclarationDocumentKey(key));
+
+    const termsRows = await db.TermsAndCondition.findAll({
+      where: { document_key: { [Op.in]: documentKeys } },
     });
 
     const records = await db.BrokerProductDeclaration.findAll({
@@ -39,6 +42,7 @@ const GetBrokerProductDeclarations = async (req, res) => {
 
     const rows = DECLARATION_PRODUCTS.map(({ key, label }) => {
       const record = records.find((r) => r.product === key);
+      const currentTerms = termsRows.find((t) => t.document_key === getDeclarationDocumentKey(key));
 
       if (!record) {
         return {
@@ -53,9 +57,10 @@ const GetBrokerProductDeclarations = async (req, res) => {
         };
       }
 
-      // Flag as pending again if admin republished the declaration content
-      // after this broker already accepted an earlier version of it.
-      const isStale = terms && record.terms_and_conditions_id !== terms.id;
+      // Flag as pending again if admin republished this product's
+      // declaration content after the broker already accepted an earlier
+      // version of it.
+      const isStale = currentTerms && record.terms_and_conditions_id !== currentTerms.id;
 
       return {
         product: key,

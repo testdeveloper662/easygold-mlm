@@ -1,4 +1,5 @@
 const db = require("../../models");
+const { isReservedDeclarationDocumentKey } = require("../../utils/brokerProductDeclaration");
 
 const updateTermsAndCondition = async (req, res) => {
     try {
@@ -37,10 +38,9 @@ const updateTermsAndCondition = async (req, res) => {
         }
 
         // Reserved entries are looked up by document_key from other parts of
-        // the app (e.g. the broker product-link declaration); their name and
-        // key must stay fixed so that lookup never breaks.
-        const RESERVED_DOCUMENT_KEYS = ["broker_product_declaration"];
-        const isReservedEntry = RESERVED_DOCUMENT_KEYS.includes(term.document_key);
+        // the app (e.g. each product's broker product-link declaration);
+        // their name and key must stay fixed so that lookup never breaks.
+        const isReservedEntry = isReservedDeclarationDocumentKey(term.document_key);
 
         await term.update({
             english_name: isReservedEntry ? term.english_name : english_name,

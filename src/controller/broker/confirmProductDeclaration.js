@@ -1,8 +1,8 @@
 require("dotenv").config();
 const db = require("../../models");
 const {
-  DECLARATION_DOCUMENT_KEY,
   DECLARATION_PRODUCT_KEYS,
+  getDeclarationDocumentKey,
 } = require("../../utils/brokerProductDeclaration");
 
 const ConfirmProductDeclaration = async (req, res) => {
@@ -29,7 +29,7 @@ const ConfirmProductDeclaration = async (req, res) => {
     }
 
     const terms = await db.TermsAndCondition.findOne({
-      where: { document_key: DECLARATION_DOCUMENT_KEY },
+      where: { document_key: getDeclarationDocumentKey(product) },
     });
 
     if (!terms) {

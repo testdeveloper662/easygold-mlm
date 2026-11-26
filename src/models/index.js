@@ -49,6 +49,7 @@ const AffiliateInvitations = require("./affiliateInvitations");
 const Seeder = require("./seeder");
 const PersonType = require("./personType");
 const UserReferrals = require("./userReferrals");
+const BrokerProductDeclaration = require("./brokerProductDeclarations");
 
 const db = {};
 
@@ -106,6 +107,7 @@ db.Order = Order;
 db.ShippingOption = ShippingOption;
 db.PriceFixation = require("./priceFixation");
 db.ProductOrderPivot = require("./productOrderPivot");
+db.BrokerProductDeclaration = BrokerProductDeclaration;
 
 // Relationships
 db.TargetCustomers.belongsTo(db.Brokers, {
@@ -254,5 +256,20 @@ db.Users.hasMany(db.ProductOrderDiamond, {
   as: "diamond_orders",
 });
 
+
+db.BrokerProductDeclaration.belongsTo(db.Brokers, {
+  foreignKey: "broker_id",
+  as: "broker",
+});
+
+db.Brokers.hasMany(db.BrokerProductDeclaration, {
+  foreignKey: "broker_id",
+  as: "product_declarations",
+});
+
+db.BrokerProductDeclaration.belongsTo(db.TermsAndCondition, {
+  foreignKey: "terms_and_conditions_id",
+  as: "terms",
+});
 
 module.exports = db;

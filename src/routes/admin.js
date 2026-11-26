@@ -57,6 +57,7 @@ const GetAllTargetCustomers = require("../controller/admin/getAllTargetCustomers
 const GetTargetCustomersByBroker = require("../controller/admin/getTargetCustomersByBroker");
 const GetTargetCustomerStatsOverall = require("../controller/admin/getTargetCustomerStatsOverall");
 const GetBrokerBankDetails = require("../controller/admin/getBrokerBankDetails");
+const GetBrokerProductDeclarations = require("../controller/admin/getBrokerProductDeclarations");
 const GetCustomerDetails = require("../controller/admin/getCustomerDetails");
 const GetAllAdminContracts = require("../controller/admin/getAllAdminContracts");
 const GetAdminContractsById = require("../controller/admin/getAdminContractsById");
@@ -132,6 +133,7 @@ adminRouter.get("/payout/requests", authenticateToken, GetBrokerPayoutRequests);
 adminRouter.put("/payout/request", authenticateToken, UpdateBrokerPayoutRequest);
 
 adminRouter.get("/broker/:brokerId/bank-details", authenticateToken, GetBrokerBankDetails);
+adminRouter.get("/brokers/:brokerId/product-declarations", authenticateToken, GetBrokerProductDeclarations);
 
 // Target Customers Routes
 adminRouter.get("/target-customers", authenticateToken, GetAllTargetCustomers);

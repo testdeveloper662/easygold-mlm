@@ -33,6 +33,8 @@ const GetAffiliateBannerById = require("../controller/broker/getAffiliateBannerB
 const UpdateAffiliateBanner = require("../controller/broker/updateAffiliateBanner");
 const DeleteAffiliateBanner = require("../controller/broker/deleteAffiliateBanner");
 const GetUserUrls = require("../controller/broker/getUserUrls");
+const GetProductDeclarations = require("../controller/broker/getProductDeclarations");
+const ConfirmProductDeclaration = require("../controller/broker/confirmProductDeclaration");
 const RemoveBrokerImage = require("../controller/broker/removeBrokerImage");
 const GetReferralDetails = require("../controller/broker/getReferralDetails");
 const GetAllBrokers = require("../controller/broker/getAllBrokers");
@@ -134,5 +136,9 @@ brokerRouter.get("/invitations", authenticateToken, GetInvitations);
 brokerRouter.get("/marketing-materials", authenticateToken, GetMarketingMaterialsForBroker);
 brokerRouter.post("/partner-referral", GetPartnerReferralCode);
 brokerRouter.get("/partner-referral", GetPartnerReferralCode);
+
+// Product link distribution-policy declaration (per broker, per product)
+brokerRouter.get("/product-declarations", authenticateToken, GetProductDeclarations);
+brokerRouter.post("/product-declarations/confirm", authenticateToken, ConfirmProductDeclaration);
 
 module.exports = brokerRouter;

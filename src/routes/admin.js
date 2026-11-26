@@ -133,7 +133,7 @@ adminRouter.get("/payout/requests", authenticateToken, GetBrokerPayoutRequests);
 adminRouter.put("/payout/request", authenticateToken, UpdateBrokerPayoutRequest);
 
 adminRouter.get("/broker/:brokerId/bank-details", authenticateToken, GetBrokerBankDetails);
-adminRouter.get("/brokers/:brokerId/product-declarations", authenticateToken, GetBrokerProductDeclarations);
+adminRouter.get("/users/:userId/product-declarations", authenticateToken, GetBrokerProductDeclarations);
 
 // Target Customers Routes
 adminRouter.get("/target-customers", authenticateToken, GetAllTargetCustomers);

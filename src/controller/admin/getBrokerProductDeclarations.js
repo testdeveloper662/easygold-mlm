@@ -7,10 +7,15 @@ const {
 
 const GetBrokerProductDeclarations = async (req, res) => {
   try {
-    const { brokerId } = req.params;
+    const { userId } = req.params;
 
+    // Looked up by user_id (not brokers.id) so the same endpoint serves both
+    // the broker detail page and the affiliate/private-individual detail
+    // page - affiliates and private individuals are synced into the brokers
+    // table (see migrations 022 and 028) but their own admin pages only ever
+    // carry a user_id, never a brokers.id.
     const broker = await db.Brokers.findOne({
-      where: { id: brokerId },
+      where: { user_id: userId },
       include: [
         {
           model: db.Users,

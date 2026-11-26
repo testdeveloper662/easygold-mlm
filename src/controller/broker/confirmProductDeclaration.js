@@ -44,6 +44,10 @@ const ConfirmProductDeclaration = async (req, res) => {
       .split(",")[0]
       .trim();
 
+    // text_version is a STRING column; terms.updatedAt is a Date instance,
+    // so it must be serialized before being stored.
+    const textVersion = new Date(terms.updatedAt).toISOString();
+
     const [declaration] = await db.BrokerProductDeclaration.findOrCreate({
       where: { broker_id: broker.id, product },
       defaults: {
@@ -51,7 +55,7 @@ const ConfirmProductDeclaration = async (req, res) => {
         user_id: user.ID,
         product,
         terms_and_conditions_id: terms.id,
-        text_version: terms.updatedAt,
+        text_version: textVersion,
         confirmed_at: new Date(),
         ip_address: ipAddress,
       },
@@ -59,7 +63,7 @@ const ConfirmProductDeclaration = async (req, res) => {
 
     await declaration.update({
       terms_and_conditions_id: terms.id,
-      text_version: terms.updatedAt,
+      text_version: textVersion,
       confirmed_at: new Date(),
       ip_address: ipAddress,
     });
